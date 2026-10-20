@@ -83,11 +83,11 @@ export class BlockInteraction {
     const ty = Math.floor(pa.y / T);
     const inReach = this.inReach(tx, ty);
 
+    // Blanco = ratón; amarillo = celular (grueso si lo marcaste tocándolo); rojo = fuera de alcance
     const color = !inReach ? 0xff5555 : pa.smart ? 0xffd84a : 0xffffff;
-    this.highlight
-      .setPosition(tx * T, ty * T)
-      .setStrokeStyle(pa.smart ? 3 : 2, color, inReach ? 0.95 : 0.6)
-      .setVisible(true);
+    const width = pa.manual ? 3 : 2;
+    const alpha = !inReach ? 0.7 : pa.smart && !pa.manual ? 0.75 : 1;
+    this.highlight.setPosition(tx * T, ty * T).setStrokeStyle(width, color, alpha).setVisible(true);
 
     if (pa.action && inReach) this.player.facing = (tx + 0.5) * T >= this.player.centerX ? 1 : -1;
 

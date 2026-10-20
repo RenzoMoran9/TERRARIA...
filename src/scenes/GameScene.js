@@ -5,6 +5,7 @@ import {
   WORLD_HEIGHT,
   PLAYER,
   STATION_RANGE,
+  REACH_TILES,
   AUTOSAVE_SECONDS,
   SAVE_VERSION,
   DEPTH,
@@ -92,12 +93,16 @@ export class GameScene extends Phaser.Scene {
 
     // --- Estado de controles (lo escriben el teclado y los controles táctiles) ---
     // action = botón de acción apretado; aimX/aimY = hacia dónde apunta el joystick
-    this.touchState = { moveX: 0, jump: false, mode: 'mine', action: false, aimX: 0, aimY: 0 };
+    // action = botón de acción apretado; actionPressed = se apretó (aunque ya se haya soltado);
+    // aimX/aimY = hacia dónde apunta el joystick
+    this.touchState = { moveX: 0, jump: false, mode: 'mine', action: false, actionPressed: false, aimX: 0, aimY: 0 };
+    this.manualTarget = null; // bloque marcado al tocarlo (celular): { tx, ty, acted }
+    this._holdStop = false; // terminó con el bloque marcado: no seguir hasta soltar el botón
     this._actionWasDown = false;
     this.isTouch = window.matchMedia?.('(pointer: coarse)').matches || false;
     this.uiBlocking = false; // true con el inventario abierto
     this._controls = { moveX: 0, jump: false };
-    this._pointerAction = { x: 0, y: 0, action: null, smart: false };
+    this._pointerAction = { x: 0, y: 0, action: null, smart: false, manual: false };
     this._tmpVec = new Phaser.Math.Vector2();
 
     // --- Cámara ---
@@ -129,6 +134,11 @@ export class GameScene extends Phaser.Scene {
     this.mouseInside = true;
     this.input.on('pointerdown', (pointer) => {
       if (this.uiBlocking) return;
+      // Celular: tocar un bloque lo MARCA (recuadro amarillo); el botón de acción lo mina o coloca
+      if (pointer.wasTouch) {
+        this.markTarget(pointer);
+        return;
+      }
       this.worldPointer = pointer;
       this.pressPending = true;
       if (pointer.wasTouch) this.pressAction = this.touchState.mode;
@@ -212,6 +222,7 @@ export class GameScene extends Phaser.Scene {
     const cam = this.cameras.main;
     const pa = this._pointerAction;
     pa.smart = false;
+    pa.manual = false;
     const wp = this.worldPointer;
     if (wp) {
       if (wp.isDown || this.pressPending) {
@@ -240,11 +251,53 @@ export class GameScene extends Phaser.Scene {
     return null;
   }
 
-  /** Objetivo automático para el botón de acción (celular). Sin acción, solo se marca en amarillo. */
+  /** Marca el bloque tocado como objetivo del botón de acción. */
+  markTarget(pointer) {
+    if (this.player.dead) return;
+    this.cameras.main.getWorldPoint(pointer.x, pointer.y, this._tmpVec);
+    this.manualTarget = { tx: Math.floor(this._tmpVec.x / T), ty: Math.floor(this._tmpVec.y / T), acted: false };
+    this._holdStop = false;
+  }
+
+  /**
+   * Botón de acción (celular): actúa sobre el bloque marcado al tocarlo o, si no hay
+   * ninguno, sobre el objetivo automático. Sin el botón apretado solo se muestra el recuadro.
+   */
   getSmartAction(pa) {
     const ts = this.touchState;
-    const justPressed = ts.action && !this._actionWasDown;
+    const pressed = ts.actionPressed;
+    ts.actionPressed = false;
+    const acting = ts.action || pressed;
+    const justPressed = pressed || (ts.action && !this._actionWasDown);
     this._actionWasDown = ts.action;
+    if (!acting) this._holdStop = false;
+
+    // 1) Bloque marcado a mano
+    const mt = this.manualTarget;
+    if (mt) {
+      const p = this.player;
+      const dist = Math.hypot((mt.tx + 0.5) * T - p.centerX, (mt.ty + 0.5) * T - p.centerY) / T;
+      const id = this.world.getTile(mt.tx, mt.ty);
+      const done = mt.acted && (ts.mode === 'mine' ? id === BLOCK.AIR : id !== BLOCK.AIR && id !== BLOCK.PLANT);
+      if (dist > REACH_TILES + 3) {
+        this.manualTarget = null; // se alejó mucho: volver al objetivo automático
+      } else if (done) {
+        // Terminado: no seguir con otro bloque que no se eligió hasta soltar el botón
+        this.manualTarget = null;
+        if (acting) this._holdStop = true;
+      } else {
+        if (justPressed) this._explainManual(mt, id, dist);
+        if (acting) mt.acted = true;
+        pa.x = (mt.tx + 0.5) * T;
+        pa.y = (mt.ty + 0.5) * T;
+        pa.action = acting && !this._holdStop ? ts.mode : null;
+        pa.smart = true;
+        pa.manual = true;
+        return pa;
+      }
+    }
+
+    // 2) Objetivo automático: lo más cercano hacia donde mira o apunta el jugador
     const target = this.interaction.findSmartTarget(ts.mode, ts.aimX, ts.aimY);
     if (!target) {
       if (justPressed) {
@@ -253,11 +306,25 @@ export class GameScene extends Phaser.Scene {
       }
       return null;
     }
-    pa.x = (target.tx + 0.5) * TILE_SIZE;
-    pa.y = (target.ty + 0.5) * TILE_SIZE;
-    pa.action = ts.action ? ts.mode : null;
+    pa.x = (target.tx + 0.5) * T;
+    pa.y = (target.ty + 0.5) * T;
+    pa.action = acting && !this._holdStop ? ts.mode : null;
     pa.smart = true;
+    pa.manual = false;
     return pa;
+  }
+
+  /** Avisa por qué no se puede actuar sobre el bloque marcado. */
+  _explainManual(mt, id, dist) {
+    let msg = null;
+    if (dist > REACH_TILES) msg = 'Está muy lejos: acércate';
+    else if (this.touchState.mode === 'mine' && id === BLOCK.AIR) msg = 'Ahí no hay nada que minar';
+    else if (this.touchState.mode === 'place') {
+      const block = this.interaction.selectedBlock();
+      if (block === undefined) msg = 'Elige un bloque en la barra para colocar';
+      else if (!this.interaction.canPlaceAt(mt.tx, mt.ty, block)) msg = 'No se puede colocar ahí';
+    }
+    if (msg) this.events.emit('toast', msg);
   }
 
   /** Zoom de cámara: en pantallas chicas (celular) se aleja un poco para ver más mundo. */

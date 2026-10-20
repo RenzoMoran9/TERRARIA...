@@ -10,11 +10,11 @@ const AIM_DEADZONE = 0.35; // inclinación mínima del joystick para apuntar en 
  * - Joystick virtual (abajo a la izquierda): mover. Empujarlo hacia arriba también salta.
  *   Mientras se mantiene el botón de acción, el joystick además APUNTA (abajo = cavar hacia abajo).
  * - Botón de salto (abajo a la derecha).
- * - Botón de ACCIÓN (junto al salto): mina o coloca automáticamente en el bloque marcado
- *   en amarillo (el más cercano hacia donde mira o apunta el jugador). No hace falta tocar el bloque.
+ * - Botón de ACCIÓN (junto al salto): mantenerlo mina o coloca en el bloque del recuadro amarillo.
+ *   · Tocar un bloque del mundo lo MARCA con el recuadro (no lo mina): así se elige con precisión.
+ *   · Si no se marcó nada, el recuadro elige solo el bloque más cercano hacia donde mira el jugador.
  * - Botón de modo (pequeño, encima): alterna entre MINAR y COLOCAR.
  * - Botón de inventario y botón de pantalla completa.
- * Tocar un bloque directamente también funciona (para mayor precisión).
  * Escriben en gameScene.touchState, que el juego lee cada frame.
  */
 export class TouchControls {
@@ -47,6 +47,8 @@ export class TouchControls {
     });
     this.actionBtn = this._circleButton('ui_button_mine', (pointer) => {
       this.actionPointer = pointer;
+      // Se marca aunque el toque sea tan corto que termine antes del siguiente frame
+      this.state.actionPressed = true;
     });
     this.modeBtn = this._circleButton('ui_button_swap', () => this.toggleMode());
     this.modeLabel = scene.add.text(0, 0, '', textStyle({ fontSize: '12px' })).setOrigin(0.5, 0.5);
