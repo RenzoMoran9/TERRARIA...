@@ -83,9 +83,10 @@ export class BlockInteraction {
     const ty = Math.floor(pa.y / T);
     const inReach = this.inReach(tx, ty);
 
+    const color = !inReach ? 0xff5555 : pa.smart ? 0xffd84a : 0xffffff;
     this.highlight
       .setPosition(tx * T, ty * T)
-      .setStrokeStyle(2, inReach ? 0xffffff : 0xff5555, inReach ? 0.9 : 0.6)
+      .setStrokeStyle(pa.smart ? 3 : 2, color, inReach ? 0.95 : 0.6)
       .setVisible(true);
 
     if (pa.action && inReach) this.player.facing = (tx + 0.5) * T >= this.player.centerX ? 1 : -1;
@@ -256,6 +257,22 @@ export class BlockInteraction {
     this.tryPlace(tx, ty, inReach);
   }
 
+  /** Bloque que se colocaría con el ítem seleccionado (o undefined si no es colocable). */
+  selectedBlock() {
+    const stack = this.inventory.selectedStack;
+    const def = stack && ITEMS[stack.id];
+    return def ? def.places : undefined;
+  }
+
+  /** ¿Se puede colocar ese bloque en (tx, ty)? (sin hacer cambios) */
+  canPlaceAt(tx, ty, block) {
+    const current = this.world.getTile(tx, ty);
+    // Se puede construir encima del pasto alto y las flores (se reemplazan)
+    if (current !== BLOCK.AIR && current !== BLOCK.PLANT) return false;
+    if (IS_SOLID[block] && this.player.overlapsTile(tx, ty)) return false;
+    return this.hasSupport(tx, ty, block);
+  }
+
   /** Coloca el bloque seleccionado en la barra rápida. */
   tryPlace(tx, ty, inReach) {
     const stack = this.inventory.selectedStack;
@@ -267,16 +284,69 @@ export class BlockInteraction {
       }
       return false;
     }
-    const current = this.world.getTile(tx, ty);
-    // Se puede construir encima del pasto alto y las flores (se reemplazan)
-    if (!inReach || (current !== BLOCK.AIR && current !== BLOCK.PLANT)) return false;
     const block = def.places;
-    if (IS_SOLID[block] && this.player.overlapsTile(tx, ty)) return false;
-    if (!this.hasSupport(tx, ty, block)) return false;
+    if (!inReach || !this.canPlaceAt(tx, ty, block)) return false;
 
     this.world.setTile(tx, ty, block);
     this.inventory.removeFromSlot(this.inventory.selected, 1);
     return true;
+  }
+
+  // ------------------------------------------------- objetivo automático (celular)
+
+  /**
+   * Busca el bloque sobre el que actuaría el botón de acción, sin tocar la pantalla.
+   * Lanza "rayos" desde el jugador hacia donde apunta el joystick (o hacia donde mira)
+   * y devuelve el tile más cercano:
+   * - MINAR: el primer bloque que no sea aire (tronco, tierra, piedra, planta…).
+   * - COLOCAR: el primer hueco donde se puede colocar el bloque seleccionado.
+   * aimX/aimY: dirección del joystick (0, 0 = hacia donde mira el jugador).
+   */
+  findSmartTarget(mode, aimX, aimY) {
+    const p = this.player;
+    if (p.dead) return null;
+    let angle = aimX === 0 && aimY === 0 ? (p.facing > 0 ? 0 : Math.PI) : Math.atan2(aimY, aimX);
+    angle = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4); // 8 direcciones
+    const dx = Math.round(Math.cos(angle) * 1000) / 1000;
+    const dy = Math.round(Math.sin(angle) * 1000) / 1000;
+    const block = mode === 'place' ? this.selectedBlock() : undefined;
+    if (mode === 'place' && block === undefined) return null;
+
+    // En horizontal se prueba a la altura de la cabeza y de los pies; en las demás, desde el centro
+    const origins = dy === 0 ? [p.y + 8, p.y + p.h - 6] : [p.centerY];
+    const maxT = REACH_TILES * T;
+    let best = null;
+    let bestT = Infinity;
+    let plant = null; // el pasto alto y las flores solo se cortan si no hay otra cosa
+    for (const oy of origins) {
+      for (let t = 12; t <= maxT && t < bestT; t += 6) {
+        const tx = Math.floor((p.centerX + dx * t) / T);
+        const ty = Math.floor((oy + dy * t) / T);
+        if (!this.inReach(tx, ty)) break;
+        const id = this.world.getTile(tx, ty);
+        if (mode === 'mine') {
+          if (id === BLOCK.PLANT) {
+            if (!plant) plant = { tx, ty };
+          } else if (id !== BLOCK.AIR) {
+            best = { tx, ty };
+            bestT = t;
+            break;
+          }
+        } else {
+          if (IS_SOLID[id]) break; // no se coloca a través de paredes
+          if (this.canPlaceAt(tx, ty, block)) {
+            best = { tx, ty };
+            bestT = t;
+            break;
+          }
+        }
+      }
+    }
+    // Un tronco se tala desde la base para que caiga el árbol entero (sin dejar tocón)
+    if (best && this.world.getTile(best.tx, best.ty) === BLOCK.LOG) {
+      while (this.world.getTile(best.tx, best.ty + 1) === BLOCK.LOG && this.inReach(best.tx, best.ty + 1)) best.ty++;
+    }
+    return best || plant;
   }
 
   // ---------------------------------------------------------------- efectos

@@ -75,6 +75,12 @@ export class UIScene extends Phaser.Scene {
     }
   }
 
+  /** Tocar una casilla de la barra: la selecciona y, en el celular, ajusta el modo (colocar/minar). */
+  onHotbarTap(index) {
+    this.gs.inventory.select(index);
+    if (this.gs.isTouch) this.touchControls.setModeForItem(this.gs.inventory.slots[index]);
+  }
+
   toggleInventory(force) {
     const open = force ?? !this.inventoryPanel.isOpen;
     if (open === this.inventoryPanel.isOpen) return;

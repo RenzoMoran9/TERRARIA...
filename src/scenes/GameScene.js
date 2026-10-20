@@ -91,11 +91,13 @@ export class GameScene extends Phaser.Scene {
     this._stations = { workbench: false };
 
     // --- Estado de controles (lo escriben el teclado y los controles táctiles) ---
-    this.touchState = { moveX: 0, jump: false, mode: 'mine' };
+    // action = botón de acción apretado; aimX/aimY = hacia dónde apunta el joystick
+    this.touchState = { moveX: 0, jump: false, mode: 'mine', action: false, aimX: 0, aimY: 0 };
+    this._actionWasDown = false;
     this.isTouch = window.matchMedia?.('(pointer: coarse)').matches || false;
     this.uiBlocking = false; // true con el inventario abierto
     this._controls = { moveX: 0, jump: false };
-    this._pointerAction = { x: 0, y: 0, action: null };
+    this._pointerAction = { x: 0, y: 0, action: null, smart: false };
     this._tmpVec = new Phaser.Math.Vector2();
 
     // --- Cámara ---
@@ -196,16 +198,20 @@ export class GameScene extends Phaser.Scene {
   /**
    * Qué quiere hacer el puntero sobre el mundo este frame:
    * - Ratón: clic izquierdo = minar, clic derecho = colocar, sin clic = solo resaltar.
-   * - Táctil: tocar = minar o colocar según el modo elegido con el botón.
+   * - Táctil: tocar un bloque = minar o colocar según el modo elegido con el botón.
+   * - Táctil sin tocar el bloque: el botón de acción usa el objetivo automático
+   *   (marcado en amarillo), el bloque más cercano hacia donde mira o apunta el jugador.
    */
   getPointerAction() {
     if (this.uiBlocking || this.player.dead) {
       this.worldPointer = null;
       this.pressPending = false;
+      this._actionWasDown = false;
       return null;
     }
     const cam = this.cameras.main;
     const pa = this._pointerAction;
+    pa.smart = false;
     const wp = this.worldPointer;
     if (wp) {
       if (wp.isDown || this.pressPending) {
@@ -220,7 +226,8 @@ export class GameScene extends Phaser.Scene {
       }
       this.worldPointer = null;
     }
-    if (!this.isTouch && this.mouseInside) {
+    if (this.isTouch) return this.getSmartAction(pa);
+    if (this.mouseInside) {
       const mp = this.input.mousePointer;
       if (mp) {
         cam.getWorldPoint(mp.x, mp.y, this._tmpVec);
@@ -231,6 +238,26 @@ export class GameScene extends Phaser.Scene {
       }
     }
     return null;
+  }
+
+  /** Objetivo automático para el botón de acción (celular). Sin acción, solo se marca en amarillo. */
+  getSmartAction(pa) {
+    const ts = this.touchState;
+    const justPressed = ts.action && !this._actionWasDown;
+    this._actionWasDown = ts.action;
+    const target = this.interaction.findSmartTarget(ts.mode, ts.aimX, ts.aimY);
+    if (!target) {
+      if (justPressed) {
+        const noBlock = ts.mode === 'place' && this.interaction.selectedBlock() === undefined;
+        this.events.emit('toast', noBlock ? 'Elige un bloque en la barra para colocar' : 'No hay nada al alcance en esa dirección');
+      }
+      return null;
+    }
+    pa.x = (target.tx + 0.5) * TILE_SIZE;
+    pa.y = (target.ty + 0.5) * TILE_SIZE;
+    pa.action = ts.action ? ts.mode : null;
+    pa.smart = true;
+    return pa;
   }
 
   /** Zoom de cámara: en pantallas chicas (celular) se aleja un poco para ver más mundo. */

@@ -35,9 +35,11 @@ La carpeta `dist/` se puede subir tal cual a cualquier hosting estático (GitHub
 | --------------------- | ----------------------------------- | ---------------------------------------------- |
 | Moverse               | `A` / `D` o flechas                 | Joystick (abajo a la izquierda)                |
 | Saltar                | `Espacio`, `W` o flecha arriba      | Botón grande con flecha, o joystick hacia arriba |
-| Minar                 | Mantener **clic izquierdo**         | Modo **MINAR** + mantener el dedo sobre el bloque |
-| Colocar bloque        | **Clic derecho**                    | Modo **COLOCAR** + tocar el lugar              |
-| Cambiar modo          | —                                   | Botón del pico / bloque (MINAR ↔ COLOCAR)       |
+| Minar / talar         | Mantener **clic izquierdo**         | Mantener el **botón de acción** (pico): actúa sobre el bloque marcado en amarillo, sin tocarlo |
+| Colocar bloque        | **Clic derecho**                    | Botón de acción en modo COLOCAR                |
+| Apuntar               | Con el ratón                        | Inclinar el joystick mientras se mantiene la acción (abajo = cavar hacia abajo) |
+| Cambiar modo          | —                                   | Botón de flechas (MINAR ↔ COLOCAR). Elegir un bloque en la barra pasa solo a COLOCAR; un pico, a MINAR |
+| Precisión             | —                                   | También se puede tocar un bloque directamente  |
 | Barra rápida          | Teclas `1`–`9` o rueda del ratón    | Tocar la casilla                               |
 | Inventario y crafteo  | `E` (cerrar: `E` o `Esc`)           | Botón de cuadritos                             |
 | Modo debug (FPS)      | `F3`                                | Tocar el reloj                                 |
@@ -88,7 +90,7 @@ Con `npm run dev` la página se recarga sola al agregar o cambiar una imagen. Pa
 Se recomienda **PNG con transparencia**. Si una imagen tiene otro tamaño se escala al tamaño de dibujo
 (los bloques siempre se dibujan a 32×32), así que también se pueden usar imágenes al doble de resolución.
 
-### Lista completa de imágenes (42)
+### Lista completa de imágenes (43)
 
 **Bloques.** Basta con dibujar un bloque "entero" de 32×32: el juego genera solo el contorno oscuro y las esquinas
 redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pasto tapado por otro bloque usa la imagen de la tierra.
@@ -133,8 +135,9 @@ redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pas
 | `ui/joystick_base.png`               | 160 × 160   | Base del joystick táctil                                                    |
 | `ui/joystick_thumb.png`              | 72 × 72     | Palanca del joystick táctil                                                 |
 | `ui/button_jump.png`                 | 96 × 96     | Botón táctil de salto                                                       |
-| `ui/button_mine.png`                 | 80 × 80     | Botón táctil en modo MINAR                                                  |
-| `ui/button_place.png`                | 80 × 80     | Botón táctil en modo COLOCAR                                                |
+| `ui/button_mine.png`                 | 80 × 80     | Botón táctil de acción en modo MINAR                                        |
+| `ui/button_place.png`                | 80 × 80     | Botón táctil de acción en modo COLOCAR                                      |
+| `ui/button_swap.png`                 | 64 × 64     | Botón táctil para cambiar entre MINAR y COLOCAR                             |
 | `ui/button_inventory.png`            | 64 × 64     | Botón táctil de inventario                                                  |
 | `ui/button_fullscreen.png`           | 48 × 48     | Botón táctil de pantalla completa                                           |
 

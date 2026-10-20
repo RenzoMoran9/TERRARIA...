@@ -75,6 +75,7 @@ export const ASSETS = {
   ui_button_jump: { file: 'ui/button_jump.png', width: 96, height: 96, placeholder: 'button_jump', smooth: true },
   ui_button_mine: { file: 'ui/button_mine.png', width: 80, height: 80, placeholder: 'button_mine', smooth: true },
   ui_button_place: { file: 'ui/button_place.png', width: 80, height: 80, placeholder: 'button_place', smooth: true },
+  ui_button_swap: { file: 'ui/button_swap.png', width: 64, height: 64, placeholder: 'button_swap', smooth: true },
   ui_button_inventory: { file: 'ui/button_inventory.png', width: 64, height: 64, placeholder: 'button_inventory', smooth: true },
   ui_button_fullscreen: { file: 'ui/button_fullscreen.png', width: 48, height: 48, placeholder: 'button_fullscreen', smooth: true },
 };

@@ -488,6 +488,25 @@ const CTX = {
     PIXEL.grass(pc, 0);
     pc.draw(ctx, w / 2 - 16, h / 2 - 16, 2);
   },
+  button_swap(ctx, w, h) {
+    // Dos flechas opuestas (cambiar entre minar y colocar)
+    circleBtn(ctx, w, h);
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    const arrow = (y, dir) => {
+      const x0 = w * 0.28;
+      const x1 = w * 0.72;
+      ctx.fillRect(x0, y - 2, x1 - x0, 4);
+      ctx.beginPath();
+      const tip = dir > 0 ? x1 + 2 : x0 - 2;
+      ctx.moveTo(tip, y);
+      ctx.lineTo(tip - dir * w * 0.14, y - h * 0.1);
+      ctx.lineTo(tip - dir * w * 0.14, y + h * 0.1);
+      ctx.closePath();
+      ctx.fill();
+    };
+    arrow(h * 0.4, 1);
+    arrow(h * 0.62, -1);
+  },
   button_inventory(ctx, w, h) {
     circleBtn(ctx, w, h);
     const c = w * 0.11;
