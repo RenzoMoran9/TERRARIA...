@@ -99,6 +99,9 @@ export class MenuScene extends Phaser.Scene {
     if (topPage && !isInstalledApp()) {
       if (window.__installPrompt) {
         createButton(this, W / 2, y + 62, bw, 40, 'Instalar en el celular', () => this.install(), { fontSize: '16px', color: 0x2f7a40, hover: 0x3c9450 });
+        this.add
+          .text(W / 2, y + 88, 'Si falla: menú ⋮ del navegador → "Agregar a la pantalla principal"', textStyle({ fontSize: '11px', color: '#ffe28a', strokeThickness: 2, align: 'center', wordWrap: { width: W - 32, useAdvancedWrap: true } }))
+          .setOrigin(0.5, 0);
       } else if (isIOS()) {
         this.add
           .text(W / 2, y + 44, 'Para instalarlo: botón Compartir → "Agregar a inicio"', textStyle({ fontSize: '13px', color: '#ffe28a' }))
@@ -110,7 +113,13 @@ export class MenuScene extends Phaser.Scene {
       ? 'Joystick: moverse · Flecha: saltar · Toca un bloque para marcarlo\nBotón del pico: minar/colocar lo marcado · Flechas: cambiar modo · Cuadritos: inventario'
       : 'A/D o flechas: moverse · Espacio/W: saltar · Clic izq.: minar · Clic der.: colocar\n1-9 o rueda: barra rápida · E: inventario y crafteo · F3: debug';
     const helpText = this.add
-      .text(W / 2, groundY - 44, help, textStyle({ fontSize: W < 640 ? '11px' : '13px', align: 'center', color: '#ffffff' }))
+      .text(
+        W / 2,
+        groundY - 44,
+        help,
+        // En pantallas angostas (celular en vertical) el texto se parte en varias líneas
+        textStyle({ fontSize: W < 640 ? '11px' : '13px', align: 'center', color: '#ffffff', wordWrap: { width: W - 40, useAdvancedWrap: true } }),
+      )
       .setOrigin(0.5, 1)
       .setDepth(1);
     this.add
