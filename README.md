@@ -1,0 +1,139 @@
+# Terra2D — Fase 1 (base jugable)
+
+Juego 2D de supervivencia y construcción estilo Terraria que se juega en el navegador,
+tanto en **PC** (teclado + ratón) como en **celular** (controles táctiles).
+Hecho con **Phaser 3 + Vite + JavaScript**.
+
+## Cómo ejecutarlo
+
+Requisitos: [Node.js](https://nodejs.org/) 18 o superior.
+
+```bash
+npm install        # solo la primera vez
+npm run dev        # abre http://localhost:5173
+```
+
+### Probarlo en el celular
+
+1. Conecta la PC y el celular a la **misma red Wi-Fi**.
+2. Ejecuta `npm run dev:movil`.
+3. En la consola aparece una línea `Network: http://192.168.x.x:5173/`: abre esa dirección en el navegador del celular.
+4. Gira el teléfono en **horizontal** (también funciona en vertical, pero se ve menos mundo).
+
+### Versión para publicar
+
+```bash
+npm run build      # genera la carpeta dist/
+npm run preview    # sirve dist/ en http://localhost:4173 para probarla
+```
+
+La carpeta `dist/` se puede subir tal cual a cualquier hosting estático (GitHub Pages, Netlify, itch.io…).
+
+## Controles
+
+| Acción                | PC                                  | Celular                                        |
+| --------------------- | ----------------------------------- | ---------------------------------------------- |
+| Moverse               | `A` / `D` o flechas                 | Joystick (abajo a la izquierda)                |
+| Saltar                | `Espacio`, `W` o flecha arriba      | Botón grande con flecha, o joystick hacia arriba |
+| Minar                 | Mantener **clic izquierdo**         | Modo **MINAR** + mantener el dedo sobre el bloque |
+| Colocar bloque        | **Clic derecho**                    | Modo **COLOCAR** + tocar el lugar              |
+| Cambiar modo          | —                                   | Botón del pico / bloque (MINAR ↔ COLOCAR)       |
+| Barra rápida          | Teclas `1`–`9` o rueda del ratón    | Tocar la casilla                               |
+| Inventario y crafteo  | `E` (cerrar: `E` o `Esc`)           | Botón de cuadritos                             |
+| Modo debug (FPS)      | `F3`                                | Tocar el reloj                                 |
+| Pantalla completa     | —                                   | Botón de esquinas (arriba a la derecha)        |
+
+En el inventario: clic/toque en una casilla para tomar o soltar una pila; clic derecho (PC) para tomar la mitad o dejar de a uno.
+Mantener el clic sobre bloques y arrastrar permite minar o construir seguido.
+
+## Qué incluye la Fase 1
+
+- **Mundo procedural con semilla** (ruido Simplex): colinas de pasto, capa de tierra, piedra, cuevas tipo túnel y
+  cavernas profundas, carbón e hierro, árboles, roca madre al fondo y paredes de fondo bajo tierra.
+  El mundo mide 2048 × 384 bloques, dividido en **chunks de 32×32** que se generan, cargan y descargan según la cámara.
+  Para usar una semilla concreta: `http://localhost:5173/?seed=12345` (también acepta texto: `?seed=hola`).
+- **Jugador**: movimiento con aceleración, salto (más alto si se mantiene), gravedad, colisión con bloques y
+  subida automática de escalones de 1 bloque. La cámara lo sigue.
+- **Minar y construir**: el tiempo depende de la dureza del bloque y del mejor pico del inventario. Alcance de unos 5 bloques.
+  Talar el tronco derriba el árbol entero. La piedra y el carbón requieren pico de madera; el hierro, pico de piedra.
+- **Inventario**: 36 casillas (9 de barra rápida), pilas de hasta 99.
+- **Crafteo**: Madera → Tablones → Mesa de trabajo; cerca de la mesa: Pico de madera y Pico de piedra (más rápido).
+  Antorchas: 1 madera + 1 carbón → 4 antorchas.
+- **Día y noche**: ciclo de 10 minutos con amanecer y atardecer graduales. La luz se propaga por bloques:
+  bajo tierra está oscuro y las antorchas iluminan alrededor.
+- **Vida**: barra de vida, daño por caídas de más de 12 bloques, regeneración lenta y reaparición en el punto de inicio.
+- **Guardado** en `localStorage`: mundo modificado, inventario, posición, vida y hora.
+  Automático cada 60 s, al cerrar o minimizar la página, y con el botón *Guardar* del inventario.
+- **HUD**: vida, barra rápida y hora del día; FPS y otros datos en modo debug.
+
+## Reemplazar el arte (placeholders)
+
+Todo el arte actual son **placeholders** dibujados por código. El archivo central [`src/assets.js`](src/assets.js)
+asocia cada clave de textura con un archivo dentro de `public/assets/`:
+
+- Si el archivo **existe**, el juego usa esa imagen.
+- Si **no existe**, usa el placeholder.
+
+Para cambiar un gráfico solo hay que copiar la imagen con el nombre exacto en la carpeta indicada; no hace falta tocar código.
+Con `npm run dev` la página se recarga sola al agregar o cambiar una imagen. Para la versión publicada, vuelve a ejecutar `npm run build`.
+
+Se recomienda **PNG con transparencia**. Si una imagen tiene otro tamaño se escala al tamaño de dibujo
+(los bloques siempre se dibujan a 32×32), así que también se pueden usar imágenes al doble de resolución.
+
+### Lista completa de imágenes (29)
+
+| Archivo (dentro de `public/assets/`) | Tamaño (px) | Qué es                                                                      |
+| ------------------------------------ | ----------- | --------------------------------------------------------------------------- |
+| `tiles/grass.png`                    | 32 × 32     | Bloque de pasto (tierra con pasto arriba)                                   |
+| `tiles/dirt.png`                     | 32 × 32     | Bloque de tierra (también es el ícono del ítem *Tierra*)                    |
+| `tiles/stone.png`                    | 32 × 32     | Bloque de piedra (también ícono del ítem *Piedra*)                          |
+| `tiles/coal_ore.png`                 | 32 × 32     | Mena de carbón                                                              |
+| `tiles/iron_ore.png`                 | 32 × 32     | Mena de hierro (también ícono del ítem *Mineral de hierro*)                 |
+| `tiles/log.png`                      | 32 × 32     | Tronco de árbol                                                             |
+| `tiles/leaves.png`                   | 32 × 32     | Hojas de árbol                                                              |
+| `tiles/planks.png`                   | 32 × 32     | Tablones (también ícono del ítem)                                           |
+| `tiles/workbench.png`                | 32 × 32     | Mesa de trabajo, con fondo transparente (también ícono)                     |
+| `tiles/torch.png`                    | 32 × 32     | Antorcha, con fondo transparente (también ícono)                            |
+| `tiles/bedrock.png`                  | 32 × 32     | Roca madre (fondo del mundo, indestructible)                                |
+| `walls/dirt_wall.png`                | 32 × 32     | Pared de fondo de tierra (más oscura que el bloque)                         |
+| `walls/stone_wall.png`               | 32 × 32     | Pared de fondo de piedra (más oscura que el bloque)                         |
+| `items/wood.png`                     | 32 × 32     | Ícono de *Madera*                                                           |
+| `items/coal.png`                     | 32 × 32     | Ícono de *Carbón*                                                           |
+| `items/wood_pickaxe.png`             | 32 × 32     | Ícono de *Pico de madera* (mango abajo a la izquierda, cabeza arriba a la derecha) |
+| `items/stone_pickaxe.png`            | 32 × 32     | Ícono de *Pico de piedra* (misma orientación)                               |
+| `player/player.png`                  | 24 × 44     | Jugador, **mirando a la derecha** (se refleja al ir a la izquierda)         |
+| `ui/slot.png`                        | 48 × 48     | Casilla de inventario                                                       |
+| `ui/slot_selected.png`               | 48 × 48     | Casilla seleccionada                                                        |
+| `ui/heart.png`                       | 24 × 24     | Corazón junto a la barra de vida                                            |
+| `ui/crack.png`                       | 32 × 32     | Grietas que aparecen al minar (transparente)                                |
+| `ui/joystick_base.png`               | 160 × 160   | Base del joystick táctil                                                    |
+| `ui/joystick_thumb.png`              | 72 × 72     | Palanca del joystick táctil                                                 |
+| `ui/button_jump.png`                 | 96 × 96     | Botón táctil de salto                                                       |
+| `ui/button_mine.png`                 | 80 × 80     | Botón táctil en modo MINAR                                                  |
+| `ui/button_place.png`                | 80 × 80     | Botón táctil en modo COLOCAR                                                |
+| `ui/button_inventory.png`            | 64 × 64     | Botón táctil de inventario                                                  |
+| `ui/button_fullscreen.png`           | 48 × 48     | Botón táctil de pantalla completa                                           |
+
+## Estructura del código
+
+```
+index.html
+vite.config.js         Vite + plugin que lista las imágenes existentes en public/assets
+public/assets/         Aquí van las imágenes (ver tabla)
+src/
+  main.js              Configuración de Phaser
+  config.js            Constantes (tamaño del mundo, física, alcance, ciclo de día…)
+  assets.js            Mapa central clave → imagen
+  scenes/              BootScene (carga), MenuScene, GameScene (mundo) y UIScene (interfaz)
+  world/               Ruido con semilla, bloques, generador, datos por chunks, renderizado de chunks y tileset
+  player/              Jugador: física, colisiones, vida y daño por caída
+  systems/             Inventario, ítems, crafteo, minar/colocar, día/noche, iluminación, guardado, placeholders
+  ui/                  HUD, barra rápida, inventario, controles táctiles, debug y avisos
+```
+
+## Notas de rendimiento
+
+- Cada chunk visible es un Tilemap de Phaser (un solo lote de dibujo por capa); los chunks de puro cielo no crean nada.
+- La iluminación usa 1 píxel por bloque en un canvas diminuto, estirado con filtrado suave: una sola imagen para toda la pantalla.
+- En celulares la cámara se aleja un poco (zoom 0,6–1) para mostrar más mundo en pantallas pequeñas.
+- `window.__game` da acceso al juego desde la consola del navegador para depurar.

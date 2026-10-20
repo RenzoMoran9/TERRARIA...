@@ -1,0 +1,19 @@
+{
+  "name": "terra2d",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Juego 2D de supervivencia y construcción estilo Terraria (Fase 1)",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:movil": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "phaser": "3.90.0"
+  },
+  "devDependencies": {
+    "vite": "^7.3.7"
+  }
+}
