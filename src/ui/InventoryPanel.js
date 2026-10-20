@@ -1,6 +1,6 @@
 import { INVENTORY_SIZE, HOTBAR_SIZE } from '../config.js';
 import { ITEMS } from '../systems/items.js';
-import { RECIPES, canCraft, craft, describeIngredients, STATION_NAMES } from '../systems/Crafting.js';
+import { RECIPES, canCraft, craft, describeIngredients, hasIngredients, STATION_NAMES } from '../systems/Crafting.js';
 import { createButton } from './Button.js';
 import { COLORS, textStyle } from './styles.js';
 
@@ -13,10 +13,15 @@ const GRID_Y = 42;
 const GRID_W = HOTBAR_SIZE * (SLOT + GAP) - GAP;
 const CRAFT_X = PAD + GRID_W + PAD;
 const CRAFT_W = 270;
-const ROW_H = 40;
-const ROW_GAP = 6;
+const ROW_H = 34;
+const ROW_GAP = 4;
+const ROWS_Y = 56;
 const PANEL_W = CRAFT_X + CRAFT_W + PAD;
-const PANEL_H = 300;
+const PANEL_H = 330;
+const BUTTON_H = 36;
+const FOOT_Y = PANEL_H - PAD - BUTTON_H / 2; // centro de la fila de botones de abajo
+const REPEAT_DELAY = 450; // ms antes de repetir al mantener "Craftear"
+const REPEAT_EVERY = 130;
 
 /** Inventario completo (tecla E) con la lista de crafteo al costado. */
 export class InventoryPanel {
@@ -28,6 +33,11 @@ export class InventoryPanel {
     this.scale = 1;
     this.craftTimer = 0;
     this.lastStationState = null;
+    this.selectedRecipe = 0; // receta elegida (se fabrica con el botón "Craftear")
+    this.holdPointer = null; // dedo/ratón que mantiene apretado "Craftear"
+    this.holdTimer = 0;
+    this.feedback = null; // resultado del último crafteo, se muestra un momento en el panel
+    this.feedbackUntil = 0;
 
     // Fondo oscuro de pantalla completa: tocar fuera del panel lo cierra
     this.blocker = scene.add.rectangle(0, 0, 10, 10, 0x000000, 0.35).setOrigin(0).setDepth(29).setVisible(false);
@@ -51,12 +61,11 @@ export class InventoryPanel {
     this._buildRecipes();
 
     // Botones inferiores
-    const footY = PANEL_H - PAD - 16;
     this.container.add(
-      createButton(scene, PAD + 55, footY, 110, 32, 'Guardar', () => this.gs.saveGame(true), { fontSize: '15px' }),
+      createButton(scene, PAD + 55, FOOT_Y, 110, BUTTON_H, 'Guardar', () => this.gs.saveGame(true), { fontSize: '15px' }),
     );
     this.container.add(
-      createButton(scene, PAD + 125 + 75, footY, 150, 32, 'Menú principal', () => this.gs.backToMenu(), { fontSize: '15px' }),
+      createButton(scene, PAD + 125 + 75, FOOT_Y, 150, BUTTON_H, 'Menú principal', () => this.gs.backToMenu(), { fontSize: '15px' }),
     );
 
     // Ítem que se lleva en el cursor
@@ -89,24 +98,75 @@ export class InventoryPanel {
     const scene = this.scene;
     this.stationText = scene.add.text(CRAFT_X, 34, '', textStyle({ fontSize: '12px', color: '#c8c8d8' }));
     this.container.add(this.stationText);
+
+    // Lista de recetas: tocar una la SELECCIONA (no la fabrica)
     this.rows = RECIPES.map((recipe, i) => {
-      const y = 56 + i * (ROW_H + ROW_GAP);
+      const y = ROWS_Y + i * (ROW_H + ROW_GAP);
       const bg = scene.add
         .rectangle(CRAFT_X, y, CRAFT_W, ROW_H, COLORS.notCraftable, 0.9)
         .setOrigin(0)
         .setStrokeStyle(1, 0xffffff, 0.25)
         .setInteractive({ useHandCursor: true });
-      bg.on('pointerdown', () => this.craft(recipe));
+      bg.on('pointerdown', () => this.selectRecipe(i));
       const item = ITEMS[recipe.result];
-      const icon = scene.add.image(CRAFT_X + 20, y + ROW_H / 2, item.icon).setDisplaySize(28, 28);
-      const name = scene.add.text(CRAFT_X + 40, y + 3, `${item.name} ×${recipe.count}`, textStyle({ fontSize: '14px' }));
-      const ingredients = scene.add.text(CRAFT_X + 40, y + 21, describeIngredients(recipe), textStyle({ fontSize: '11px', strokeThickness: 2, color: '#d8d8d8' }));
+      const icon = scene.add.image(CRAFT_X + 18, y + ROW_H / 2, item.icon).setDisplaySize(26, 26);
+      const name = scene.add.text(CRAFT_X + 36, y + 2, `${item.name} ×${recipe.count}`, textStyle({ fontSize: '14px' }));
+      const ingredients = scene.add.text(CRAFT_X + 36, y + 18, describeIngredients(recipe), textStyle({ fontSize: '11px', strokeThickness: 2, color: '#d8d8d8' }));
       const tag = scene.add
-        .text(CRAFT_X + CRAFT_W - 6, y + 4, recipe.station ? 'Mesa' : '', textStyle({ fontSize: '10px', strokeThickness: 2, color: '#ffd54f' }))
+        .text(CRAFT_X + CRAFT_W - 6, y + 3, recipe.station ? 'Mesa' : '', textStyle({ fontSize: '10px', strokeThickness: 2, color: '#ffd54f' }))
         .setOrigin(1, 0);
       this.container.add([bg, icon, name, ingredients, tag]);
       return { recipe, bg, icon, name, ingredients, craftable: null };
     });
+
+    // Detalle de la receta elegida: qué se necesita y cuánto tienes
+    const detailY = ROWS_Y + RECIPES.length * (ROW_H + ROW_GAP) + 2;
+    this.detailText = scene.add.text(CRAFT_X, detailY, '', textStyle({ fontSize: '12px', strokeThickness: 2, wordWrap: { width: CRAFT_W } }));
+    this.container.add(this.detailText);
+
+    // Botón "Craftear" (mantener apretado = fabricar varias veces)
+    const bx = CRAFT_X + CRAFT_W / 2;
+    this.craftBtn = scene.add.container(bx, FOOT_Y);
+    this.craftBtnBg = scene.add
+      .rectangle(0, 0, CRAFT_W, BUTTON_H, COLORS.craftable, 0.95)
+      .setStrokeStyle(2, 0xffffff, 0.7)
+      .setInteractive({ useHandCursor: true });
+    this.craftBtnText = scene.add.text(0, 0, 'Craftear', textStyle({ fontSize: '18px', fontStyle: 'bold' })).setOrigin(0.5);
+    this.craftBtn.add([this.craftBtnBg, this.craftBtnText]);
+    this.container.add(this.craftBtn);
+    this.craftBtnBg.on('pointerdown', (pointer) => {
+      this.holdPointer = pointer;
+      this.holdTimer = REPEAT_DELAY;
+      this.craftBtn.setScale(0.97);
+      this.craftSelected(true);
+    });
+    const release = () => {
+      this.holdPointer = null;
+      this.craftBtn.setScale(1);
+    };
+    this.craftBtnBg.on('pointerup', release);
+    this.craftBtnBg.on('pointerout', release);
+  }
+
+  /** Elige una receta de la lista (se marca y se muestra su detalle). */
+  selectRecipe(index) {
+    this.selectedRecipe = index;
+    this.feedback = null; // al elegir otra receta se muestra lo que necesita
+    this.refreshCrafting(true);
+  }
+
+  /** Fabrica la receta elegida. showErrors=false al repetir (para no mostrar errores en bucle). */
+  craftSelected(showErrors) {
+    const recipe = RECIPES[this.selectedRecipe];
+    const result = craft(this.inv, recipe, this.gs.getStations());
+    // El resultado se muestra dentro del panel (un aviso flotante taparía la lista)
+    if (result.ok || showErrors) {
+      this.feedback = result;
+      this.feedbackUntil = this.scene.time.now + 1500; // hora real (no depende de los FPS)
+    }
+    if (!result.ok) this.holdPointer = null;
+    this.refreshCrafting(true);
+    return result.ok;
   }
 
   layout(width, height) {
@@ -130,17 +190,13 @@ export class InventoryPanel {
 
   close() {
     this.isOpen = false;
+    this.holdPointer = null;
+    this.feedback = null;
     this.inv.returnHeld();
     this.blocker.setVisible(false);
     this.container.setVisible(false);
     this.heldIcon.setVisible(false);
     this.heldCount.setText('');
-  }
-
-  craft(recipe) {
-    const result = craft(this.inv, recipe, this.gs.getStations());
-    this.gs.events.emit('toast', result.message);
-    this.refreshCrafting(true);
   }
 
   refresh() {
@@ -169,25 +225,52 @@ export class InventoryPanel {
     this.refreshCrafting(true);
   }
 
-  /** Colorea las recetas según si se pueden craftear ahora. */
+  /** Colorea las recetas según si se pueden craftear y actualiza el detalle y el botón. */
   refreshCrafting(force = false) {
     const stations = this.gs.getStations();
     const stationState = stations.workbench;
-    if (force || stationState !== this.lastStationState) {
+    const stationChanged = stationState !== this.lastStationState;
+    if (force || stationChanged) {
       this.lastStationState = stationState;
       this.stationText.setText(
         stationState ? `${STATION_NAMES.workbench} cerca: Sí` : `${STATION_NAMES.workbench} cerca: No`,
       );
     }
-    for (const row of this.rows) {
+    let changed = force || stationChanged;
+    this.rows.forEach((row, i) => {
       const ok = canCraft(this.inv, row.recipe, stations);
       if (force || ok !== row.craftable) {
+        changed = true;
         row.craftable = ok;
         row.bg.setFillStyle(ok ? COLORS.craftable : COLORS.notCraftable, 0.9);
         row.icon.setAlpha(ok ? 1 : 0.5);
         row.name.setAlpha(ok ? 1 : 0.6);
       }
+      const selected = i === this.selectedRecipe;
+      row.bg.setStrokeStyle(selected ? 3 : 1, selected ? 0xffd84a : 0xffffff, selected ? 1 : 0.25);
+    });
+    if (changed) this._refreshDetail(stations);
+  }
+
+  _refreshDetail(stations) {
+    const recipe = RECIPES[this.selectedRecipe];
+    const ok = canCraft(this.inv, recipe, stations);
+    const needs = recipe.ingredients.map(([id, n]) => `${n} ${ITEMS[id].name} (tienes ${this.inv.count(id)})`).join(' + ');
+    let text = `Necesitas: ${needs}`;
+    let color = '#b9f6a8';
+    if (recipe.station && !stations[recipe.station]) {
+      text = `Acércate a una ${STATION_NAMES[recipe.station]}. ${text}`;
+      color = '#ffb4a8';
+    } else if (!hasIngredients(this.inv, recipe)) {
+      color = '#ffb4a8';
     }
+    if (this.feedback) {
+      text = this.feedback.message;
+      color = this.feedback.ok ? '#ffe28a' : '#ffb4a8';
+    }
+    this.detailText.setText(text).setColor(color);
+    this.craftBtnBg.setFillStyle(ok ? COLORS.craftable : COLORS.notCraftable, 0.95);
+    this.craftBtnText.setAlpha(ok ? 1 : 0.55);
   }
 
   update(delta) {
@@ -197,6 +280,23 @@ export class InventoryPanel {
       const p = this.scene.input.activePointer;
       this.heldIcon.setPosition(p.x, p.y);
       this.heldCount.setPosition(p.x + this.heldIconSize / 2 + 2, p.y + this.heldIconSize / 2 + 2);
+    }
+    // Mantener apretado "Craftear" fabrica varias veces seguidas
+    if (this.holdPointer) {
+      if (!this.holdPointer.isDown) {
+        this.holdPointer = null;
+        this.craftBtn.setScale(1);
+      } else {
+        this.holdTimer -= delta;
+        if (this.holdTimer <= 0) {
+          this.holdTimer = REPEAT_EVERY;
+          this.craftSelected(false);
+        }
+      }
+    }
+    if (this.feedback && this.scene.time.now >= this.feedbackUntil) {
+      this.feedback = null;
+      this.refreshCrafting(true);
     }
     // Revisar cada tanto si el jugador se acercó/alejó de la mesa
     this.craftTimer -= delta;

@@ -44,6 +44,9 @@ La carpeta `dist/` se puede subir tal cual a cualquier hosting estático (GitHub
 | Pantalla completa     | —                                   | Botón de esquinas (arriba a la derecha)        |
 
 En el inventario: clic/toque en una casilla para tomar o soltar una pila; clic derecho (PC) para tomar la mitad o dejar de a uno.
+
+Para craftear: toca (o haz clic en) una receta para elegirla; debajo aparece qué necesitas y cuánto tienes.
+Luego aprieta el botón **Craftear**. Si lo mantienes apretado, fabrica varias veces seguidas.
 Mantener el clic sobre bloques y arrastrar permite minar o construir seguido.
 
 ## Qué incluye la Fase 1

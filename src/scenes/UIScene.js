@@ -83,6 +83,7 @@ export class UIScene extends Phaser.Scene {
     else this.inventoryPanel.close();
     this.gs.uiBlocking = open;
     this.hotbar.setVisible(!open);
+    this.layoutToast();
   }
 
   /** Ubica todo según el tamaño de pantalla (PC, celular horizontal o vertical). */
@@ -102,10 +103,16 @@ export class UIScene extends Phaser.Scene {
     const hotbarBottom = y + HOTBAR_HEIGHT * scale;
 
     this.debug.layout(10, Math.max(54, y === 42 ? hotbarBottom + 8 : 54));
-    this.toast.layout(W / 2, hotbarBottom + 26);
+    this.toastY = hotbarBottom + 26;
+    this.layoutToast();
     this.inventoryPanel.layout(W, H);
     this.touchControls.layout(W, H, y === 42 ? hotbarBottom + 28 : 62);
     this.deathText.setPosition(W / 2, H / 2);
+  }
+
+  /** Avisos: bajo la barra rápida, o arriba del todo si el inventario está abierto (para no taparlo). */
+  layoutToast() {
+    this.toast.layout(this.scale.width / 2, this.inventoryPanel.isOpen ? 2 : this.toastY);
   }
 
   update(time, delta) {

@@ -6,7 +6,8 @@ export class Toast {
     this.scene = scene;
     this.tween = null;
     this.text = scene.add
-      .text(0, 0, '', textStyle({ fontSize: '16px', align: 'center' }))
+      .text(0, 0, '', textStyle({ fontSize: '16px', align: 'center', backgroundColor: 'rgba(12,16,44,0.78)' }))
+      .setPadding(10, 4, 10, 4)
       .setOrigin(0.5, 0)
       .setDepth(40)
       .setAlpha(0);
