@@ -6,16 +6,18 @@ import { getViewRect } from './view.js';
 const MARGIN = 12; // tiles extra fuera de pantalla (para que la luz de antorchas cercanas entre bien)
 const AIR_DECAY = 0.085; // cuánta luz se pierde por cada tile de aire
 const SOLID_DECAY = 0.2; // ...y por cada bloque sólido
-const PLAYER_LIGHT = 0.45; // luz tenue alrededor del jugador para no quedar a ciegas
+const PLAYER_LIGHT = 0.42; // luz tenue alrededor del jugador para no quedar a ciegas
+const TORCH_COLOR = [1.0, 0.8, 0.55]; // luz cálida de las antorchas
 const REFRESH_SECONDS = 0.2; // recálculo periódico (para el cambio gradual del día)
 
 /**
- * Iluminación por tiles, barata para celulares:
- * - Se calcula 1 valor de luz por tile solo en la zona visible (+ margen).
- * - Fuentes: cielo (según la hora) sobre la superficie, antorchas y el jugador.
- * - La luz se propaga con barridos en ambas direcciones (pocas operaciones por tile).
- * - El resultado se dibuja en un canvas diminuto (1 px por tile) y se estira ×32
- *   con filtrado lineal → sombras suaves con una sola imagen.
+ * Iluminación de color por tiles, barata para celulares:
+ * - Dos canales de luz: cielo (según la hora) y bloques (antorchas + jugador).
+ * - Se calcula 1 valor por tile solo en la zona visible (+ margen) y se propaga con
+ *   barridos en ambas direcciones (pocas operaciones por tile).
+ * - El resultado (color de luz) se dibuja en un canvas diminuto, 1 px por tile, que se
+ *   estira ×32 con filtrado lineal y se MULTIPLICA sobre la escena:
+ *   blanco = sin cambio, negro = oscuridad total, naranja = luz de antorcha.
  */
 export class Lighting {
   constructor(scene, world, dayNight, player) {
@@ -46,18 +48,26 @@ export class Lighting {
     if (w === this.w && h === this.h) return;
     this.w = w;
     this.h = h;
-    this.light = new Float32Array(w * h);
+    this.sky = new Float32Array(w * h);
+    this.block = new Float32Array(w * h);
     this.decay = new Float32Array(w * h);
     if (!this.texture) {
       if (this.scene.textures.exists(this.key)) this.scene.textures.remove(this.key);
       this.texture = this.scene.textures.createCanvas(this.key, w, h);
-      this.texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
-      this.image = this.scene.add.image(0, 0, this.key).setOrigin(0).setDepth(DEPTH.LIGHT).setScale(TILE_SIZE);
+      this.image = this.scene.add
+        .image(0, 0, this.key)
+        .setOrigin(0)
+        .setDepth(DEPTH.LIGHT)
+        .setScale(TILE_SIZE)
+        .setBlendMode(Phaser.BlendModes.MULTIPLY);
     } else {
       this.texture.setSize(w, h);
       this.image.setTexture(this.key).setScale(TILE_SIZE);
     }
     this.imageData = this.texture.context.createImageData(w, h);
+    // Alfa siempre opaco: el color de cada píxel multiplica la escena
+    const px = this.imageData.data;
+    for (let i = 3; i < px.length; i += 4) px[i] = 255;
     this.dirty = true;
   }
 
@@ -90,9 +100,8 @@ export class Lighting {
   }
 
   _compute(tx0, ty0, ptx, pty) {
-    const { w, h, light: L, decay: D, world } = this;
+    const { w, h, sky: S, block: B, decay: D, world } = this;
     const skyTop = world.skyTop;
-    const daylight = this.dayNight.getDaylight();
 
     // 1) Fuentes de luz y atenuación de cada tile
     for (let j = 0; j < h; j++) {
@@ -101,9 +110,8 @@ export class Lighting {
       for (let i = 0; i < w; i++, idx++) {
         const tx = tx0 + i;
         const id = world.getTile(tx, ty);
-        let l = LIGHT_EMIT[id];
-        if (tx >= 0 && tx < WORLD_WIDTH && ty < skyTop[tx] && daylight > l) l = daylight;
-        L[idx] = l;
+        S[idx] = tx >= 0 && tx < WORLD_WIDTH && ty < skyTop[tx] ? 1 : 0;
+        B[idx] = LIGHT_EMIT[id];
         D[idx] = IS_SOLID[id] ? SOLID_DECAY : AIR_DECAY;
       }
     }
@@ -114,7 +122,36 @@ export class Lighting {
       this._addSource(ptx - tx0, pty - 1 - ty0, PLAYER_LIGHT);
     }
 
-    // 3) Propagación: barrido ↘ y ↖, dos veces (cubre cuevas con curvas)
+    // 3) Propagación de los dos canales
+    this._propagate(S);
+    this._propagate(B);
+
+    // 4) Color final = cielo × color del sol/luna + bloques × color de antorcha
+    const day = this.dayNight.getDaylight();
+    const [lr, lg, lb] = this.dayNight.getLightColor();
+    const sr = lr * day * 255;
+    const sg = lg * day * 255;
+    const sb = lb * day * 255;
+    const br = TORCH_COLOR[0] * 255;
+    const bg = TORCH_COLOR[1] * 255;
+    const bb = TORCH_COLOR[2] * 255;
+    const px = this.imageData.data;
+    for (let k = 0, p = 0; k < S.length; k++, p += 4) {
+      const s = S[k] > 0 ? S[k] : 0;
+      const b = B[k] > 0 ? B[k] : 0;
+      px[p] = s * sr + b * br; // Uint8ClampedArray recorta a 255
+      px[p + 1] = s * sg + b * bg;
+      px[p + 2] = s * sb + b * bb;
+    }
+    this.texture.context.putImageData(this.imageData, 0, 0);
+    this.texture.refresh();
+    // refresh() vuelve a subir la textura con filtro NEAREST (por pixelArt): restaurar el suavizado
+    this.texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
+  }
+
+  /** Barrido ↘ y ↖, dos veces (cubre cuevas con curvas). */
+  _propagate(L) {
+    const { w, h, decay: D } = this;
     for (let pass = 0; pass < 2; pass++) {
       for (let j = 0; j < h; j++) {
         let idx = j * w;
@@ -149,23 +186,12 @@ export class Lighting {
         }
       }
     }
-
-    // 4) Oscuridad = 1 - luz, escrita en el canal alfa (color negro)
-    const px = this.imageData.data;
-    for (let k = 0, a = 3; k < L.length; k++, a += 4) {
-      const l = L[k];
-      px[a] = l >= 1 ? 0 : l <= 0 ? 255 : (1 - l) * 255;
-    }
-    this.texture.context.putImageData(this.imageData, 0, 0);
-    this.texture.refresh();
-    // refresh() vuelve a subir la textura con filtro NEAREST (por pixelArt): restaurar el suavizado
-    this.texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
   }
 
   _addSource(i, j, value) {
     if (i < 0 || j < 0 || i >= this.w || j >= this.h) return;
     const idx = j * this.w + i;
-    if (this.light[idx] < value) this.light[idx] = value;
+    if (this.block[idx] < value) this.block[idx] = value;
   }
 
   destroy() {

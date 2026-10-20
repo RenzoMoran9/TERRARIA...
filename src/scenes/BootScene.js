@@ -3,6 +3,7 @@ import manifest from 'virtual:asset-manifest';
 import { ASSETS, ASSET_BASE } from '../assets.js';
 import { createPlaceholderTexture, applyTextureFilter } from '../systems/Placeholders.js';
 import { buildTileset } from '../world/Tileset.js';
+import { PIXEL_FONT_NAME } from '../ui/styles.js';
 
 /**
  * Carga las imágenes que existan en /public/assets (según assets.js)
@@ -28,7 +29,12 @@ export class BootScene extends Phaser.Scene {
     const available = new Set(manifest);
     const base = import.meta.env.BASE_URL + ASSET_BASE;
     for (const [key, asset] of Object.entries(ASSETS)) {
-      if (available.has(asset.file)) this.load.image(key, base + asset.file);
+      if (!available.has(asset.file)) continue;
+      if (asset.frameWidth) {
+        this.load.spritesheet(key, base + asset.file, { frameWidth: asset.frameWidth, frameHeight: asset.frameHeight });
+      } else {
+        this.load.image(key, base + asset.file);
+      }
     }
   }
 
@@ -42,6 +48,17 @@ export class BootScene extends Phaser.Scene {
     }
     buildTileset(this);
     console.info(`[assets] ${images} imágenes cargadas, ${total - images} placeholders generados.`);
-    this.scene.start('MenuScene');
+
+    // Esperar la fuente pixel art (máx. 2 s) para que los textos no se dibujen con otra fuente
+    const fontReady = document.fonts
+      ? Promise.all([document.fonts.load(`16px ${PIXEL_FONT_NAME}`), document.fonts.load(`bold 16px ${PIXEL_FONT_NAME}`)])
+      : Promise.resolve();
+    const timeout = new Promise((resolve) => setTimeout(resolve, 2000));
+    Promise.race([fontReady, timeout])
+      .catch(() => {})
+      .then(() => {
+        this.scene.launch('BackgroundScene');
+        this.scene.start('MenuScene');
+      });
   }
 }

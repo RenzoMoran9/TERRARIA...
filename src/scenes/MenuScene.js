@@ -22,7 +22,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   create() {
-    this.cameras.main.setBackgroundColor('#1d2b44');
+    // Sin color de fondo: se ve BackgroundScene (cielo y paisaje en movimiento) detrás
     this.confirmNew = false;
     this.build();
     this.scale.on('resize', this.build, this);
@@ -34,17 +34,22 @@ export class MenuScene extends Phaser.Scene {
     const { width: W, height: H } = this.scale;
     const touch = isTouchDevice();
 
-    // Suelo decorativo con las texturas de bloques
+    // Suelo decorativo con las texturas de bloques y algunas plantas
     const groundY = H - 64;
-    for (let x = 0; x < W + 32; x += 32) {
+    const plants = ['tile_plant_grass', 'tile_plant_flower_red', 'tile_plant_grass', 'tile_plant_flower_yellow'];
+    for (let x = 0, i = 0; x < W + 32; x += 32, i++) {
       this.add.image(x, groundY, 'tile_grass').setOrigin(0);
       this.add.image(x, groundY + 32, 'tile_dirt').setOrigin(0);
+      if (i % 3 !== 1) this.add.image(x, groundY - 32, plants[i % plants.length]).setOrigin(0);
     }
 
-    const titleSize = Math.round(Phaser.Math.Clamp(W / 10, 32, 64));
-    this.add.text(W / 2, H * 0.16, 'TERRA 2D', textStyle({ fontSize: `${titleSize}px`, strokeThickness: 6 })).setOrigin(0.5);
+    const titleSize = Math.round(Phaser.Math.Clamp(W / 9, 36, 76));
     this.add
-      .text(W / 2, H * 0.16 + titleSize * 0.75, 'Fase 1 · Supervivencia y construcción', textStyle({ fontSize: '15px', color: '#c8d8f0' }))
+      .text(W / 2, H * 0.16, 'TERRA 2D', textStyle({ fontSize: `${titleSize}px`, fontStyle: 'bold', color: '#ffe28a', strokeThickness: 8 }))
+      .setOrigin(0.5)
+      .setShadow(0, 5, '#3a2410', 0, true, false);
+    this.add
+      .text(W / 2, H * 0.16 + titleSize * 0.72, 'Supervivencia y construcción', textStyle({ fontSize: '16px', color: '#ffffff' }))
       .setOrigin(0.5);
 
     const save = SaveSystem.load();
@@ -74,9 +79,13 @@ export class MenuScene extends Phaser.Scene {
     const help = touch
       ? 'Joystick: moverse · Botón grande: saltar · Toca un bloque para minar/colocar\nBotón MINAR/COLOCAR: cambia el modo · Botón de cuadritos: inventario'
       : 'A/D o flechas: moverse · Espacio/W: saltar · Clic izq.: minar · Clic der.: colocar\n1-9 o rueda: barra rápida · E: inventario y crafteo · F3: debug';
+    const helpText = this.add
+      .text(W / 2, groundY - 44, help, textStyle({ fontSize: W < 640 ? '11px' : '13px', align: 'center', color: '#ffffff' }))
+      .setOrigin(0.5, 1)
+      .setDepth(1);
     this.add
-      .text(W / 2, groundY - 12, help, textStyle({ fontSize: W < 640 ? '11px' : '13px', align: 'center', color: '#e0e8f8' }))
-      .setOrigin(0.5, 1);
+      .rectangle(W / 2, helpText.y - helpText.height / 2, Math.min(W - 16, helpText.width + 24), helpText.height + 12, 0x10163a, 0.6)
+      .setStrokeStyle(1, 0x7d8fe0, 0.6);
   }
 
   startGame(data) {

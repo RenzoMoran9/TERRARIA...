@@ -1,6 +1,7 @@
 // Estilos de texto compartidos por la interfaz
 
-export const FONT = 'Arial, Helvetica, sans-serif';
+export const PIXEL_FONT_NAME = '"Pixelify Sans"';
+export const FONT = `${PIXEL_FONT_NAME}, "Trebuchet MS", Arial, sans-serif`;
 
 export const TEXT = {
   fontFamily: FONT,
@@ -14,11 +15,12 @@ export function textStyle(overrides = {}) {
   return { ...TEXT, ...overrides };
 }
 
+// Paleta de la interfaz (azules translúcidos, como los paneles de Terraria)
 export const COLORS = {
-  panel: 0x14141f,
-  panelBorder: 0x6b6b9a,
-  button: 0x2d3b5c,
-  buttonHover: 0x3f5585,
-  craftable: 0x2e6b33,
-  notCraftable: 0x2a2a3a,
+  panel: 0x1a2258,
+  panelBorder: 0x7d8fe0,
+  button: 0x34408a,
+  buttonHover: 0x4a5bc0,
+  craftable: 0x2f7a40,
+  notCraftable: 0x262c5a,
 };

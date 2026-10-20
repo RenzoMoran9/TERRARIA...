@@ -1,6 +1,12 @@
 import { TILE_SIZE, PLAYER as P, DEPTH } from '../config.js';
+import { frameCount } from '../systems/Placeholders.js';
 
 const EPS = 0.001;
+// Cuadros de la hoja del jugador
+const FRAME_IDLE = 0;
+const FRAME_WALK = 1; // 1..6
+const WALK_FRAMES = 6;
+const FRAME_JUMP = 7;
 const MAX_STEP = 8; // el movimiento se divide en pasos de ≤8 px para no atravesar bloques
 
 function approach(value, target, amount) {
@@ -39,9 +45,11 @@ export class Player {
 
     this.stepOffset = 0; // suaviza visualmente la subida automática de escalones
     this.walkTime = 0;
+    this.dustTimer = 0;
 
+    this.frames = frameCount(scene, 'player');
     this.sprite = scene.add
-      .image(0, 0, 'player')
+      .image(0, 0, 'player', 0)
       .setOrigin(0.5, 1)
       .setDepth(DEPTH.PLAYER)
       .setDisplaySize(P.SPRITE_WIDTH, P.SPRITE_HEIGHT);
@@ -101,6 +109,7 @@ export class Player {
       if (wasOnGround || this.y < this.peakY) this.peakY = this.y;
     } else if (!wasOnGround) {
       const fallTiles = (this.y - this.peakY) / TILE_SIZE;
+      if (fallTiles > 1.5) this.scene.spawnDust(this.centerX, this.y + this.h, Math.min(12, 4 + Math.round(fallTiles)));
       if (fallTiles > P.SAFE_FALL_TILES) {
         this.damage(Math.round((fallTiles - P.SAFE_FALL_TILES) * P.FALL_DAMAGE_PER_TILE));
       }
@@ -117,6 +126,12 @@ export class Player {
     this.stepOffset = Math.max(0, this.stepOffset - dt * 320);
     if (this.onGround && Math.abs(this.vx) > 20) this.walkTime += dt;
     else this.walkTime = 0;
+    // Polvo de los pasos al correr
+    this.dustTimer -= dt;
+    if (this.onGround && Math.abs(this.vx) > 150 && this.dustTimer <= 0) {
+      this.dustTimer = 0.22;
+      this.scene.spawnDust(this.centerX - this.facing * 6, this.y + this.h, 2);
+    }
     this.syncSprite();
   }
 
@@ -227,8 +242,13 @@ export class Player {
   }
 
   syncSprite() {
-    const bob = this.walkTime > 0 ? -Math.abs(Math.sin(this.walkTime * 14)) * 2 : 0;
-    this.sprite.setPosition(this.x + this.w / 2, this.y + this.h + this.stepOffset + bob);
+    // Animación: en el aire → salto; caminando → ciclo de 6 cuadros; quieto → reposo
+    let frame = FRAME_IDLE;
+    if (!this.onGround) frame = FRAME_JUMP;
+    else if (this.walkTime > 0) frame = FRAME_WALK + (Math.floor(this.walkTime * 12) % WALK_FRAMES);
+    // Si la imagen del jugador tiene un solo cuadro, se usa siempre ese
+    this.sprite.setFrame(this.frames > frame ? frame : 0, false, false);
+    this.sprite.setPosition(this.x + this.w / 2, this.y + this.h + this.stepOffset);
     this.sprite.setFlipX(this.facing < 0);
   }
 }

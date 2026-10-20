@@ -1,7 +1,7 @@
-import Phaser from 'phaser';
 import { TILE_SIZE, WORLD_WIDTH, WORLD_HEIGHT, REACH_TILES, DEPTH } from '../config.js';
 import { BLOCK, BLOCK_DEFS, IS_SOLID, WALL } from '../world/blocks.js';
 import { ITEMS, HAND } from './items.js';
+import { frameCount } from './Placeholders.js';
 
 const T = TILE_SIZE;
 const REACH_PX2 = (REACH_TILES * T) ** 2;
@@ -38,7 +38,8 @@ export class BlockInteraction {
       .setDepth(DEPTH.HIGHLIGHT)
       .setVisible(false);
     // Grietas que aparecen mientras se mina
-    this.crack = scene.add.image(0, 0, 'ui_crack').setOrigin(0).setDisplaySize(T, T).setDepth(DEPTH.CRACK).setVisible(false);
+    this.crack = scene.add.image(0, 0, 'ui_crack', 0).setOrigin(0).setDisplaySize(T, T).setDepth(DEPTH.CRACK).setVisible(false);
+    this.crackFrames = frameCount(scene, 'ui_crack');
     // Herramienta que se balancea en la mano mientras se mina
     this.tool = scene.add.image(0, 0, 'item_wood_pickaxe').setOrigin(0.15, 0.85).setDepth(DEPTH.TOOL).setVisible(false);
 
@@ -134,10 +135,14 @@ export class BlockInteraction {
 
     const time = def.hardness / tool.speed;
     this.progress += dt;
-    this.crack
-      .setPosition(tx * T, ty * T)
-      .setAlpha(Math.min(1, 0.25 + (this.progress / time) * 0.75))
-      .setVisible(true);
+    const ratio = Math.min(1, this.progress / time);
+    // Grietas por etapas (o, si la imagen tiene un solo cuadro, cada vez más opacas)
+    if (this.crackFrames > 1) {
+      this.crack.setFrame(Math.min(this.crackFrames - 1, Math.floor(ratio * this.crackFrames)), false, false).setAlpha(1);
+    } else {
+      this.crack.setAlpha(0.25 + ratio * 0.75);
+    }
+    this.crack.setPosition(tx * T, ty * T).setVisible(true);
     if (this.progress >= time) {
       this.breakBlock(tx, ty);
       this._resetMining();
@@ -161,8 +166,11 @@ export class BlockInteraction {
       return false;
     }
     this.world.setTile(tx, ty, BLOCK.AIR);
-    if (drop) this.inventory.add(drop, 1);
-    this._spawnParticles(tx, ty, BLOCK_DEFS[id].color);
+    if (drop) {
+      this.inventory.add(drop, 1);
+      this._pickupText(`+1 ${ITEMS[drop].name}`);
+    }
+    this.scene.spawnDebris((tx + 0.5) * T, (ty + 0.5) * T, BLOCK_DEFS[id].color);
     this._checkSupportAround(tx, ty);
     return true;
   }
@@ -178,7 +186,7 @@ export class BlockInteraction {
     }
     for (let y = ty; y >= top; y--) {
       this.world.setTile(tx, y, BLOCK.AIR);
-      this._spawnParticles(tx, y, BLOCK_DEFS[BLOCK.LOG].color);
+      this.scene.spawnDebris((tx + 0.5) * T, (y + 0.5) * T, y < top + 3 ? BLOCK_DEFS[BLOCK.LEAVES].color : BLOCK_DEFS[BLOCK.LOG].color, 5);
     }
     // Hojas alrededor de la punta (los árboles están separados ≥6 columnas)
     for (let dy = -4; dy <= 2; dy++) {
@@ -187,11 +195,17 @@ export class BlockInteraction {
       }
     }
     this.inventory.add('wood', logs);
-    this.scene.events.emit('toast', `+${logs} Madera`);
+    this._pickupText(`+${logs} ${ITEMS.wood.name}`);
     return true;
   }
 
-  /** Si se quitó un bloque que sostenía una antorcha o una mesa, estas se caen al inventario. */
+  /** Texto flotante sobre el jugador al recoger algo (como en Terraria). */
+  _pickupText(text) {
+    const p = this.player;
+    this.scene.showFloatingText(p.centerX + (Math.random() - 0.5) * 16, p.y - 10, text, '#ffffff', 13);
+  }
+
+  /** Si se quitó un bloque que sostenía una antorcha, una mesa o una planta, estas se caen. */
   _checkSupportAround(tx, ty) {
     const around = [
       [tx, ty - 1],
@@ -200,10 +214,10 @@ export class BlockInteraction {
     ];
     for (const [x, y] of around) {
       const id = this.world.getTile(x, y);
-      if ((id === BLOCK.TORCH || id === BLOCK.WORKBENCH) && !this.hasSupport(x, y, id)) {
+      if ((id === BLOCK.TORCH || id === BLOCK.WORKBENCH || id === BLOCK.PLANT) && !this.hasSupport(x, y, id)) {
         this.world.setTile(x, y, BLOCK.AIR);
         const drop = BLOCK_DEFS[id].drop;
-        if (this.inventory.add(drop, 1) > 0) this.scene.events.emit('toast', 'Inventario lleno');
+        if (drop && this.inventory.add(drop, 1) > 0) this.scene.events.emit('toast', 'Inventario lleno');
       }
     }
   }
@@ -214,7 +228,7 @@ export class BlockInteraction {
     if (id === BLOCK.TORCH) {
       return w.isSolid(x, y + 1) || w.isSolid(x - 1, y) || w.isSolid(x + 1, y) || w.getWall(x, y) !== WALL.NONE;
     }
-    if (id === BLOCK.WORKBENCH) return w.isSolid(x, y + 1);
+    if (id === BLOCK.WORKBENCH || id === BLOCK.PLANT) return w.isSolid(x, y + 1);
     // Bloques normales: necesitan algo al lado o una pared detrás
     return (
       w.getTile(x, y + 1) !== BLOCK.AIR ||
@@ -253,7 +267,9 @@ export class BlockInteraction {
       }
       return false;
     }
-    if (!inReach || this.world.getTile(tx, ty) !== BLOCK.AIR) return false;
+    const current = this.world.getTile(tx, ty);
+    // Se puede construir encima del pasto alto y las flores (se reemplazan)
+    if (!inReach || (current !== BLOCK.AIR && current !== BLOCK.PLANT)) return false;
     const block = def.places;
     if (IS_SOLID[block] && this.player.overlapsTile(tx, ty)) return false;
     if (!this.hasSupport(tx, ty, block)) return false;
@@ -282,22 +298,6 @@ export class BlockInteraction {
       .setPosition(this.player.centerX + f * 6, this.player.centerY + 4)
       .setScale(s * f, s) // escala negativa = espejo alrededor del mango
       .setRotation(f * (Math.sin(this.swing) * 0.8 - 0.2));
-  }
-
-  _spawnParticles(tx, ty, color) {
-    const cx = (tx + 0.5) * T;
-    const cy = (ty + 0.5) * T;
-    for (let i = 0; i < 5; i++) {
-      const p = this.scene.add.rectangle(cx, cy, 5, 5, color).setDepth(DEPTH.PARTICLES);
-      this.scene.tweens.add({
-        targets: p,
-        x: cx + Phaser.Math.Between(-18, 18),
-        y: cy + Phaser.Math.Between(-20, 12),
-        alpha: 0,
-        duration: 350,
-        onComplete: () => p.destroy(),
-      });
-    }
   }
 
   destroy() {

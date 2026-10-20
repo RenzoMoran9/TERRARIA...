@@ -1,5 +1,9 @@
 import Phaser from 'phaser';
+// Fuente pixel art (incluida en el proyecto: funciona sin internet)
+import '@fontsource/pixelify-sans/latin-400.css';
+import '@fontsource/pixelify-sans/latin-700.css';
 import { BootScene } from './scenes/BootScene.js';
+import { BackgroundScene } from './scenes/BackgroundScene.js';
 import { MenuScene } from './scenes/MenuScene.js';
 import { GameScene } from './scenes/GameScene.js';
 import { UIScene } from './scenes/UIScene.js';
@@ -26,7 +30,8 @@ const config = {
   },
   fps: { target: 60 },
   audio: { noAudio: true }, // la Fase 1 no tiene sonido
-  scene: [BootScene, MenuScene, GameScene, UIScene],
+  // El orden importa: el fondo se dibuja primero (debajo), la interfaz al final (encima)
+  scene: [BootScene, BackgroundScene, MenuScene, GameScene, UIScene],
 };
 
 const game = new Phaser.Game(config);

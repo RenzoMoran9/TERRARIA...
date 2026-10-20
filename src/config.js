@@ -19,8 +19,8 @@ export const CHUNKS_PER_FRAME = 1;
 export const PLAYER = {
   WIDTH: 20, // hitbox en píxeles
   HEIGHT: 42,
-  SPRITE_WIDTH: 24, // tamaño con el que se dibuja el sprite
-  SPRITE_HEIGHT: 44,
+  SPRITE_WIDTH: 32, // tamaño de cada cuadro del sprite (los pies van abajo al centro)
+  SPRITE_HEIGHT: 48,
   SPEED: 210, // píxeles/segundo
   GROUND_ACCEL: 2000,
   AIR_ACCEL: 1300,

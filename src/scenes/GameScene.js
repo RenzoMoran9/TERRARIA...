@@ -63,6 +63,31 @@ export class GameScene extends Phaser.Scene {
     this.chunkManager = new ChunkManager(this, this.world);
     this.lighting = new Lighting(this, this.world, this.dayNight, this.player);
     this.interaction = new BlockInteraction(this, this.world, this.player, this.inventory);
+
+    // --- Partículas: polvo al correr/aterrizar y fragmentos al romper bloques ---
+    this.makePixelTexture();
+    this.dust = this.add
+      .particles(0, 0, 'fx_pixel', {
+        lifespan: { min: 250, max: 450 },
+        speedX: { min: -50, max: 50 },
+        speedY: { min: -70, max: -15 },
+        gravityY: 220,
+        scale: { start: 1.2, end: 0 },
+        tint: 0xd8c8a8,
+        emitting: false,
+      })
+      .setDepth(DEPTH.PARTICLES);
+    this.debris = this.add
+      .particles(0, 0, 'fx_pixel', {
+        lifespan: { min: 350, max: 650 },
+        speedX: { min: -90, max: 90 },
+        speedY: { min: -170, max: -40 },
+        gravityY: 700,
+        scale: { start: 1.3, end: 0.4 },
+        rotate: { min: 0, max: 90 },
+        emitting: false,
+      })
+      .setDepth(DEPTH.PARTICLES);
     this._stations = { workbench: false };
 
     // --- Estado de controles (lo escriben el teclado y los controles táctiles) ---
@@ -81,8 +106,6 @@ export class GameScene extends Phaser.Scene {
     this.camTarget = { x: this.player.centerX, y: this.player.centerY };
     cam.startFollow(this.camTarget, true, 0.15, 0.15);
     cam.centerOn(this.camTarget.x, this.camTarget.y);
-    this.skyTimer = 0;
-    cam.setBackgroundColor(this.dayNight.getSkyColor());
 
     // Cargar de una vez todo lo visible para no ver el mundo vacío al empezar
     this.chunkManager.update(cam, true);
@@ -136,12 +159,7 @@ export class GameScene extends Phaser.Scene {
     const dt = Math.min(delta, 50) / 1000; // limitar el paso si el navegador se trabó
     const cam = this.cameras.main;
 
-    this.dayNight.update(dt);
-    this.skyTimer -= dt;
-    if (this.skyTimer <= 0) {
-      this.skyTimer = 0.5;
-      cam.setBackgroundColor(this.dayNight.getSkyColor());
-    }
+    this.dayNight.update(dt); // el cielo lo dibuja BackgroundScene según esta hora
 
     this.player.update(dt, this.readControls());
     if (this.player.dead) {
@@ -152,6 +170,7 @@ export class GameScene extends Phaser.Scene {
     this.camTarget.y = this.player.centerY;
 
     this.chunkManager.update(cam);
+    this.chunkManager.animate(time);
     this.interaction.update(dt, this.getPointerAction());
     this.lighting.update(dt, cam);
 
@@ -256,9 +275,27 @@ export class GameScene extends Phaser.Scene {
     this.events.emit('playerRespawned');
   }
 
-  showFloatingText(x, y, text, color = '#ffffff') {
+  /** Textura de 4×4 px blanca para las partículas (se tiñe de cada color). */
+  makePixelTexture() {
+    if (this.textures.exists('fx_pixel')) return;
+    const t = this.textures.createCanvas('fx_pixel', 4, 4);
+    t.context.fillStyle = '#ffffff';
+    t.context.fillRect(0, 0, 4, 4);
+    t.refresh();
+  }
+
+  spawnDust(x, y, count) {
+    this.dust.explode(count, x, y - 2);
+  }
+
+  spawnDebris(x, y, color, count = 8) {
+    this.debris.setParticleTint(color);
+    this.debris.explode(count, x, y);
+  }
+
+  showFloatingText(x, y, text, color = '#ffffff', size = 16) {
     const t = this.add
-      .text(x, y, text, textStyle({ fontSize: '16px', color, fontStyle: 'bold' }))
+      .text(x, y, text, textStyle({ fontSize: `${size}px`, color, fontStyle: 'bold' }))
       .setOrigin(0.5)
       .setDepth(DEPTH.FLOATING_TEXT);
     this.tweens.add({ targets: t, y: y - 40, alpha: 0, duration: 900, onComplete: () => t.destroy() });

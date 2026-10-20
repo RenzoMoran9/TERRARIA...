@@ -2,20 +2,22 @@
 //  MAPA CENTRAL DE ASSETS
 //  Cada clave de textura apunta a un archivo dentro de /public/assets/.
 //  - Si el archivo existe, el juego usa esa imagen.
-//  - Si no existe, se genera un placeholder (rectángulos de colores).
+//  - Si no existe, se genera un placeholder (ver systems/Placeholders.js).
 //  Para reemplazar el arte solo hay que colocar la imagen con ese nombre:
 //  no hace falta tocar código.
 //
-//  width/height = tamaño recomendado. Si la imagen tiene otro tamaño se
-//  escala al tamaño de dibujo (los bloques siempre se dibujan a 32×32).
-//  placeholder = nombre del dibujo de reemplazo en systems/Placeholders.js
+//  width/height = tamaño de la imagen. Los bloques siempre se dibujan a 32×32.
+//  frameWidth/frameHeight = la imagen es una hoja con varios cuadros del mismo
+//    tamaño, uno al lado del otro (animaciones o variantes).
+//  smooth = se dibuja con suavizado (círculos y brillos de la interfaz).
+//  placeholder = nombre del dibujo de reemplazo.
 // =====================================================================
 
 // Carpeta (relativa a /public) donde viven las imágenes
 export const ASSET_BASE = 'assets/';
 
 export const ASSETS = {
-  // ---------- Bloques (tiles de 32×32) ----------
+  // ---------- Bloques (32×32). Los bordes redondeados se generan solos ----------
   tile_grass: { file: 'tiles/grass.png', width: 32, height: 32, placeholder: 'grass' },
   tile_dirt: { file: 'tiles/dirt.png', width: 32, height: 32, placeholder: 'dirt' },
   tile_stone: { file: 'tiles/stone.png', width: 32, height: 32, placeholder: 'stone' },
@@ -27,10 +29,18 @@ export const ASSETS = {
   tile_workbench: { file: 'tiles/workbench.png', width: 32, height: 32, placeholder: 'workbench' },
   tile_torch: { file: 'tiles/torch.png', width: 32, height: 32, placeholder: 'torch' },
   tile_bedrock: { file: 'tiles/bedrock.png', width: 32, height: 32, placeholder: 'bedrock' },
+  tile_plant_grass: { file: 'tiles/plant_grass.png', width: 32, height: 32, placeholder: 'plant_grass' },
+  tile_plant_flower_red: { file: 'tiles/plant_flower_red.png', width: 32, height: 32, placeholder: 'plant_flower_red' },
+  tile_plant_flower_yellow: { file: 'tiles/plant_flower_yellow.png', width: 32, height: 32, placeholder: 'plant_flower_yellow' },
 
   // ---------- Paredes de fondo (32×32) ----------
   wall_dirt: { file: 'walls/dirt_wall.png', width: 32, height: 32, placeholder: 'wall_dirt' },
   wall_stone: { file: 'walls/stone_wall.png', width: 32, height: 32, placeholder: 'wall_stone' },
+
+  // ---------- Árboles ----------
+  // Copa: 3 variantes de 144×128 una al lado de la otra
+  tree_top: { file: 'trees/tree_top.png', width: 432, height: 128, frameWidth: 144, frameHeight: 128, placeholder: 'tree_top' },
+  tree_branch: { file: 'trees/tree_branch.png', width: 32, height: 32, placeholder: 'tree_branch' },
 
   // ---------- Íconos de ítems (32×32) ----------
   // (los ítems que son bloques usan la imagen del bloque como ícono)
@@ -39,14 +49,27 @@ export const ASSETS = {
   item_wood_pickaxe: { file: 'items/wood_pickaxe.png', width: 32, height: 32, placeholder: 'wood_pickaxe' },
   item_stone_pickaxe: { file: 'items/stone_pickaxe.png', width: 32, height: 32, placeholder: 'stone_pickaxe' },
 
-  // ---------- Jugador ----------
-  player: { file: 'player/player.png', width: 24, height: 44, placeholder: 'player' },
+  // ---------- Jugador: 8 cuadros de 32×48 (0 quieto, 1-6 caminar, 7 saltar), mirando a la derecha ----------
+  player: { file: 'player/player.png', width: 256, height: 48, frameWidth: 32, frameHeight: 48, placeholder: 'player' },
+
+  // ---------- Fondo y cielo ----------
+  bg_mountains: { file: 'backgrounds/mountains.png', width: 960, height: 320, placeholder: 'mountains' },
+  bg_hills: { file: 'backgrounds/hills.png', width: 960, height: 240, placeholder: 'hills' },
+  bg_forest: { file: 'backgrounds/forest.png', width: 960, height: 240, placeholder: 'forest' },
+  bg_cloud: { file: 'backgrounds/cloud.png', width: 128, height: 48, placeholder: 'cloud' },
+  bg_sun: { file: 'backgrounds/sun.png', width: 64, height: 64, placeholder: 'sun' },
+  bg_moon: { file: 'backgrounds/moon.png', width: 48, height: 48, placeholder: 'moon' },
+  bg_stars: { file: 'backgrounds/stars.png', width: 256, height: 256, placeholder: 'stars' },
+
+  // ---------- Efectos ----------
+  fx_glow: { file: 'fx/glow.png', width: 128, height: 128, placeholder: 'glow', smooth: true },
 
   // ---------- Interfaz ----------
   ui_slot: { file: 'ui/slot.png', width: 48, height: 48, placeholder: 'slot' },
   ui_slot_selected: { file: 'ui/slot_selected.png', width: 48, height: 48, placeholder: 'slot_selected' },
   ui_heart: { file: 'ui/heart.png', width: 24, height: 24, placeholder: 'heart' },
-  ui_crack: { file: 'ui/crack.png', width: 32, height: 32, placeholder: 'crack' },
+  // Grietas al minar: 4 etapas de 32×32
+  ui_crack: { file: 'ui/crack.png', width: 128, height: 32, frameWidth: 32, frameHeight: 32, placeholder: 'crack' },
   ui_joystick_base: { file: 'ui/joystick_base.png', width: 160, height: 160, placeholder: 'joystick_base', smooth: true },
   ui_joystick_thumb: { file: 'ui/joystick_thumb.png', width: 72, height: 72, placeholder: 'joystick_thumb', smooth: true },
   ui_button_jump: { file: 'ui/button_jump.png', width: 96, height: 96, placeholder: 'button_jump', smooth: true },

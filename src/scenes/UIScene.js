@@ -101,7 +101,7 @@ export class UIScene extends Phaser.Scene {
     this.hotbar.layout(Math.round((W - HOTBAR_WIDTH * scale) / 2), y, scale);
     const hotbarBottom = y + HOTBAR_HEIGHT * scale;
 
-    this.debug.layout(10, Math.max(44, y === 42 ? hotbarBottom + 8 : 44));
+    this.debug.layout(10, Math.max(54, y === 42 ? hotbarBottom + 8 : 54));
     this.toast.layout(W / 2, hotbarBottom + 26);
     this.inventoryPanel.layout(W, H);
     this.touchControls.layout(W, H, y === 42 ? hotbarBottom + 28 : 62);

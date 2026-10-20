@@ -64,7 +64,12 @@ Mantener el clic sobre bloques y arrastrar permite minar o construir seguido.
 - **Vida**: barra de vida, daño por caídas de más de 12 bloques, regeneración lenta y reaparición en el punto de inicio.
 - **Guardado** en `localStorage`: mundo modificado, inventario, posición, vida y hora.
   Automático cada 60 s, al cerrar o minimizar la página, y con el botón *Guardar* del inventario.
-- **HUD**: vida, barra rápida y hora del día; FPS y otros datos en modo debug.
+- **HUD**: corazones de vida, barra rápida y hora del día; FPS y otros datos en modo debug.
+- **Gráficos**: pixel art con 3 variantes por bloque, bordes y esquinas redondeadas automáticos, pasto alto y flores,
+  árboles con copa y ramas, personaje animado, cielo con degradado según la hora, sol, luna, estrellas y nubes,
+  paisaje de fondo con paralaje (montañas, colinas y bosque), luz de color (antorchas cálidas, noche azulada,
+  atardecer anaranjado) con brillo parpadeante, polvo al correr o aterrizar, fragmentos al romper bloques,
+  texto al recoger ítems, grietas por etapas y fuente pixel art (Pixelify Sans, licencia OFL).
 
 ## Reemplazar el arte (placeholders)
 
@@ -80,32 +85,48 @@ Con `npm run dev` la página se recarga sola al agregar o cambiar una imagen. Pa
 Se recomienda **PNG con transparencia**. Si una imagen tiene otro tamaño se escala al tamaño de dibujo
 (los bloques siempre se dibujan a 32×32), así que también se pueden usar imágenes al doble de resolución.
 
-### Lista completa de imágenes (29)
+### Lista completa de imágenes (42)
+
+**Bloques.** Basta con dibujar un bloque "entero" de 32×32: el juego genera solo el contorno oscuro y las esquinas
+redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pasto tapado por otro bloque usa la imagen de la tierra.
 
 | Archivo (dentro de `public/assets/`) | Tamaño (px) | Qué es                                                                      |
 | ------------------------------------ | ----------- | --------------------------------------------------------------------------- |
 | `tiles/grass.png`                    | 32 × 32     | Bloque de pasto (tierra con pasto arriba)                                   |
-| `tiles/dirt.png`                     | 32 × 32     | Bloque de tierra (también es el ícono del ítem *Tierra*)                    |
+| `tiles/dirt.png`                     | 32 × 32     | Bloque de tierra (también ícono del ítem *Tierra*)                          |
 | `tiles/stone.png`                    | 32 × 32     | Bloque de piedra (también ícono del ítem *Piedra*)                          |
 | `tiles/coal_ore.png`                 | 32 × 32     | Mena de carbón                                                              |
 | `tiles/iron_ore.png`                 | 32 × 32     | Mena de hierro (también ícono del ítem *Mineral de hierro*)                 |
 | `tiles/log.png`                      | 32 × 32     | Tronco de árbol                                                             |
-| `tiles/leaves.png`                   | 32 × 32     | Hojas de árbol                                                              |
+| `tiles/leaves.png`                   | 32 × 32     | Hojas (solo aparecen en partidas creadas antes del pase visual)             |
 | `tiles/planks.png`                   | 32 × 32     | Tablones (también ícono del ítem)                                           |
 | `tiles/workbench.png`                | 32 × 32     | Mesa de trabajo, con fondo transparente (también ícono)                     |
 | `tiles/torch.png`                    | 32 × 32     | Antorcha, con fondo transparente (también ícono)                            |
 | `tiles/bedrock.png`                  | 32 × 32     | Roca madre (fondo del mundo, indestructible)                                |
+| `tiles/plant_grass.png`              | 32 × 32     | Pasto alto decorativo (transparente)                                        |
+| `tiles/plant_flower_red.png`         | 32 × 32     | Flor roja decorativa (transparente)                                         |
+| `tiles/plant_flower_yellow.png`      | 32 × 32     | Flor amarilla decorativa (transparente)                                     |
 | `walls/dirt_wall.png`                | 32 × 32     | Pared de fondo de tierra (más oscura que el bloque)                         |
 | `walls/stone_wall.png`               | 32 × 32     | Pared de fondo de piedra (más oscura que el bloque)                         |
+| `trees/tree_top.png`                 | 432 × 128   | Copas de árbol: **3 variantes de 144×128** una al lado de la otra; la base de la copa va abajo al centro |
+| `trees/tree_branch.png`              | 32 × 32     | Ramita con hojas que sale del tronco **hacia la derecha** (se refleja para la izquierda) |
 | `items/wood.png`                     | 32 × 32     | Ícono de *Madera*                                                           |
 | `items/coal.png`                     | 32 × 32     | Ícono de *Carbón*                                                           |
 | `items/wood_pickaxe.png`             | 32 × 32     | Ícono de *Pico de madera* (mango abajo a la izquierda, cabeza arriba a la derecha) |
 | `items/stone_pickaxe.png`            | 32 × 32     | Ícono de *Pico de piedra* (misma orientación)                               |
-| `player/player.png`                  | 24 × 44     | Jugador, **mirando a la derecha** (se refleja al ir a la izquierda)         |
+| `player/player.png`                  | 256 × 48    | Jugador: **8 cuadros de 32×48** mirando a la derecha: 0 quieto, 1-6 caminar, 7 saltar (los pies tocan el borde de abajo) |
+| `backgrounds/mountains.png`          | 960 × 320   | Montañas lejanas (se repite en horizontal: los bordes izquierdo y derecho deben empalmar) |
+| `backgrounds/hills.png`              | 960 × 240   | Colinas intermedias (repetible en horizontal)                               |
+| `backgrounds/forest.png`             | 960 × 240   | Bosque cercano (repetible en horizontal)                                    |
+| `backgrounds/cloud.png`              | 128 × 48    | Nube                                                                        |
+| `backgrounds/sun.png`                | 64 × 64     | Sol                                                                         |
+| `backgrounds/moon.png`               | 48 × 48     | Luna                                                                        |
+| `backgrounds/stars.png`              | 256 × 256   | Estrellas sobre fondo transparente (repetible)                              |
+| `fx/glow.png`                        | 128 × 128   | Brillo de las antorchas (degradado radial sobre fondo transparente)         |
 | `ui/slot.png`                        | 48 × 48     | Casilla de inventario                                                       |
 | `ui/slot_selected.png`               | 48 × 48     | Casilla seleccionada                                                        |
-| `ui/heart.png`                       | 24 × 24     | Corazón junto a la barra de vida                                            |
-| `ui/crack.png`                       | 32 × 32     | Grietas que aparecen al minar (transparente)                                |
+| `ui/heart.png`                       | 24 × 24     | Corazón de vida (cada corazón = 20 de vida)                                 |
+| `ui/crack.png`                       | 128 × 32    | Grietas al minar: **4 etapas de 32×32** (transparente)                      |
 | `ui/joystick_base.png`               | 160 × 160   | Base del joystick táctil                                                    |
 | `ui/joystick_thumb.png`              | 72 × 72     | Palanca del joystick táctil                                                 |
 | `ui/button_jump.png`                 | 96 × 96     | Botón táctil de salto                                                       |
@@ -113,6 +134,9 @@ Se recomienda **PNG con transparencia**. Si una imagen tiene otro tamaño se esc
 | `ui/button_place.png`                | 80 × 80     | Botón táctil en modo COLOCAR                                                |
 | `ui/button_inventory.png`            | 64 × 64     | Botón táctil de inventario                                                  |
 | `ui/button_fullscreen.png`           | 48 × 48     | Botón táctil de pantalla completa                                           |
+
+Las hojas de sprites (`player.png`, `tree_top.png`, `crack.png`) también aceptan un solo cuadro: si el jugador tiene
+un único cuadro de 32×48, se usa sin animación.
 
 ## Estructura del código
 
@@ -124,16 +148,17 @@ src/
   main.js              Configuración de Phaser
   config.js            Constantes (tamaño del mundo, física, alcance, ciclo de día…)
   assets.js            Mapa central clave → imagen
-  scenes/              BootScene (carga), MenuScene, GameScene (mundo) y UIScene (interfaz)
+  scenes/              BootScene (carga), BackgroundScene (cielo y paisaje), MenuScene, GameScene (mundo) y UIScene (interfaz)
   world/               Ruido con semilla, bloques, generador, datos por chunks, renderizado de chunks y tileset
   player/              Jugador: física, colisiones, vida y daño por caída
-  systems/             Inventario, ítems, crafteo, minar/colocar, día/noche, iluminación, guardado, placeholders
+  systems/             Inventario, ítems, crafteo, minar/colocar, día/noche, iluminación, guardado y placeholders (pixel art por código)
   ui/                  HUD, barra rápida, inventario, controles táctiles, debug y avisos
 ```
 
 ## Notas de rendimiento
 
 - Cada chunk visible es un Tilemap de Phaser (un solo lote de dibujo por capa); los chunks de puro cielo no crean nada.
-- La iluminación usa 1 píxel por bloque en un canvas diminuto, estirado con filtrado suave: una sola imagen para toda la pantalla.
+- La iluminación usa 1 píxel por bloque en un canvas diminuto, estirado con filtrado suave y multiplicado sobre la escena: una sola imagen para toda la pantalla.
+- Los bordes de los bloques se generan una vez al iniciar (tileset de 16 combinaciones × 3 variantes); en juego no cuestan nada.
 - En celulares la cámara se aleja un poco (zoom 0,6–1) para mostrar más mundo en pantallas pequeñas.
 - `window.__game` da acceso al juego desde la consola del navegador para depurar.

@@ -1,11 +1,12 @@
 import { textStyle } from './styles.js';
 
-const BAR_W = 120;
-const BAR_H = 16;
+const HEARTS = 5; // 20 de vida por corazón (como Terraria)
+const HEART_SIZE = 24;
+const HEART_GAP = 3;
 // Espacio horizontal que ocupan la vida (izquierda) y el reloj (derecha); la barra rápida va entre ambos
 export const HUD_SIDE_SPACE = 172;
 
-/** Barra de vida (arriba a la izquierda) y reloj del día (arriba a la derecha). */
+/** Corazones de vida (arriba a la izquierda) y reloj del día (arriba a la derecha). */
 export class HUD {
   constructor(scene, gameScene) {
     this.scene = scene;
@@ -13,26 +14,30 @@ export class HUD {
     this.lastHp = -1;
     this.lastClock = '';
 
-    this.heart = scene.add.image(0, 0, 'ui_heart').setOrigin(0, 0.5).setDisplaySize(22, 22).setDepth(10);
-    this.barBg = scene.add
-      .rectangle(0, 0, BAR_W, BAR_H, 0x000000, 0.6)
-      .setOrigin(0, 0.5)
-      .setStrokeStyle(2, 0xffffff, 0.8)
-      .setDepth(10);
-    this.barFill = scene.add.rectangle(0, 0, BAR_W - 4, BAR_H - 4, 0xe53935).setOrigin(0, 0.5).setDepth(10);
-    this.hpText = scene.add.text(0, 0, '', textStyle({ fontSize: '11px', strokeThickness: 2 })).setOrigin(0.5).setDepth(10);
+    this.hpText = scene.add.text(0, 0, '', textStyle({ fontSize: '13px' })).setDepth(10);
+    this.hearts = [];
+    for (let i = 0; i < HEARTS; i++) {
+      // Corazón vacío (oscuro) detrás y corazón lleno recortado según la vida
+      const empty = scene.add.image(0, 0, 'ui_heart').setOrigin(0, 0.5).setTint(0x2a1418).setAlpha(0.85).setDepth(10);
+      const full = scene.add.image(0, 0, 'ui_heart').setOrigin(0, 0.5).setDepth(10);
+      empty.setDisplaySize(HEART_SIZE, HEART_SIZE);
+      full.setDisplaySize(HEART_SIZE, HEART_SIZE);
+      this.hearts.push({ empty, full });
+    }
 
     this.clockText = scene.add.text(0, 0, '', textStyle({ fontSize: '16px' })).setOrigin(1, 0).setDepth(10);
-    this.celestial = scene.add.circle(0, 0, 7, 0xffd54f).setDepth(10);
+    this.celestial = scene.add.image(0, 0, 'bg_sun').setDisplaySize(22, 22).setDepth(10);
     // Tocar el reloj activa/desactiva el modo debug (útil en celular, que no tiene F3)
     this.clockText.setInteractive({ useHandCursor: true }).on('pointerdown', () => scene.debug.toggle());
   }
 
   layout(width) {
-    this.heart.setPosition(10, 22);
-    this.barBg.setPosition(38, 22);
-    this.barFill.setPosition(40, 22);
-    this.hpText.setPosition(38 + BAR_W / 2, 22);
+    this.hpText.setPosition(10, 4);
+    this.hearts.forEach((h, i) => {
+      const x = 10 + i * (HEART_SIZE + HEART_GAP);
+      h.empty.setPosition(x, 32);
+      h.full.setPosition(x, 32);
+    });
     this.clockText.setPosition(width - 12, 12);
     this.lastClock = '';
   }
@@ -42,10 +47,13 @@ export class HUD {
     const hp = Math.max(0, Math.round(p.health));
     if (hp !== this.lastHp) {
       this.lastHp = hp;
-      const ratio = hp / p.maxHealth;
-      this.barFill.scaleX = ratio;
-      this.barFill.setFillStyle(ratio > 0.5 ? 0x43a047 : ratio > 0.25 ? 0xfdd835 : 0xe53935);
-      this.hpText.setText(`${hp}/${p.maxHealth}`);
+      this.hpText.setText(`Vida ${hp}/${p.maxHealth}`);
+      const perHeart = p.maxHealth / HEARTS;
+      this.hearts.forEach((h, i) => {
+        const frac = Math.max(0, Math.min(1, (hp - i * perHeart) / perHeart));
+        const w = h.full.frame.width;
+        h.full.setVisible(frac > 0).setCrop(0, 0, w * frac, h.full.frame.height);
+      });
     }
 
     const dn = this.gs.dayNight;
@@ -53,14 +61,10 @@ export class HUD {
     if (clock !== this.lastClock) {
       this.lastClock = clock;
       this.clockText.setText(clock);
-      const night = dn.isNight();
       this.celestial
-        .setFillStyle(night ? 0xdfe6f0 : 0xffd54f)
-        .setPosition(this.clockText.x - this.clockText.width - 14, this.clockText.y + this.clockText.height / 2);
+        .setTexture(dn.isNight() ? 'bg_moon' : 'bg_sun')
+        .setDisplaySize(22, 22)
+        .setPosition(this.clockText.x - this.clockText.width - 16, this.clockText.y + this.clockText.height / 2);
     }
-  }
-
-  destroy() {
-    [this.heart, this.barBg, this.barFill, this.hpText, this.clockText, this.celestial].forEach((o) => o.destroy());
   }
 }

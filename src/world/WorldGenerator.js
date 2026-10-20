@@ -2,15 +2,6 @@ import { WORLD_WIDTH, WORLD_HEIGHT, CHUNK_SIZE, SURFACE_LEVEL } from '../config.
 import { BLOCK, WALL, IS_SOLID } from './blocks.js';
 import { createSimplex2D, hash2 } from './noise.js';
 
-// Forma de la copa del árbol, relativa al tronco superior (dx, dy)
-const CANOPY = [
-  [0, -3],
-  [-1, -2], [0, -2], [1, -2],
-  [-2, -1], [-1, -1], [0, -1], [1, -1], [2, -1],
-  [-2, 0], [-1, 0], [1, 0], [2, 0],
-  [-1, 1], [1, 1],
-];
-
 const smoothstep = (t) => t * t * (3 - 2 * t);
 
 /**
@@ -163,20 +154,25 @@ export class WorldGenerator {
       }
     }
 
-    // Árboles (incluye los de columnas vecinas cuya copa entra en este chunk)
-    const minX = Math.max(0, x0 - 3);
-    const maxX = Math.min(WORLD_WIDTH - 1, x0 + CS + 2);
-    for (let x = minX; x <= maxX; x++) {
+    // Árboles (solo el tronco: la copa y las ramas son sprites decorativos)
+    // y plantas sobre el pasto (pasto alto y flores)
+    for (let lx = 0; lx < CS; lx++) {
+      const x = x0 + lx;
+      const s = this.surface[x];
       const h = this.treeHeight[x];
-      if (h) this._stampTree(data, x0, y0, x, this.surface[x], h);
+      if (s - 1 < y0 || s - Math.max(1, h) >= y0 + CS) continue; // nada de esta columna cae en el chunk
+      if (h) {
+        for (let y = s - 1; y >= s - h; y--) this._put(data, x0, y0, x, y, BLOCK.LOG);
+      } else if (this.hasPlant(x)) {
+        this._put(data, x0, y0, x, s - 1, BLOCK.PLANT);
+      }
     }
     return data;
   }
 
-  _stampTree(data, x0, y0, tx, surfaceY, height) {
-    const top = surfaceY - height;
-    for (let y = surfaceY - 1; y >= top; y--) this._put(data, x0, y0, tx, y, BLOCK.LOG);
-    for (const [dx, dy] of CANOPY) this._put(data, x0, y0, tx + dx, top + dy, BLOCK.LEAVES);
+  /** ¿Hay pasto alto o una flor sobre esta columna? */
+  hasPlant(x) {
+    return hash2(x, 31, this.seed) < 0.38 && this.baseTile(x, this.surface[x]) === BLOCK.GRASS;
   }
 
   _put(data, x0, y0, x, y, id) {

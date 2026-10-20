@@ -1,294 +1,629 @@
 import Phaser from 'phaser';
+import { PixelCanvas, hash, pick } from './PixelArt.js';
 
-// Texturas de reemplazo generadas por código (rectángulos de colores).
-// Se usan cuando la imagen correspondiente no existe en /public/assets.
+// =====================================================================
+//  Arte de reemplazo generado por código.
+//  Se usa cuando la imagen correspondiente no existe en /public/assets.
+//  - PIXEL: se pintan en una cuadrícula lógica (mitad del tamaño final) y se
+//    escalan ×2 → estilo pixel art como Terraria.
+//  - CTX: se dibujan directamente con canvas (círculos suaves, degradados, fondos).
+//  'v' es la variante (0, 1, 2): cambia los detalles para que el suelo no se vea repetido.
+// =====================================================================
 
-// Pequeño generador pseudoaleatorio para que los "puntitos" sean siempre iguales
-function rng(seed) {
-  let s = seed >>> 0 || 1;
-  return () => {
-    s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
-    return s / 4294967296;
-  };
-}
+// ---------------------------------------------------------------- paletas
+const DIRT = ['#5a3519', '#6e4321', '#82522b', '#946035', '#a76f3f'];
+const STONE = ['#3e434c', '#50565f', '#646a74', '#7a808a', '#90969f'];
+const GRASS_TOP = { light: '#8fdc5e', mid: '#4caf50', alt: '#5cbf55', dark: '#2e7d32' };
+const BARK = ['#4a2d16', '#5e3a1c', '#6f4523', '#82552c'];
+const LEAF = { dark: '#1e5a26', mid: '#2f7d34', light: '#46a047', hi: '#8fd16a', line: '#143d18' };
 
-function rect(ctx, color, x, y, w, h) {
-  ctx.fillStyle = color;
-  ctx.fillRect(x, y, w, h);
-}
+// Ruido "en bloques" de 2×2 + detalle de 1×1 (textura más natural que el ruido puro)
+const blocky = (x, y, s) => 0.6 * hash(x >> 1, y >> 1, s) + 0.4 * hash(x, y, s + 77);
 
-// Puntos de colores repartidos al azar (textura)
-function speckle(ctx, w, h, colors, count, seed, size = 2) {
-  const r = rng(seed);
-  for (let i = 0; i < count; i++) {
-    rect(ctx, colors[i % colors.length], Math.floor(r() * (w - size + 1)), Math.floor(r() * (h - size + 1)), size, size);
+function fillNoise(pc, palette, v, seed, weights = [0.1, 0.42, 0.8, 0.95]) {
+  for (let y = 0; y < pc.h; y++) {
+    for (let x = 0; x < pc.w; x++) {
+      const t = blocky(x, y, seed + v * 31);
+      let i = 0;
+      while (i < weights.length && t > weights[i]) i++;
+      pc.set(x, y, palette[i]);
+    }
   }
 }
 
-// Borde claro arriba/izquierda y oscuro abajo/derecha (relieve suave)
-function bevel(ctx, w, h) {
-  rect(ctx, 'rgba(255,255,255,0.10)', 0, 0, w, 2);
-  rect(ctx, 'rgba(255,255,255,0.06)', 0, 0, 2, h);
-  rect(ctx, 'rgba(0,0,0,0.18)', 0, h - 2, w, 2);
-  rect(ctx, 'rgba(0,0,0,0.12)', w - 2, 0, 2, h);
-}
-
-function circle(ctx, cx, cy, r, fill, stroke, lineWidth = 3) {
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  if (fill) {
-    ctx.fillStyle = fill;
-    ctx.fill();
-  }
-  if (stroke) {
-    ctx.strokeStyle = stroke;
-    ctx.lineWidth = lineWidth;
-    ctx.stroke();
+function pebbles(pc, v, seed, light, dark, count = 2) {
+  for (let k = 0; k < count; k++) {
+    const x = 1 + Math.floor(hash(k, 1, seed + v) * 12);
+    const y = 4 + Math.floor(hash(k, 2, seed + v) * 10);
+    pc.rect(x, y, 2, 1, light);
+    pc.set(x, y + 1, dark);
+    pc.set(x + 1, y + 1, dark);
   }
 }
 
-// Botón circular semitransparente (base para los controles táctiles)
-function roundButton(ctx, w, h) {
-  circle(ctx, w / 2, h / 2, w / 2 - 3, 'rgba(255,255,255,0.18)', 'rgba(255,255,255,0.55)', 3);
+function oreClumps(pc, v, seed, colors) {
+  for (let k = 0; k < 3; k++) {
+    const cx = 2 + Math.floor(hash(k, 3, seed + v) * 11);
+    const cy = 2 + Math.floor(hash(k, 4, seed + v) * 11);
+    const cells = [[0, 0], [1, 0], [0, 1], [1, 1], [2, 1], [1, 2], [2, 2]];
+    cells.forEach(([dx, dy], i) => pc.set(cx + dx, cy + dy, i === 0 ? colors[2] : i > 4 ? colors[0] : colors[1]));
+  }
 }
 
-// Pico: mango diagonal + cabeza curvada
-function pickaxe(ctx, head, headLight) {
-  for (let i = 0; i < 9; i++) rect(ctx, '#8a5a2b', 5 + i * 2, 25 - i * 2, 3, 3);
-  const cells = [
-    [9, 6], [12, 4], [15, 3], [18, 3], [21, 4], [23, 6], [25, 9], [26, 12], [27, 15],
+function pickaxe(pc, head, light, dark) {
+  for (let i = 0; i < 8; i++) {
+    pc.set(3 + i, 13 - i, '#8a5a2b');
+    pc.set(4 + i, 13 - i, '#6b4420');
+  }
+  const rows = [
+    [1, 7, 10],
+    [2, 5, 12],
+    [3, 4, 5],
+    [3, 11, 13],
+    [4, 3, 4],
+    [4, 12, 13],
+    [5, 3, 3],
+    [5, 13, 14],
+    [6, 13, 14],
+    [7, 14, 14],
   ];
-  for (const [x, y] of cells) rect(ctx, head, x, y, 4, 4);
-  rect(ctx, headLight, 14, 3, 6, 2);
-  rect(ctx, headLight, 24, 8, 2, 4);
+  for (const [y, x0, x1] of rows) for (let x = x0; x <= x1; x++) pc.set(x, y, y <= 2 ? light : y >= 5 ? dark : head);
+  pc.outline('#20160e');
 }
 
-const PAINTERS = {
-  // ---------- Bloques ----------
-  dirt(ctx, w, h) {
-    rect(ctx, '#8b5a2b', 0, 0, w, h);
-    speckle(ctx, w, h, ['#6f4520', '#a06a36', '#7a4c24'], 18, 11, 3);
-    bevel(ctx, w, h);
+// Personaje (mirando a la derecha). 8 cuadros de 16×24: 0 quieto, 1-6 caminar, 7 saltar.
+const PLAYER_COLORS = {
+  skin: '#f2c18d',
+  skinShade: '#d49b62',
+  hair: '#5a3412',
+  hairLight: '#7d4b1e',
+  eye: '#1d1d2e',
+  shirt: '#3d7fd9',
+  shirtShade: '#2b5ea8',
+  shirtLight: '#6aa0ea',
+  pants: '#41416a',
+  pantsShade: '#2d2d4d',
+  boots: '#5a3a1e',
+  bootsShade: '#3d2611',
+};
+const WALK = [
+  [2, -2, 0],
+  [1, -1, 1],
+  [0, 0, 0],
+  [-2, 2, 0],
+  [-1, 1, 1],
+  [0, 0, 0],
+];
+
+function drawPlayerFrame(pc, ox, frame) {
+  const C = PLAYER_COLORS;
+  let front = 0;
+  let back = 0;
+  let bob = 0;
+  let frontFoot = 23;
+  let jump = false;
+  if (frame >= 1 && frame <= 6) [front, back, bob] = WALK[frame - 1];
+  if (frame === 7) {
+    front = 2;
+    back = -1;
+    frontFoot = 21;
+    jump = true;
+  }
+  const hip = 17 + bob;
+
+  const leg = (hipX, dx, pants, footRow) => {
+    for (let r = hip; r <= footRow; r++) {
+      const x = ox + hipX + Math.round((dx * (r - hip)) / Math.max(1, footRow - hip));
+      const isBoot = r >= footRow - 2;
+      pc.set(x, r, isBoot ? C.bootsShade : pants === C.pants ? C.pantsShade : pants);
+      pc.set(x + 1, r, isBoot ? C.boots : pants);
+      if (r === footRow) pc.set(x + 2, r, C.boots);
+    }
+  };
+  const arm = (sx, hx, hy, color) => {
+    const top = 11 + bob;
+    for (let r = top; r < hy; r++) {
+      const x = ox + sx + Math.round(((hx - sx) * (r - top)) / Math.max(1, hy - top));
+      pc.set(x, r, color);
+      pc.set(x + 1, r, color);
+    }
+    pc.set(ox + hx, hy, C.skinShade);
+    pc.set(ox + hx + 1, hy, C.skin);
+  };
+
+  // Brazo y pierna de atrás (más oscuros)
+  arm(6, 6 + Math.round(front / 2), 16 + bob, C.shirtShade);
+  leg(6, back, C.pantsShade, 23);
+  // Torso
+  pc.rect(ox + 5, 10 + bob, 6, hip - 10 - bob, C.shirt);
+  pc.rect(ox + 5, 10 + bob, 1, hip - 10 - bob, C.shirtShade);
+  pc.rect(ox + 8, 10 + bob, 3, 1, C.shirtLight);
+  pc.rect(ox + 5, hip - 1, 6, 1, C.pantsShade); // cinturón
+  // Cabeza
+  const hy = 2 + bob;
+  pc.rect(ox + 5, hy + 2, 7, 6, C.skin);
+  pc.rect(ox + 5, hy + 2, 1, 6, C.skinShade);
+  pc.rect(ox + 6, hy + 7, 5, 1, C.skinShade);
+  pc.set(ox + 9, hy + 4, C.eye);
+  pc.set(ox + 9, hy + 5, C.eye);
+  // Pelo
+  pc.rect(ox + 4, hy, 8, 2, C.hair);
+  pc.rect(ox + 5, hy, 5, 1, C.hairLight);
+  pc.rect(ox + 4, hy + 2, 2, 5, C.hair);
+  pc.rect(ox + 6, hy + 2, 1, 1, C.hair);
+  pc.rect(ox + 10, hy + 2, 2, 1, C.hair);
+  // Pierna y brazo de adelante
+  leg(8, front, C.pants, frontFoot);
+  if (jump) arm(8, 11, 9 + bob, C.shirt);
+  else arm(8, 8 - Math.round(front / 2), 16 + bob, C.shirt);
+}
+
+function drawCanopy(pc, ox, v) {
+  const layouts = [
+    [[36, 30, 20], [22, 36, 13], [50, 36, 13], [30, 20, 12], [44, 20, 12], [36, 44, 12]],
+    [[36, 26, 16], [36, 40, 15], [25, 33, 12], [47, 33, 12], [36, 13, 11]],
+    [[36, 32, 18], [18, 38, 12], [54, 38, 12], [26, 23, 12], [46, 23, 12]],
+  ];
+  const discs = layouts[v % layouts.length];
+  for (const [x, y, r] of discs) pc.disc(ox + x, y, r, LEAF.dark);
+  for (const [x, y, r] of discs) pc.disc(ox + x - 2, y - 2, r - 2.5, LEAF.mid);
+  for (const [x, y, r] of discs) pc.disc(ox + x - 4, y - 5, r - 6.5, LEAF.light);
+  // Textura de hojas: algunos píxeles un tono más oscuro y brillos
+  const darker = { [LEAF.mid]: LEAF.dark, [LEAF.light]: LEAF.mid, [LEAF.dark]: LEAF.line };
+  for (let y = 0; y < pc.h; y++) {
+    for (let x = ox; x < ox + 72; x++) {
+      const c = pc.get(x, y);
+      if (!c) continue;
+      const t = hash(x, y, 900 + v);
+      if (t < 0.13) pc.set(x, y, darker[c] || c);
+      else if (t > 0.985 && c === LEAF.light) pc.set(x, y, LEAF.hi);
+    }
+  }
+  pc.outline(LEAF.line);
+}
+
+function circleBtn(ctx, w, h) {
+  ctx.beginPath();
+  ctx.arc(w / 2, h / 2, w / 2 - 3, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(20,28,70,0.45)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(200,215,255,0.7)';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+}
+
+// Rectángulo con esquinas recortadas (estilo pixel)
+function slotShape(ctx, w, h, fill, border, borderW, highlight) {
+  ctx.fillStyle = border;
+  ctx.fillRect(2, 0, w - 4, h);
+  ctx.fillRect(0, 2, w, h - 4);
+  ctx.clearRect(0, 0, 2, 2);
+  ctx.fillStyle = fill;
+  ctx.clearRect(borderW, borderW, w - borderW * 2, h - borderW * 2);
+  ctx.fillRect(borderW, borderW, w - borderW * 2, h - borderW * 2);
+  ctx.fillStyle = highlight;
+  ctx.fillRect(borderW, borderW, w - borderW * 2, 2);
+}
+
+// Silueta horizontal repetible (fondos con paralaje). hFn(u) da la altura (0..1 del alto) para u en [0,1).
+function ridge(ctx, w, h, hFn, colorFn, scale = 2) {
+  const cols = w / scale;
+  const rows = h / scale;
+  for (let x = 0; x < cols; x++) {
+    const u = x / cols;
+    const top = Math.round(rows - hFn(u) * rows);
+    const slope = hFn(((x + 1) % cols) / cols) - hFn(u);
+    for (let y = Math.max(0, top); y < rows; y++) {
+      ctx.fillStyle = colorFn(y - top, slope, x, y);
+      ctx.fillRect(x * scale, y * scale, scale, scale);
+    }
+  }
+}
+
+const TAU = Math.PI * 2;
+
+// ---------------------------------------------------------------- pintores en pixel art
+const PIXEL = {
+  dirt(pc, v) {
+    fillNoise(pc, DIRT, v, 10);
+    pebbles(pc, v, 11, '#b49a7c', '#4a2c14');
   },
-  grass(ctx, w, h) {
-    PAINTERS.dirt(ctx, w, h);
-    rect(ctx, '#4caf50', 0, 0, w, 7);
-    const r = rng(5);
-    for (let x = 0; x < w; x += 4) rect(ctx, '#4caf50', x, 7, 4, Math.floor(r() * 5));
-    rect(ctx, '#7ed957', 0, 0, w, 2);
-  },
-  stone(ctx, w, h) {
-    rect(ctx, '#7a7a7a', 0, 0, w, h);
-    speckle(ctx, w, h, ['#666666', '#8c8c8c', '#707070'], 16, 21, 3);
-    rect(ctx, '#5e5e5e', 6, 9, 7, 1);
-    rect(ctx, '#5e5e5e', 18, 22, 8, 1);
-    bevel(ctx, w, h);
-  },
-  coal_ore(ctx, w, h) {
-    PAINTERS.stone(ctx, w, h);
-    for (const [x, y] of [[5, 5], [18, 8], [9, 18], [21, 21]]) {
-      rect(ctx, '#1c1c1c', x, y, 6, 5);
-      rect(ctx, '#3d3d3d', x + 1, y + 1, 2, 2);
+  grass(pc, v) {
+    PIXEL.dirt(pc, v);
+    for (let x = 0; x < 16; x++) {
+      const len = 2 + (hash(x, 1, 50 + v) < 0.55 ? 1 : 0) + (hash(x, 2, 50 + v) < 0.2 ? 1 : 0);
+      for (let y = 0; y < len; y++) {
+        const c = y === 0 ? GRASS_TOP.light : y === len - 1 ? GRASS_TOP.dark : hash(x, y, v) < 0.35 ? GRASS_TOP.alt : GRASS_TOP.mid;
+        pc.set(x, y, c);
+      }
     }
   },
-  iron_ore(ctx, w, h) {
-    PAINTERS.stone(ctx, w, h);
-    for (const [x, y] of [[6, 6], [19, 7], [8, 19], [20, 20]]) {
-      rect(ctx, '#c98d5a', x, y, 6, 5);
-      rect(ctx, '#ecc096', x + 1, y + 1, 2, 2);
+  stone(pc, v) {
+    fillNoise(pc, STONE, v, 20);
+    for (let k = 0; k < 2; k++) {
+      const x = 2 + Math.floor(hash(k, 5, 21 + v) * 10);
+      const y = 2 + Math.floor(hash(k, 6, 21 + v) * 10);
+      pc.line(x, y, x + 2, y + 2, '#2f333a');
+      pc.set(x + 1, y, STONE[4]);
     }
   },
-  log(ctx, w, h) {
-    rect(ctx, '#6b4423', 0, 0, w, h);
-    for (const x of [4, 12, 20, 27]) {
-      rect(ctx, '#55351a', x, 0, 2, h);
-      rect(ctx, '#835631', x + 2, 0, 1, h);
+  coal_ore(pc, v) {
+    PIXEL.stone(pc, v);
+    oreClumps(pc, v, 30, ['#111111', '#262626', '#555555']);
+  },
+  iron_ore(pc, v) {
+    PIXEL.stone(pc, v);
+    oreClumps(pc, v, 40, ['#7a4b2e', '#b07a52', '#ecbb92']);
+  },
+  log(pc, v) {
+    for (let x = 0; x < 16; x++) {
+      const base = x === 0 || x === 15 ? BARK[0] : x === 2 || x === 3 ? BARK[3] : pick(BARK.slice(1), hash(x, 0, 60 + v));
+      for (let y = 0; y < 16; y++) pc.set(x, y, hash(x, y, 61 + v) < 0.12 && x > 0 && x < 15 ? BARK[1] : base);
+    }
+    if (v === 2) {
+      pc.rect(6, 6, 4, 3, BARK[0]);
+      pc.rect(7, 7, 2, 1, BARK[3]);
     }
   },
-  leaves(ctx, w, h) {
-    rect(ctx, '#2e7d32', 0, 0, w, h);
-    speckle(ctx, w, h, ['#1b5e20', '#43a047', '#388e3c'], 24, 31, 4);
+  leaves(pc, v) {
+    fillNoise(pc, [LEAF.line, LEAF.dark, LEAF.mid, LEAF.light, LEAF.hi], v, 70, [0.08, 0.4, 0.78, 0.97]);
   },
-  planks(ctx, w, h) {
-    rect(ctx, '#b5823f', 0, 0, w, h);
-    for (let y = 0; y < h; y += 8) {
-      rect(ctx, '#8a5e2a', 0, y + 7, w, 1);
-      rect(ctx, '#c99552', 0, y, w, 1);
-      const seam = (y / 8) % 2 === 0 ? 10 : 22;
-      rect(ctx, '#8a5e2a', seam, y, 1, 8);
+  planks(pc, v) {
+    const boards = ['#a3733a', '#b5843f', '#9a6a35'];
+    for (let y = 0; y < 16; y++) {
+      const b = y >> 2;
+      const row = y & 3;
+      const base = boards[Math.floor(hash(b, 0, 80 + v) * 3)];
+      const seam = 3 + Math.floor(hash(b, 9, 80 + v) * 10);
+      for (let x = 0; x < 16; x++) {
+        let c = base;
+        if (row === 0) c = '#c99a58';
+        else if (row === 3) c = '#6e4a22';
+        else if (hash(x, y, 81 + v) < 0.12) c = '#8f6230';
+        if (x === seam && row !== 0) c = '#5e3e1c';
+        pc.set(x, y, c);
+      }
     }
   },
-  workbench(ctx, w, h) {
-    rect(ctx, '#a0692f', 0, 10, w, 6);
-    rect(ctx, '#c48a4a', 0, 10, w, 2);
-    rect(ctx, '#7a4f22', 3, 16, 5, 16);
-    rect(ctx, '#7a4f22', w - 8, 16, 5, 16);
-    rect(ctx, '#8a5a28', 3, 24, w - 6, 3);
+  workbench(pc) {
+    pc.rect(0, 4, 16, 1, '#d6a061');
+    pc.rect(0, 5, 16, 1, '#b07a3e');
+    pc.rect(0, 6, 16, 1, '#7a4f22');
+    pc.rect(1, 7, 2, 9, '#8a5a28');
+    pc.rect(2, 7, 1, 9, '#6b4420');
+    pc.rect(13, 7, 2, 9, '#8a5a28');
+    pc.rect(14, 7, 1, 9, '#6b4420');
+    pc.rect(3, 11, 10, 1, '#9a6a34');
+    pc.rect(3, 12, 10, 1, '#6b4420');
+    pc.rect(10, 2, 4, 2, '#8c8c8c'); // herramienta sobre la mesa
+    pc.rect(10, 2, 4, 1, '#b8b8b8');
+    pc.outline('#2e1c0c');
   },
-  torch(ctx) {
-    rect(ctx, '#7a4f26', 14, 13, 4, 17);
-    rect(ctx, '#ff9800', 12, 5, 8, 9);
-    rect(ctx, '#ffeb3b', 14, 7, 4, 6);
+  torch(pc) {
+    pc.rect(7, 7, 1, 9, '#8a5a2b');
+    pc.rect(8, 7, 1, 9, '#6b4420');
+    const flame = [[1, 8, 8], [2, 7, 8], [3, 6, 9], [4, 6, 9], [5, 6, 9], [6, 7, 8]];
+    for (const [y, x0, x1] of flame) for (let x = x0; x <= x1; x++) pc.set(x, y, '#ff8f00');
+    pc.rect(7, 3, 2, 3, '#ffc107');
+    pc.rect(7, 4, 1, 1, '#fff3b0');
+    pc.set(8, 1, '#ffd54f');
   },
-  bedrock(ctx, w, h) {
-    rect(ctx, '#262626', 0, 0, w, h);
-    speckle(ctx, w, h, ['#3b3b3b', '#141414'], 20, 41, 4);
+  bedrock(pc, v) {
+    fillNoise(pc, ['#14141c', '#1f1f2b', '#2b2b3d', '#383852', '#46466a'], v, 90);
   },
-  wall_dirt(ctx, w, h) {
-    rect(ctx, '#4a3020', 0, 0, w, h);
-    speckle(ctx, w, h, ['#3d271a', '#553826'], 14, 51, 4);
+  wall_dirt(pc, v) {
+    fillNoise(pc, ['#24150a', '#2e1b0e', '#382212', '#422916', '#4c301a'], v, 100);
   },
-  wall_stone(ctx, w, h) {
-    rect(ctx, '#3e3e46', 0, 0, w, h);
-    speckle(ctx, w, h, ['#34343b', '#48484f'], 14, 61, 4);
+  wall_stone(pc, v) {
+    fillNoise(pc, ['#1a1d22', '#22262c', '#2b3037', '#353a42', '#3f454e'], v, 110);
+  },
+  plant_grass(pc, v) {
+    for (let k = 0; k < 5; k++) {
+      const x = 1 + k * 3 + Math.floor(hash(k, 0, 120 + v) * 2);
+      const h = 3 + Math.floor(hash(k, 1, 120 + v) * 6);
+      const lean = hash(k, 2, 120 + v) < 0.5 ? -1 : 1;
+      pc.line(x, 15, x + (h > 5 ? lean : 0), 16 - h, k % 2 ? '#43a047' : '#4caf50');
+      pc.set(x + (h > 5 ? lean : 0), 16 - h, '#8fdc5e');
+    }
+  },
+  plant_flower_red(pc, v) {
+    PIXEL._flower(pc, v, '#e53935', '#ff8a80', '#ffd54f');
+  },
+  plant_flower_yellow(pc, v) {
+    PIXEL._flower(pc, v, '#fbc02d', '#fff176', '#8d5524');
+  },
+  _flower(pc, v, petal, petalLight, center) {
+    const x = 7 + (v % 2);
+    const top = 6 + (v === 2 ? 2 : 0);
+    pc.line(x, 15, x, top + 2, '#3e8e41');
+    pc.set(x - 1, 12, '#4caf50');
+    pc.set(x - 2, 11, '#4caf50');
+    pc.set(x + 1, 13, '#4caf50');
+    pc.set(x + 2, 12, '#4caf50');
+    pc.disc(x, top, 2.3, petal);
+    pc.set(x - 1, top - 1, petalLight);
+    pc.set(x, top, center);
   },
 
-  // ---------- Ítems ----------
-  wood(ctx) {
-    rect(ctx, '#7a4f26', 4, 11, 22, 10);
-    rect(ctx, '#5e3a1a', 4, 15, 22, 2);
-    rect(ctx, '#c99a5e', 24, 11, 5, 10);
-    rect(ctx, '#a87a44', 25, 14, 3, 4);
+  // ---------- ítems ----------
+  wood(pc) {
+    pc.rect(2, 5, 11, 6, '#6f4523');
+    pc.rect(2, 6, 11, 1, '#82552c');
+    pc.rect(2, 9, 11, 1, '#5a371b');
+    pc.rect(5, 7, 4, 1, '#5a371b');
+    pc.rect(12, 5, 3, 6, '#c99a5e');
+    pc.rect(13, 7, 1, 2, '#a87a44');
+    pc.outline('#2e1c0c');
   },
-  coal(ctx) {
-    rect(ctx, '#1e1e1e', 6, 13, 11, 9);
-    rect(ctx, '#1e1e1e', 15, 9, 11, 11);
-    rect(ctx, '#1e1e1e', 10, 18, 13, 8);
-    rect(ctx, '#474747', 17, 11, 3, 3);
-    rect(ctx, '#474747', 8, 15, 2, 2);
+  coal(pc) {
+    pc.disc(6, 9, 3, '#1e1e1e');
+    pc.disc(10, 8, 3.2, '#2a2a2a');
+    pc.disc(8, 11, 2.5, '#222222');
+    pc.set(9, 6, '#5a5a5a');
+    pc.set(5, 8, '#4a4a4a');
+    pc.set(10, 7, '#3a3a3a');
+    pc.outline('#000000');
   },
-  wood_pickaxe(ctx) {
-    pickaxe(ctx, '#b5823f', '#d6a35f');
+  wood_pickaxe(pc) {
+    pickaxe(pc, '#b5843f', '#d9a865', '#8a5f2b');
   },
-  stone_pickaxe(ctx) {
-    pickaxe(ctx, '#8c8c8c', '#b8b8b8');
-  },
-
-  // ---------- Jugador (mira a la derecha) ----------
-  player(ctx, w, h) {
-    const sx = w / 24;
-    const sy = h / 44;
-    ctx.save();
-    ctx.scale(sx, sy);
-    rect(ctx, '#f1c27d', 6, 2, 12, 12); // cabeza
-    rect(ctx, '#4a2c12', 5, 0, 14, 4); // pelo
-    rect(ctx, '#4a2c12', 5, 0, 3, 8);
-    rect(ctx, '#222222', 14, 7, 2, 2); // ojo
-    rect(ctx, '#3a7bd5', 4, 14, 16, 16); // camisa
-    rect(ctx, '#2f63ad', 4, 14, 3, 13); // manga
-    rect(ctx, '#f1c27d', 4, 27, 3, 3); // mano
-    rect(ctx, '#3b3b5c', 5, 30, 14, 10); // pantalón
-    rect(ctx, '#2b1d0e', 4, 40, 7, 4); // zapatos
-    rect(ctx, '#2b1d0e', 13, 40, 7, 4);
-    ctx.restore();
+  stone_pickaxe(pc) {
+    pickaxe(pc, '#8c939c', '#c2c8cf', '#5d636b');
   },
 
-  // ---------- Interfaz ----------
-  slot(ctx, w, h) {
-    rect(ctx, 'rgba(20,20,35,0.78)', 0, 0, w, h);
-    ctx.strokeStyle = '#8a8ab8';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(1, 1, w - 2, h - 2);
+  // ---------- jugador (hoja de 8 cuadros) ----------
+  player(pc) {
+    for (let f = 0; f < 8; f++) drawPlayerFrame(pc, f * 16, f);
+    pc.outline('#1a120c');
   },
-  slot_selected(ctx, w, h) {
-    rect(ctx, 'rgba(80,68,20,0.88)', 0, 0, w, h);
-    ctx.strokeStyle = '#ffd54f';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(1.5, 1.5, w - 3, h - 3);
+
+  // ---------- árboles ----------
+  tree_top(pc) {
+    for (let v = 0; v < 3; v++) drawCanopy(pc, v * 72, v);
   },
-  heart(ctx, w, h) {
-    const s = w / 12;
+  tree_branch(pc) {
+    pc.line(0, 9, 5, 8, '#6b4423');
+    pc.line(0, 10, 5, 9, '#4e2f17');
+    pc.disc(10, 7, 4.5, LEAF.dark);
+    pc.disc(9, 6, 3.2, LEAF.mid);
+    pc.disc(8, 5, 1.6, LEAF.light);
+    pc.outline(LEAF.line);
+  },
+
+  // ---------- cielo ----------
+  sun(pc) {
+    pc.disc(16, 16, 14, 'rgba(255,214,110,0.25)');
+    pc.disc(16, 16, 11.5, 'rgba(255,224,130,0.45)');
+    pc.disc(16, 16, 9, '#ffd54f');
+    pc.disc(15, 15, 7, '#ffe57f');
+    pc.disc(13, 13, 2.5, '#fff8d6');
+  },
+  moon(pc) {
+    pc.disc(12, 12, 11, 'rgba(220,230,255,0.18)');
+    pc.disc(12, 12, 8.5, '#dfe6f2');
+    pc.disc(10, 10, 4.5, '#eef2f9');
+    pc.disc(14, 15, 1.6, '#c3cddd');
+    pc.disc(9, 13, 1.2, '#c3cddd');
+    pc.disc(15, 9, 1, '#c3cddd');
+  },
+  cloud(pc) {
+    const parts = [[16, 15, 7], [27, 11, 9], [41, 12, 8.5], [52, 15, 6.5]];
+    for (const [x, y, r] of parts) pc.disc(x, y, r, '#ffffff');
+    pc.rect(12, 15, 44, 6, '#ffffff');
+    for (let y = 17; y < 24; y++) for (let x = 0; x < 64; x++) if (pc.get(x, y)) pc.set(x, y, '#dde6f3');
+  },
+
+  // ---------- interfaz ----------
+  heart(pc) {
     const rows = ['.XX..XX.', 'XXXXXXXX', 'XXXXXXXX', '.XXXXXX.', '..XXXX..', '...XX...'];
     rows.forEach((row, y) => {
-      for (let x = 0; x < row.length; x++) {
-        if (row[x] === 'X') rect(ctx, '#e53935', (x + 2) * s, (y + 3) * s, s, s);
+      for (let x = 0; x < 8; x++) {
+        if (row[x] !== 'X') continue;
+        pc.set(x + 2, y + 3, x >= 5 || y >= 4 ? '#b01e28' : '#e5303a');
       }
     });
-    rect(ctx, '#ff8a80', 3 * s, 4 * s, s, s);
+    pc.set(3, 4, '#ff9aa0');
+    pc.set(4, 4, '#ff9aa0');
+    pc.outline('#3a0a0e');
   },
-  crack(ctx) {
-    const c = 'rgba(0,0,0,0.75)';
-    const path = [[15, 2], [14, 7], [17, 11], [13, 16], [16, 21], [12, 26], [14, 30]];
-    for (const [x, y] of path) rect(ctx, c, x, y, 3, 5);
-    for (const [x, y] of [[5, 9], [9, 12], [20, 14], [24, 17], [6, 24], [22, 25]]) rect(ctx, c, x, y, 4, 2);
-  },
-  joystick_base(ctx, w, h) {
-    circle(ctx, w / 2, h / 2, w / 2 - 3, 'rgba(255,255,255,0.12)', 'rgba(255,255,255,0.45)', 4);
-    circle(ctx, w / 2, h / 2, w / 4, null, 'rgba(255,255,255,0.15)', 2);
-  },
-  joystick_thumb(ctx, w, h) {
-    circle(ctx, w / 2, h / 2, w / 2 - 2, 'rgba(255,255,255,0.5)', 'rgba(255,255,255,0.85)', 3);
-  },
-  button_jump(ctx, w, h) {
-    roundButton(ctx, w, h);
-    ctx.fillStyle = 'rgba(255,255,255,0.9)';
-    ctx.beginPath();
-    ctx.moveTo(w / 2, h * 0.28);
-    ctx.lineTo(w * 0.72, h * 0.56);
-    ctx.lineTo(w * 0.28, h * 0.56);
-    ctx.closePath();
-    ctx.fill();
-    rect(ctx, 'rgba(255,255,255,0.9)', w * 0.42, h * 0.55, w * 0.16, h * 0.18);
-  },
-  button_mine(ctx, w, h) {
-    roundButton(ctx, w, h);
-    ctx.save();
-    ctx.translate(w / 2 - 16, h / 2 - 16);
-    pickaxe(ctx, '#d0d0d0', '#ffffff');
-    ctx.restore();
-  },
-  button_place(ctx, w, h) {
-    roundButton(ctx, w, h);
-    const s = w * 0.36;
-    rect(ctx, '#8b5a2b', w / 2 - s / 2, h / 2 - s / 2, s, s);
-    rect(ctx, '#4caf50', w / 2 - s / 2, h / 2 - s / 2, s, s * 0.25);
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(w / 2 - s / 2, h / 2 - s / 2, s, s);
-  },
-  button_inventory(ctx, w, h) {
-    roundButton(ctx, w, h);
-    const c = w * 0.11;
-    for (let y = 0; y < 3; y++) {
-      for (let x = 0; x < 3; x++) rect(ctx, 'rgba(255,255,255,0.9)', w * 0.3 + x * c * 1.3, h * 0.3 + y * c * 1.3, c, c);
+  crack(pc) {
+    const c = 'rgba(0,0,0,0.78)';
+    const stages = [
+      [[8, 1, 7, 5], [7, 5, 9, 8]],
+      [[9, 8, 6, 12], [7, 5, 3, 4]],
+      [[6, 12, 7, 15], [9, 8, 13, 10], [3, 4, 1, 6]],
+      [[13, 10, 15, 13], [8, 1, 12, 2], [6, 12, 2, 13], [12, 2, 14, 5]],
+    ];
+    for (let f = 0; f < 4; f++) {
+      for (let s = 0; s <= f; s++) for (const [x0, y0, x1, y1] of stages[s]) pc.line(f * 16 + x0, y0, f * 16 + x1, y1, c);
     }
-  },
-  button_fullscreen(ctx, w, h) {
-    rect(ctx, 'rgba(0,0,0,0.35)', 0, 0, w, h);
-    const a = w * 0.22;
-    const t = 3;
-    const m = w * 0.2;
-    const col = 'rgba(255,255,255,0.9)';
-    rect(ctx, col, m, m, a, t);
-    rect(ctx, col, m, m, t, a);
-    rect(ctx, col, w - m - a, m, a, t);
-    rect(ctx, col, w - m - t, m, t, a);
-    rect(ctx, col, m, h - m - t, a, t);
-    rect(ctx, col, m, h - m - a, t, a);
-    rect(ctx, col, w - m - a, h - m - t, a, t);
-    rect(ctx, col, w - m - t, h - m - a, t, a);
-  },
-
-  // Por si falta un dibujo: cuadro magenta bien visible
-  missing(ctx, w, h) {
-    rect(ctx, '#ff00ff', 0, 0, w, h);
-    rect(ctx, '#000000', 0, 0, w / 2, h / 2);
-    rect(ctx, '#000000', w / 2, h / 2, w / 2, h / 2);
   },
 };
 
-/** Crea en el TextureManager una textura placeholder con la clave indicada. */
+// ---------------------------------------------------------------- pintores directos (canvas)
+const CTX = {
+  slot(ctx, w, h) {
+    slotShape(ctx, w, h, 'rgba(48,62,150,0.74)', 'rgba(16,20,56,0.95)', 2, 'rgba(150,170,255,0.30)');
+  },
+  slot_selected(ctx, w, h) {
+    slotShape(ctx, w, h, 'rgba(78,96,200,0.88)', '#ffd84a', 3, 'rgba(255,255,255,0.25)');
+  },
+  joystick_base(ctx, w, h) {
+    circleBtn(ctx, w, h);
+    ctx.beginPath();
+    ctx.arc(w / 2, h / 2, w / 4, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(200,215,255,0.25)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  },
+  joystick_thumb(ctx, w, h) {
+    ctx.beginPath();
+    ctx.arc(w / 2, h / 2, w / 2 - 2, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(120,145,235,0.65)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(230,238,255,0.9)';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+  },
+  button_jump(ctx, w, h) {
+    circleBtn(ctx, w, h);
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.beginPath();
+    ctx.moveTo(w / 2, h * 0.27);
+    ctx.lineTo(w * 0.72, h * 0.55);
+    ctx.lineTo(w * 0.28, h * 0.55);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillRect(w * 0.42, h * 0.54, w * 0.16, h * 0.2);
+  },
+  button_mine(ctx, w, h) {
+    circleBtn(ctx, w, h);
+    const pc = new PixelCanvas(16, 16);
+    PIXEL.stone_pickaxe(pc);
+    pc.draw(ctx, w / 2 - 16, h / 2 - 16, 2);
+  },
+  button_place(ctx, w, h) {
+    circleBtn(ctx, w, h);
+    const pc = new PixelCanvas(16, 16);
+    PIXEL.grass(pc, 0);
+    pc.draw(ctx, w / 2 - 16, h / 2 - 16, 2);
+  },
+  button_inventory(ctx, w, h) {
+    circleBtn(ctx, w, h);
+    const c = w * 0.11;
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) ctx.fillRect(w * 0.3 + x * c * 1.3, h * 0.3 + y * c * 1.3, c, c);
+  },
+  button_fullscreen(ctx, w, h) {
+    ctx.fillStyle = 'rgba(20,28,70,0.5)';
+    ctx.fillRect(0, 0, w, h);
+    const a = w * 0.22;
+    const m = w * 0.2;
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    for (const [x, y, sx, sy] of [[m, m, 1, 1], [w - m, m, -1, 1], [m, h - m, 1, -1], [w - m, h - m, -1, -1]]) {
+      ctx.fillRect(sx > 0 ? x : x - a, sy > 0 ? y : y - 3, a, 3);
+      ctx.fillRect(sx > 0 ? x : x - 3, sy > 0 ? y : y - a, 3, a);
+    }
+  },
+  glow(ctx, w, h) {
+    const g = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
+    g.addColorStop(0, 'rgba(255,200,110,0.65)');
+    g.addColorStop(0.35, 'rgba(255,160,60,0.22)');
+    g.addColorStop(1, 'rgba(255,140,40,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+  },
+  stars(ctx, w, h) {
+    for (let i = 0; i < 90; i++) {
+      const x = Math.floor(hash(i, 1, 7) * w);
+      const y = Math.floor(hash(i, 2, 7) * h);
+      const big = hash(i, 3, 7) < 0.15;
+      ctx.fillStyle = hash(i, 4, 7) < 0.3 ? 'rgba(190,210,255,0.9)' : 'rgba(255,255,255,0.85)';
+      ctx.fillRect(x, y, big ? 4 : 2, big ? 4 : 2);
+    }
+  },
+  mountains(ctx, w, h) {
+    // Cordillera lejana repetible, con nieve en los picos más altos
+    const hf = (u) =>
+      0.25 + 0.42 * (0.5 + 0.5 * Math.sin(TAU * 2 * u + 0.3)) * (1 - Math.abs(Math.sin(Math.PI * 5 * u + 1))) + 0.12 * (0.5 + 0.5 * Math.sin(TAU * 9 * u));
+    const cols = w / 2;
+    ridge(ctx, w, h, hf, (d, slope, x) => {
+      const peak = hf(x / cols);
+      if (peak > 0.55 && d < 2 + Math.round((peak - 0.55) * 30)) return '#e6eef8';
+      return slope > 0.004 ? '#93add2' : slope < -0.004 ? '#7590b8' : '#8399c0';
+    });
+  },
+  hills(ctx, w, h) {
+    const hf = (u) => 0.42 + 0.16 * Math.sin(TAU * 3 * u + 1) + 0.09 * Math.sin(TAU * 7 * u + 2);
+    ridge(ctx, w, h, hf, (d, slope) => (d < 2 ? '#86c47a' : slope > 0.004 ? '#5ea657' : slope < -0.004 ? '#4f9149' : '#57a050'));
+    // Arbolitos sobre las colinas
+    const cols = w / 2;
+    for (let i = 0; i < 26; i++) {
+      const x = Math.floor(hash(i, 1, 300) * cols);
+      const top = Math.round(h / 2 - hf(x / cols) * (h / 2));
+      const r = 3 + Math.floor(hash(i, 2, 300) * 3);
+      ctx.fillStyle = '#4a3522';
+      for (const ox of [0, -cols, cols]) ctx.fillRect((x + ox) * 2, (top - 3) * 2, 2, 8);
+      ctx.fillStyle = '#3f7d3c';
+      for (let dy = -r; dy <= r; dy++) {
+        const half = Math.floor(Math.sqrt(r * r - dy * dy));
+        for (const ox of [0, -cols, cols]) ctx.fillRect((x - half + ox) * 2, (top - r - 2 + dy) * 2, (half * 2 + 1) * 2, 2);
+      }
+    }
+  },
+  forest(ctx, w, h) {
+    const cols = w / 2;
+    const rows = h / 2;
+    const ground = Math.round(rows * 0.8);
+    ctx.fillStyle = '#2b5a2c';
+    ctx.fillRect(0, ground * 2, w, h - ground * 2);
+    for (let i = 0; i < 60; i++) {
+      const x = Math.floor((i / 60) * cols + hash(i, 1, 400) * 6);
+      const th = 14 + Math.floor(hash(i, 2, 400) * 22);
+      const r = 5 + Math.floor(hash(i, 3, 400) * 4);
+      const cy = ground - th;
+      for (const ox of [0, -cols, cols]) {
+        ctx.fillStyle = '#3b2a1a';
+        ctx.fillRect((x + ox) * 2, cy * 2, 4, (th + 2) * 2);
+        for (let dy = -r; dy <= r; dy++) {
+          const half = Math.floor(Math.sqrt(r * r - dy * dy));
+          ctx.fillStyle = dy < -r / 3 ? '#3c7340' : '#2f6332';
+          ctx.fillRect((x - half + ox) * 2, (cy + dy) * 2, (half * 2 + 1) * 2, 2);
+        }
+      }
+    }
+  },
+  missing(ctx, w, h) {
+    ctx.fillStyle = '#ff00ff';
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, w / 2, h / 2);
+    ctx.fillRect(w / 2, h / 2, w / 2, h / 2);
+  },
+};
+
+/** Dibuja la variante 'variant' de un asset y devuelve un canvas del tamaño del asset. */
+export function paintPlaceholder(asset, variant = 0) {
+  const canvas = document.createElement('canvas');
+  canvas.width = asset.width;
+  canvas.height = asset.height;
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  const name = asset.placeholder;
+  if (PIXEL[name]) {
+    const pc = new PixelCanvas(asset.width / 2, asset.height / 2);
+    PIXEL[name](pc, variant, asset);
+    pc.draw(ctx, 0, 0, 2);
+  } else {
+    (CTX[name] || CTX.missing)(ctx, asset.width, asset.height, variant);
+  }
+  return canvas;
+}
+
+/** Crea en el TextureManager la textura placeholder (y sus cuadros si es una hoja de sprites). */
 export function createPlaceholderTexture(scene, key, asset) {
-  const texture = scene.textures.createCanvas(key, asset.width, asset.height);
-  const painter = PAINTERS[asset.placeholder] || PAINTERS.missing;
-  painter(texture.context, asset.width, asset.height);
-  texture.refresh();
+  const texture = scene.textures.addCanvas(key, paintPlaceholder(asset, 0));
+  if (asset.frameWidth) {
+    const cols = Math.floor(asset.width / asset.frameWidth);
+    const rows = Math.floor(asset.height / asset.frameHeight);
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        texture.add(r * cols + c, 0, c * asset.frameWidth, r * asset.frameHeight, asset.frameWidth, asset.frameHeight);
+      }
+    }
+  }
   return texture;
 }
 
-/** Los botones/círculos de la interfaz se ven mejor con filtrado suave. */
+/** Los botones/círculos/brillos de la interfaz se ven mejor con filtrado suave. */
 export function applyTextureFilter(scene, key, asset) {
   if (asset.smooth && scene.textures.exists(key)) {
     scene.textures.get(key).setFilter(Phaser.Textures.FilterMode.LINEAR);
   }
+}
+
+/** Cantidad de cuadros reales de una textura (sin contar el cuadro base de Phaser). */
+export function frameCount(scene, key) {
+  const t = scene.textures.get(key);
+  return Math.max(1, t.frameTotal - 1);
 }
