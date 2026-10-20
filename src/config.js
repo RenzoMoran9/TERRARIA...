@@ -17,18 +17,20 @@ export const CHUNK_LOAD_MARGIN = 1;
 export const CHUNKS_PER_FRAME = 1;
 
 export const PLAYER = {
-  WIDTH: 20, // hitbox en píxeles
-  HEIGHT: 42,
-  SPRITE_WIDTH: 32, // tamaño de cada cuadro del sprite (los pies van abajo al centro)
-  SPRITE_HEIGHT: 48,
-  SPEED: 210, // píxeles/segundo
+  // Proporción tipo Terraria: ~2,5 bloques de alto (necesita 3 bloques de espacio para pasar)
+  // y menos de 1 bloque de ancho (cabe por pozos de 1 bloque).
+  WIDTH: 26, // hitbox en píxeles
+  HEIGHT: 80,
+  SPRITE_WIDTH: 48, // tamaño de cada cuadro del sprite (los pies van abajo al centro)
+  SPRITE_HEIGHT: 88,
+  SPEED: 220, // píxeles/segundo
   GROUND_ACCEL: 2000,
   AIR_ACCEL: 1300,
   GROUND_FRICTION: 2400,
   AIR_FRICTION: 500,
   GRAVITY: 1900,
   MAX_FALL: 950,
-  JUMP_VELOCITY: -680, // ~3,8 bloques de altura
+  JUMP_VELOCITY: -800, // ~5,3 bloques de altura
   COYOTE_TIME: 0.1, // margen para saltar justo después de salir de un borde
   JUMP_BUFFER: 0.12, // margen para saltar si se pulsó un poco antes de tocar suelo
   MAX_HEALTH: 100,

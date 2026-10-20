@@ -32,6 +32,7 @@ export class Lighting {
     this.ty0 = NaN;
     this.lastPtx = NaN;
     this.lastPty = NaN;
+    this.lastHeld = 0;
     this.timer = 0;
     this.dirty = true;
     this.lastMs = 0;
@@ -81,6 +82,11 @@ export class Lighting {
     const p = this.player;
     const ptx = Math.floor(p.centerX / T);
     const pty = Math.floor(p.centerY / T);
+    // Agarró o soltó una antorcha: recalcular ya
+    if (p.heldLight !== this.lastHeld) {
+      this.lastHeld = p.heldLight;
+      this.dirty = true;
+    }
     this.timer -= dt;
     // Solo se recalcula si algo cambió (cámara, bloques, jugador) o cada REFRESH_SECONDS
     if (!this.dirty && this.timer > 0 && tx0 === this.tx0 && ty0 === this.ty0 && ptx === this.lastPtx && pty === this.lastPty) {
@@ -116,10 +122,11 @@ export class Lighting {
       }
     }
 
-    // 2) Luz del jugador (cabeza y cuerpo)
-    if (!this.player.dead) {
-      this._addSource(ptx - tx0, pty - ty0, PLAYER_LIGHT);
-      this._addSource(ptx - tx0, pty - 1 - ty0, PLAYER_LIGHT);
+    // 2) Luz del jugador (cabeza y cuerpo); más fuerte si lleva una antorcha en la mano
+    if (this.player.visible) {
+      const light = Math.max(PLAYER_LIGHT, this.player.heldLight || 0);
+      this._addSource(ptx - tx0, pty - ty0, light);
+      this._addSource(ptx - tx0, pty - 1 - ty0, light);
     }
 
     // 3) Propagación de los dos canales

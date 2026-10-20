@@ -1,12 +1,7 @@
-import { TILE_SIZE, PLAYER as P, DEPTH } from '../config.js';
-import { frameCount } from '../systems/Placeholders.js';
+import { TILE_SIZE, PLAYER as P } from '../config.js';
+import { PlayerAnimator } from './PlayerAnimator.js';
 
 const EPS = 0.001;
-// Cuadros de la hoja del jugador
-const FRAME_IDLE = 0;
-const FRAME_WALK = 1; // 1..6
-const WALK_FRAMES = 6;
-const FRAME_JUMP = 7;
 const MAX_STEP = 8; // el movimiento se divide en pasos de ≤8 px para no atravesar bloques
 
 function approach(value, target, amount) {
@@ -44,16 +39,20 @@ export class Player {
     this.jumping = false;
 
     this.stepOffset = 0; // suaviza visualmente la subida automática de escalones
-    this.walkTime = 0;
-    this.dustTimer = 0;
+    this.pushing = false; // caminando contra una pared
+    this.heldLight = 0; // luz de lo que lleva en la mano (antorcha), la usa Lighting
 
-    this.frames = frameCount(scene, 'player');
-    this.sprite = scene.add
-      .image(0, 0, 'player', 0)
-      .setOrigin(0.5, 1)
-      .setDepth(DEPTH.PLAYER)
-      .setDisplaySize(P.SPRITE_WIDTH, P.SPRITE_HEIGHT);
-    this.syncSprite();
+    // Sprite, animaciones y efectos
+    this.anim = new PlayerAnimator(scene, this);
+  }
+
+  get sprite() {
+    return this.anim.sprite;
+  }
+
+  /** ¿Se lo ve? (vivo, o todavía desvaneciéndose al morir): mientras tanto lleva su luz tenue */
+  get visible() {
+    return !this.dead || this.anim.deathTime < 1.5;
   }
 
   get centerX() {
@@ -66,13 +65,19 @@ export class Player {
 
   /** controls: { moveX: -1..1, jump: boolean } */
   update(dt, controls) {
-    if (this.dead) return;
+    if (this.dead) {
+      this.anim.update(dt);
+      return;
+    }
+    if (controls.moveX !== 0 || controls.jump) this.anim.wake();
 
     // --- Movimiento horizontal con aceleración ---
     if (controls.moveX !== 0) {
       const accel = this.onGround ? P.GROUND_ACCEL : P.AIR_ACCEL;
       this.vx = approach(this.vx, controls.moveX * P.SPEED, accel * dt);
-      this.facing = controls.moveX > 0 ? 1 : -1;
+      const facing = controls.moveX > 0 ? 1 : -1;
+      if (facing !== this.facing) this.anim.turn(Math.abs(this.vx));
+      this.facing = facing;
     } else {
       const friction = this.onGround ? P.GROUND_FRICTION : P.AIR_FRICTION;
       this.vx = approach(this.vx, 0, friction * dt);
@@ -88,6 +93,7 @@ export class Player {
       this.jumpBuffer = 0;
       this.coyote = 0;
       this.jumping = true;
+      this.anim.jump();
     }
     // Soltar el botón antes corta el salto (saltos cortos)
     if (this.jumping && !controls.jump && this.vy < 0) {
@@ -101,6 +107,7 @@ export class Player {
 
     // --- Mover y resolver colisiones (primero X, luego Y) ---
     const wasOnGround = this.onGround;
+    this.pushing = false;
     this.moveX(this.vx * dt, controls.moveX !== 0);
     this.moveY(this.vy * dt);
 
@@ -109,6 +116,7 @@ export class Player {
       if (wasOnGround || this.y < this.peakY) this.peakY = this.y;
     } else if (!wasOnGround) {
       const fallTiles = (this.y - this.peakY) / TILE_SIZE;
+      this.anim.land(fallTiles);
       if (fallTiles > 1.5) this.scene.spawnDust(this.centerX, this.y + this.h, Math.min(12, 4 + Math.round(fallTiles)));
       if (fallTiles > P.SAFE_FALL_TILES) {
         this.damage(Math.round((fallTiles - P.SAFE_FALL_TILES) * P.FALL_DAMAGE_PER_TILE));
@@ -122,17 +130,9 @@ export class Player {
       this.health = Math.min(this.maxHealth, this.health + P.REGEN_PER_SECOND * dt);
     }
 
-    // --- Animación simple ---
+    // --- Animación ---
     this.stepOffset = Math.max(0, this.stepOffset - dt * 320);
-    if (this.onGround && Math.abs(this.vx) > 20) this.walkTime += dt;
-    else this.walkTime = 0;
-    // Polvo de los pasos al correr
-    this.dustTimer -= dt;
-    if (this.onGround && Math.abs(this.vx) > 150 && this.dustTimer <= 0) {
-      this.dustTimer = 0.22;
-      this.scene.spawnDust(this.centerX - this.facing * 6, this.y + this.h, 2);
-    }
-    this.syncSprite();
+    this.anim.update(dt);
   }
 
   /** ¿La hitbox en (x, y) toca algún bloque sólido? */
@@ -170,7 +170,8 @@ export class Player {
           continue;
         }
       }
-      // Pegarse al borde del bloque
+      // Pegarse al borde del bloque (si está en el suelo y quiere avanzar, empuja la pared)
+      if (this.onGround && wantsStepUp) this.pushing = true;
       if (step > 0) this.x = Math.floor((nx + this.w) / T) * T - this.w;
       else this.x = (Math.floor(nx / T) + 1) * T;
       this.vx = 0;
@@ -194,6 +195,7 @@ export class Player {
         this.onGround = true;
       } else {
         this.y = (Math.floor(ny / T) + 1) * T;
+        if (this.vy < -200) this.anim.bump(); // cabezazo contra el techo
       }
       this.vy = 0;
       break;
@@ -212,8 +214,7 @@ export class Player {
     this.timeSinceDamage = 0;
     this.scene.showFloatingText(this.centerX, this.y - 4, `-${amount}`, '#ff5252');
     this.scene.cameras.main.shake(150, 0.006);
-    this.sprite.setTint(0xff7070);
-    this.scene.time.delayedCall(180, () => this.sprite.clearTint());
+    this.anim.hurt();
     if (this.health <= 0) this.die();
   }
 
@@ -222,7 +223,7 @@ export class Player {
     this.dead = true;
     this.vx = 0;
     this.vy = 0;
-    this.sprite.setVisible(false);
+    this.anim.die(); // cae de espaldas y se desvanece
     this.scene.onPlayerDied();
   }
 
@@ -237,18 +238,7 @@ export class Player {
     this.peakY = y;
     this.timeSinceDamage = 99;
     this.stepOffset = 0;
-    this.sprite.setVisible(true).clearTint();
-    this.syncSprite();
-  }
-
-  syncSprite() {
-    // Animación: en el aire → salto; caminando → ciclo de 6 cuadros; quieto → reposo
-    let frame = FRAME_IDLE;
-    if (!this.onGround) frame = FRAME_JUMP;
-    else if (this.walkTime > 0) frame = FRAME_WALK + (Math.floor(this.walkTime * 12) % WALK_FRAMES);
-    // Si la imagen del jugador tiene un solo cuadro, se usa siempre ese
-    this.sprite.setFrame(this.frames > frame ? frame : 0, false, false);
-    this.sprite.setPosition(this.x + this.w / 2, this.y + this.h + this.stepOffset);
-    this.sprite.setFlipX(this.facing < 0);
+    this.anim.respawn(); // aparece con brillos y saluda
+    this.anim.update(0);
   }
 }

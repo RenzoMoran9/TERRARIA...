@@ -5,7 +5,11 @@ import { frameCount } from './Placeholders.js';
 
 const T = TILE_SIZE;
 const REACH_PX2 = (REACH_TILES * T) ** 2;
-const PLACE_REPEAT = 0.18; // segundos entre colocaciones al mantener pulsado
+const PLACE_FIRST_REPEAT = 0.4; // al mantener pulsado: espera antes de empezar a repetir
+const PLACE_REPEAT = 0.18; // ...y después, segundos entre colocaciones
+// Objetos (antorcha, mesa): se pone o se quita UNO por pulsación aunque se mantenga apretado
+// (si no, en el celular el recuadro salta al siguiente lugar y se ponen/quitan varios seguidos)
+const ONE_PER_PRESS = new Set([BLOCK.TORCH, BLOCK.WORKBENCH]);
 const TIER_MESSAGES = { 1: 'Necesitas un pico de madera', 2: 'Necesitas un pico de piedra' };
 
 /**
@@ -24,10 +28,11 @@ export class BlockInteraction {
     this.mineTy = -1;
     this.progress = 0;
     this.warned = false;
-    this.lastPlaceKey = -1;
+    this.mineLock = false; // ya se quitó un objeto: no seguir hasta soltar
     this.placeTimer = 0;
+    this.placeCount = 0; // bloques puestos en esta pulsación
+    this.placeLock = false; // ya se puso un objeto: no seguir hasta soltar
     this.placeWarned = false;
-    this.swing = 0;
     this._bestTool = null;
 
     // Recuadro sobre el bloque apuntado
@@ -40,8 +45,7 @@ export class BlockInteraction {
     // Grietas que aparecen mientras se mina
     this.crack = scene.add.image(0, 0, 'ui_crack', 0).setOrigin(0).setDisplaySize(T, T).setDepth(DEPTH.CRACK).setVisible(false);
     this.crackFrames = frameCount(scene, 'ui_crack');
-    // Herramienta que se balancea en la mano mientras se mina
-    this.tool = scene.add.image(0, 0, 'item_wood_pickaxe').setOrigin(0.15, 0.85).setDepth(DEPTH.TOOL).setVisible(false);
+    // (el pico en la mano y el golpe los anima el jugador: ver PlayerAnimator)
 
     inventory.on('change', this._invalidateTool, this);
   }
@@ -75,8 +79,8 @@ export class BlockInteraction {
     if (!pa || this.player.dead) {
       this.highlight.setVisible(false);
       this._resetMining();
+      this.mineLock = false;
       this._resetPlacing();
-      this.tool.setVisible(false);
       return;
     }
     const tx = Math.floor(pa.x / T);
@@ -92,12 +96,13 @@ export class BlockInteraction {
     if (pa.action && inReach) this.player.facing = (tx + 0.5) * T >= this.player.centerX ? 1 : -1;
 
     if (pa.action === 'mine') this._updateMining(dt, tx, ty, inReach);
-    else this._resetMining();
+    else {
+      this._resetMining();
+      this.mineLock = false; // se soltó el botón
+    }
 
     if (pa.action === 'place') this._updatePlacing(dt, tx, ty, inReach);
     else this._resetPlacing();
-
-    this._updateToolSprite(dt);
   }
 
   // ------------------------------------------------------------------ minar
@@ -112,7 +117,7 @@ export class BlockInteraction {
 
   _updateMining(dt, tx, ty, inReach) {
     const id = this.world.getTile(tx, ty);
-    if (!inReach || id === BLOCK.AIR) {
+    if (this.mineLock || !inReach || id === BLOCK.AIR) {
       this._resetMining();
       return;
     }
@@ -124,7 +129,10 @@ export class BlockInteraction {
 
     const def = BLOCK_DEFS[id];
     const tool = this.getBestTool();
-    if (def.tier > tool.tier) {
+    // El personaje golpea aunque el bloque sea muy duro (solo saltan chispas)
+    const tooHard = def.tier > tool.tier;
+    this.player.anim.swing(tool.icon, (tx + 0.5) * T, (ty + 0.5) * T, tooHard ? 0xfff3b0 : def.color, tool.speed);
+    if (tooHard) {
       this._warnOnce(TIER_MESSAGES[def.tier] || 'Este bloque es indestructible');
       return;
     }
@@ -145,7 +153,7 @@ export class BlockInteraction {
     }
     this.crack.setPosition(tx * T, ty * T).setVisible(true);
     if (this.progress >= time) {
-      this.breakBlock(tx, ty);
+      if (this.breakBlock(tx, ty) && ONE_PER_PRESS.has(id)) this.mineLock = true;
       this._resetMining();
     }
   }
@@ -197,6 +205,7 @@ export class BlockInteraction {
     }
     this.inventory.add('wood', logs);
     this._pickupText(`+${logs} ${ITEMS.wood.name}`);
+    this.player.anim.cheer(0.8); // ¡árbol talado!
     return true;
   }
 
@@ -243,18 +252,21 @@ export class BlockInteraction {
   // --------------------------------------------------------------- colocar
 
   _resetPlacing() {
-    this.lastPlaceKey = -1;
     this.placeTimer = 0;
+    this.placeCount = 0;
+    this.placeLock = false;
     this.placeWarned = false;
   }
 
   _updatePlacing(dt, tx, ty, inReach) {
-    const key = ty * WORLD_WIDTH + tx;
     this.placeTimer -= dt;
-    if (key === this.lastPlaceKey && this.placeTimer > 0) return;
-    this.lastPlaceKey = key;
-    this.placeTimer = PLACE_REPEAT;
-    this.tryPlace(tx, ty, inReach);
+    // La espera vale aunque el objetivo cambie (el recuadro automático salta al siguiente hueco)
+    if (this.placeLock || this.placeTimer > 0) return;
+    const block = this.selectedBlock();
+    if (!this.tryPlace(tx, ty, inReach)) return;
+    // El primero sale enseguida; manteniendo pulsado se repite (los objetos, solo uno)
+    if (ONE_PER_PRESS.has(block)) this.placeLock = true;
+    this.placeTimer = this.placeCount++ === 0 ? PLACE_FIRST_REPEAT : PLACE_REPEAT;
   }
 
   /** Bloque que se colocaría con el ítem seleccionado (o undefined si no es colocable). */
@@ -289,10 +301,44 @@ export class BlockInteraction {
 
     this.world.setTile(tx, ty, block);
     this.inventory.removeFromSlot(this.inventory.selected, 1);
+    this.player.anim.use(def.icon);
     return true;
   }
 
   // ------------------------------------------------- objetivo automático (celular)
+
+  /**
+   * Bloque que marca un toque del dedo en (wx, wy) (coordenadas del mundo).
+   * El dedo es más grande que un bloque: si el toque cae sobre algo que no sirve
+   * (aire al MINAR, un lugar ocupado al COLOCAR), se elige el bloque válido más cercano
+   * al dedo entre los vecinos ("imán"). Si no hay ninguno, el bloque justo debajo del dedo.
+   */
+  pickTouchTile(wx, wy, mode) {
+    const tx0 = Math.floor(wx / T);
+    const ty0 = Math.floor(wy / T);
+    const block = mode === 'place' ? this.selectedBlock() : undefined;
+    const valid = (tx, ty) => {
+      if (!this.inReach(tx, ty)) return false;
+      if (mode === 'place') return block !== undefined && this.canPlaceAt(tx, ty, block);
+      return this.world.getTile(tx, ty) !== BLOCK.AIR;
+    };
+    if (valid(tx0, ty0)) return { tx: tx0, ty: ty0 };
+    let best = null;
+    let bestD = (0.95 * T) ** 2; // hasta ~1 bloque de distancia del dedo
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const tx = tx0 + dx;
+        const ty = ty0 + dy;
+        if ((dx === 0 && dy === 0) || !valid(tx, ty)) continue;
+        const d = ((tx + 0.5) * T - wx) ** 2 + ((ty + 0.5) * T - wy) ** 2;
+        if (d < bestD) {
+          bestD = d;
+          best = { tx, ty };
+        }
+      }
+    }
+    return best || { tx: tx0, ty: ty0 };
+  }
 
   /**
    * Busca el bloque sobre el que actuaría el botón de acción, sin tocar la pantalla.
@@ -312,8 +358,8 @@ export class BlockInteraction {
     const block = mode === 'place' ? this.selectedBlock() : undefined;
     if (mode === 'place' && block === undefined) return null;
 
-    // En horizontal se prueba a la altura de la cabeza y de los pies; en las demás, desde el centro
-    const origins = dy === 0 ? [p.y + 8, p.y + p.h - 6] : [p.centerY];
+    // En horizontal se prueba a la altura de la cabeza, del cuerpo y de los pies; en las demás, desde el centro
+    const origins = dy === 0 ? [p.y + 8, p.centerY, p.y + p.h - 6] : [p.centerY];
     const maxT = REACH_TILES * T;
     let best = null;
     let bestT = Infinity;
@@ -347,27 +393,6 @@ export class BlockInteraction {
       while (this.world.getTile(best.tx, best.ty + 1) === BLOCK.LOG && this.inReach(best.tx, best.ty + 1)) best.ty++;
     }
     return best || plant;
-  }
-
-  // ---------------------------------------------------------------- efectos
-
-  _updateToolSprite(dt) {
-    const mining = this.mineTx >= 0 && this.crack.visible;
-    const tool = mining ? this.getBestTool() : null;
-    if (!tool || !tool.icon) {
-      this.tool.setVisible(false);
-      this.swing = 0;
-      return;
-    }
-    if (this.tool.texture.key !== tool.icon) this.tool.setTexture(tool.icon);
-    this.swing += dt * 14;
-    const f = this.player.facing;
-    const s = 22 / this.tool.width;
-    this.tool
-      .setVisible(true)
-      .setPosition(this.player.centerX + f * 6, this.player.centerY + 4)
-      .setScale(s * f, s) // escala negativa = espejo alrededor del mango
-      .setRotation(f * (Math.sin(this.swing) * 0.8 - 0.2));
   }
 
   destroy() {

@@ -165,6 +165,7 @@ export class InventoryPanel {
       this.feedbackUntil = this.scene.time.now + 1500; // hora real (no depende de los FPS)
     }
     if (!result.ok) this.holdPointer = null;
+    else this.gs.player.anim.cheer(); // el personaje festeja lo que fabricó
     this.refreshCrafting(true);
     return result.ok;
   }

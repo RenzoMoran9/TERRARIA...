@@ -3,6 +3,7 @@ import { textStyle } from './styles.js';
 const HEARTS = 5; // 20 de vida por corazón (como Terraria)
 const HEART_SIZE = 24;
 const HEART_GAP = 3;
+const LOW_HEALTH = 0.3; // con poca vida los corazones laten
 // Espacio horizontal que ocupan la vida (izquierda) y el reloj (derecha); la barra rápida va entre ambos
 export const HUD_SIDE_SPACE = 172;
 
@@ -18,12 +19,13 @@ export class HUD {
     this.hearts = [];
     for (let i = 0; i < HEARTS; i++) {
       // Corazón vacío (oscuro) detrás y corazón lleno recortado según la vida
-      const empty = scene.add.image(0, 0, 'ui_heart').setOrigin(0, 0.5).setTint(0x2a1418).setAlpha(0.85).setDepth(10);
-      const full = scene.add.image(0, 0, 'ui_heart').setOrigin(0, 0.5).setDepth(10);
+      const empty = scene.add.image(0, 0, 'ui_heart').setOrigin(0.5).setTint(0x2a1418).setAlpha(0.85).setDepth(10);
+      const full = scene.add.image(0, 0, 'ui_heart').setOrigin(0.5).setDepth(10);
       empty.setDisplaySize(HEART_SIZE, HEART_SIZE);
       full.setDisplaySize(HEART_SIZE, HEART_SIZE);
-      this.hearts.push({ empty, full });
+      this.hearts.push({ empty, full, scale: full.scaleX });
     }
+    this.pulsing = false;
 
     this.clockText = scene.add.text(0, 0, '', textStyle({ fontSize: '16px' })).setOrigin(1, 0).setDepth(10);
     this.celestial = scene.add.image(0, 0, 'bg_sun').setDisplaySize(22, 22).setDepth(10);
@@ -34,7 +36,7 @@ export class HUD {
   layout(width) {
     this.hpText.setPosition(10, 4);
     this.hearts.forEach((h, i) => {
-      const x = 10 + i * (HEART_SIZE + HEART_GAP);
+      const x = 10 + HEART_SIZE / 2 + i * (HEART_SIZE + HEART_GAP);
       h.empty.setPosition(x, 32);
       h.full.setPosition(x, 32);
     });
@@ -54,6 +56,18 @@ export class HUD {
         const w = h.full.frame.width;
         h.full.setVisible(frac > 0).setCrop(0, 0, w * frac, h.full.frame.height);
       });
+    }
+
+    // Latido de los corazones con poca vida (dos golpes seguidos, como un corazón)
+    const low = hp > 0 && hp / p.maxHealth < LOW_HEALTH;
+    if (low || this.pulsing) {
+      this.pulsing = low;
+      const t = (this.scene.time.now % 1000) / 1000;
+      const beat = low ? Math.max(Math.exp(-((t - 0.08) ** 2) / 0.002), 0.6 * Math.exp(-((t - 0.28) ** 2) / 0.002)) : 0;
+      for (const h of this.hearts) {
+        h.full.setScale(h.scale * (1 + beat * 0.18));
+        h.empty.setScale(h.scale * (1 + beat * 0.18));
+      }
     }
 
     const dn = this.gs.dayNight;

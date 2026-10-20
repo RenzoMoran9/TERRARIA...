@@ -4,6 +4,10 @@ import { createSimplex2D, hash2 } from './noise.js';
 
 const smoothstep = (t) => t * t * (3 - 2 * t);
 
+// Forma de los túneles de las cuevas
+const TUNNEL_FREQ_Y = 0.028; // menor = túneles más altos
+const TUNNEL_WIDTH = 0.1; // mayor = túneles más anchos (81% del piso de las cuevas con 3 bloques de alto)
+
 /**
  * Generador procedural del mundo.
  * Todo es una función pura de (semilla, x, y): cualquier chunk se puede
@@ -64,7 +68,7 @@ export class WorldGenerator {
       const s = this.surface[x];
       if (Math.abs(this.surface[x - 1] - s) > 1 || Math.abs(this.surface[x + 1] - s) > 1) continue;
       if (this.baseTile(x, s) !== BLOCK.GRASS) continue;
-      this.treeHeight[x] = 5 + Math.floor(hash2(x, 13, this.seed) * 6);
+      this.treeHeight[x] = 7 + Math.floor(hash2(x, 13, this.seed) * 7); // 7 a 13 bloques
     }
   }
 
@@ -79,8 +83,9 @@ export class WorldGenerator {
     if (distSpawn < 14 && depth < 18) return false;
 
     // Túneles: banda estrecha alrededor del cero del ruido (forma de gusano)
-    const t = this.nCave(x * 0.03, y * 0.045);
-    const width = 0.045 + Math.min(depth, 120) * 0.0004;
+    // (más gruesos y estirados en vertical: el jugador necesita 3 bloques de alto para pasar)
+    const t = this.nCave(x * 0.03, y * TUNNEL_FREQ_Y);
+    const width = TUNNEL_WIDTH + Math.min(depth, 120) * 0.0004;
     if (t > -width && t < width && this.nCaveMask(x * 0.012, y * 0.012) > -0.35) return true;
 
     // Cavernas grandes en profundidad

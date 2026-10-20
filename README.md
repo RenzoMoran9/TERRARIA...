@@ -49,9 +49,9 @@ La carpeta `dist/` se puede subir tal cual a cualquier hosting estático (GitHub
 | --------------------- | ----------------------------------- | ---------------------------------------------- |
 | Moverse               | `A` / `D` o flechas                 | Joystick (abajo a la izquierda)                |
 | Saltar                | `Espacio`, `W` o flecha arriba      | Botón grande con flecha, o joystick hacia arriba |
-| Elegir el bloque      | Con el ratón                        | **Tocar un bloque lo marca** con el recuadro amarillo (no lo mina). Sin marcar, el recuadro elige solo el bloque más cercano hacia donde miras |
+| Elegir el bloque      | Con el ratón                        | **Tocar un bloque lo marca** con el recuadro amarillo (no lo mina). Con el dedo apoyado, **el recuadro lo sigue**: deslízalo hasta el bloque exacto y suelta. Si tocas cerca (en el aire), el recuadro se ajusta al bloque más cercano. Sin marcar, el recuadro elige solo el bloque más cercano hacia donde miras |
 | Minar / talar         | Mantener **clic izquierdo**         | Mantener el **botón de acción** (pico): mina el bloque del recuadro y se detiene al terminar |
-| Colocar bloque        | **Clic derecho**                    | Botón de acción en modo COLOCAR (un toque = un bloque) |
+| Colocar bloque        | **Clic derecho**                    | Botón de acción en modo COLOCAR (un toque = un bloque; manteniéndolo, sigue poniendo después de un momento) |
 | Apuntar sin marcar    | —                                   | Inclinar el joystick mientras se mantiene la acción (abajo = cavar hacia abajo) |
 | Cambiar modo          | —                                   | Botón de flechas (MINAR ↔ COLOCAR). Elegir un bloque en la barra pasa solo a COLOCAR; un pico, a MINAR |
 | Barra rápida          | Teclas `1`–`9` o rueda del ratón    | Tocar la casilla                               |
@@ -64,6 +64,7 @@ En el inventario: clic/toque en una casilla para tomar o soltar una pila; clic d
 Para craftear: toca (o haz clic en) una receta para elegirla; debajo aparece qué necesitas y cuánto tienes.
 Luego aprieta el botón **Craftear**. Si lo mantienes apretado, fabrica varias veces seguidas.
 Mantener el clic sobre bloques y arrastrar permite minar o construir seguido.
+Las **antorchas y la mesa de trabajo** se ponen y se quitan **de a una por pulsación** (aunque se mantenga apretado).
 
 ## Qué incluye la Fase 1
 
@@ -71,8 +72,15 @@ Mantener el clic sobre bloques y arrastrar permite minar o construir seguido.
   cavernas profundas, carbón e hierro, árboles, roca madre al fondo y paredes de fondo bajo tierra.
   El mundo mide 2048 × 384 bloques, dividido en **chunks de 32×32** que se generan, cargan y descargan según la cámara.
   Para usar una semilla concreta: `http://localhost:5173/?seed=12345` (también acepta texto: `?seed=hola`).
-- **Jugador**: movimiento con aceleración, salto (más alto si se mantiene), gravedad, colisión con bloques y
-  subida automática de escalones de 1 bloque. La cámara lo sigue.
+- **Jugador**: proporción tipo Terraria (2,5 bloques de alto: necesita 3 bloques de espacio para pasar y cabe por
+  pozos de 1 bloque de ancho). Movimiento con aceleración, salto (más alto si se mantiene), gravedad, colisión con
+  bloques y subida automática de escalones de 1 bloque. La cámara lo sigue.
+- **Animaciones del personaje** (30 poses): respira y parpadea; camina (más rápido cuanto más corre) levantando polvo;
+  salta estirándose, cae, agita los brazos en caídas largas y aterriza aplastándose; levanta y baja el pico al minar
+  (con chispas en cada golpe); estira el brazo con el bloque al colocar; lleva la antorcha encendida en la mano
+  (ilumina alrededor); empuja las paredes; pone cara de dolor al recibir daño; festeja con brillos al talar un árbol
+  o craftear; con poca vida respira agitado y suda (y los corazones laten); si no lo tocas mira para atrás, bosteza
+  y se sienta a dormir con "zzz"; al morir cae de espaldas y se desvanece, y reaparece con brillos saludando.
 - **Minar y construir**: el tiempo depende de la dureza del bloque y del mejor pico del inventario. Alcance de unos 5 bloques.
   Talar el tronco derriba el árbol entero. La piedra y el carbón requieren pico de madera; el hierro, pico de piedra.
 - **Inventario**: 36 casillas (9 de barra rápida), pilas de hasta 99.
@@ -133,7 +141,7 @@ redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pas
 | `items/coal.png`                     | 32 × 32     | Ícono de *Carbón*                                                           |
 | `items/wood_pickaxe.png`             | 32 × 32     | Ícono de *Pico de madera* (mango abajo a la izquierda, cabeza arriba a la derecha) |
 | `items/stone_pickaxe.png`            | 32 × 32     | Ícono de *Pico de piedra* (misma orientación)                               |
-| `player/player.png`                  | 256 × 48    | Jugador: **8 cuadros de 32×48** mirando a la derecha: 0 quieto, 1-6 caminar, 7 saltar (los pies tocan el borde de abajo) |
+| `player/player.png`                  | 384 × 352   | Jugador: **30 poses de 48×88**, 8 por fila, mirando a la derecha (los pies tocan el borde de abajo). Orden: quieto, respirar, parpadear, caminar ×8, saltar, caer, agitar brazos, aterrizar, golpe ×3 (levantar, bajar, impacto), usar, daño, festejo, empujar, mirar atrás, bostezo, cansado ×2, sentado/dormido ×2, saludo ×2 (ver `src/player/animations.js`) |
 | `backgrounds/mountains.png`          | 960 × 320   | Montañas lejanas (se repite en horizontal: los bordes izquierdo y derecho deben empalmar) |
 | `backgrounds/hills.png`              | 960 × 240   | Colinas intermedias (repetible en horizontal)                               |
 | `backgrounds/forest.png`             | 960 × 240   | Bosque cercano (repetible en horizontal)                                    |
@@ -156,7 +164,9 @@ redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pas
 | `ui/button_fullscreen.png`           | 48 × 48     | Botón táctil de pantalla completa                                           |
 
 Las hojas de sprites (`player.png`, `tree_top.png`, `crack.png`) también aceptan un solo cuadro: si el jugador tiene
-un único cuadro de 32×48, se usa sin animación.
+un único cuadro de 48×88, se usa sin animación. El pico y la antorcha se dibujan en la mano de adelante según la
+posición de la mano en cada pose de `src/player/animations.js` (si dibujas tus propias poses, respeta esas posiciones
+o ajústalas ahí).
 
 ## Estructura del código
 
@@ -170,7 +180,7 @@ src/
   assets.js            Mapa central clave → imagen
   scenes/              BootScene (carga), BackgroundScene (cielo y paisaje), MenuScene, GameScene (mundo) y UIScene (interfaz)
   world/               Ruido con semilla, bloques, generador, datos por chunks, renderizado de chunks y tileset
-  player/              Jugador: física, colisiones, vida y daño por caída
+  player/              Jugador: física, colisiones, vida y daño por caída (Player), poses (animations) y animaciones y efectos (PlayerAnimator)
   systems/             Inventario, ítems, crafteo, minar/colocar, día/noche, iluminación, guardado y placeholders (pixel art por código)
   ui/                  HUD, barra rápida, inventario, controles táctiles, debug y avisos
 ```

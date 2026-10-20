@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { PixelCanvas, hash, pick } from './PixelArt.js';
+import { POSES, SHEET_COLS, ART_W, ART_H } from '../player/animations.js';
 
 // =====================================================================
 //  Arte de reemplazo generado por código.
@@ -71,91 +72,165 @@ function pickaxe(pc, head, light, dark) {
   pc.outline('#20160e');
 }
 
-// Personaje (mirando a la derecha). 8 cuadros de 16×24: 0 quieto, 1-6 caminar, 7 saltar.
+// Personaje (mirando a la derecha). Cuadros de 24×44 (arte) = 48×88 en pantalla, uno por
+// pose de player/animations.js (8 por fila). Los pies tocan la última fila del cuadro.
 const PLAYER_COLORS = {
   skin: '#f2c18d',
   skinShade: '#d49b62',
+  mouth: '#b9754e',
   hair: '#5a3412',
   hairLight: '#7d4b1e',
-  eye: '#1d1d2e',
+  eyeWhite: '#ffffff',
+  eye: '#2a3a8a',
   shirt: '#3d7fd9',
   shirtShade: '#2b5ea8',
   shirtLight: '#6aa0ea',
+  belt: '#4a3420',
+  buckle: '#e0c060',
   pants: '#41416a',
   pantsShade: '#2d2d4d',
-  boots: '#5a3a1e',
-  bootsShade: '#3d2611',
+  boots: '#6b4423',
+  bootsShade: '#4a2d16',
 };
-const WALK = [
-  [2, -2, 0],
-  [1, -1, 1],
-  [0, 0, 0],
-  [-2, 2, 0],
-  [-1, 1, 1],
-  [0, 0, 0],
-];
-
-function drawPlayerFrame(pc, ox, frame) {
+// Dibuja una pose (ver player/animations.js) en el cuadro que empieza en (ox, oy)
+function drawPose(pc, ox, oy, P) {
   const C = PLAYER_COLORS;
-  let front = 0;
-  let back = 0;
-  let bob = 0;
-  let frontFoot = 23;
-  let jump = false;
-  if (frame >= 1 && frame <= 6) [front, back, bob] = WALK[frame - 1];
-  if (frame === 7) {
-    front = 2;
-    back = -1;
-    frontFoot = 21;
-    jump = true;
-  }
-  const hip = 17 + bob;
+  const bob = P.bob || 0;
+  const lean = P.lean || 0;
+  const lift = P.lift || 0;
+  const Y = (y) => oy + y - lift;
+  const hip = 28 + bob;
+  const shoulder = 16 + bob;
+  const ux = ox + lean; // torso y cabeza se inclinan con lean
+  const hipShift = P.sit ? lean : Math.round(lean / 2);
+  const frontLeg = { dx: 0, foot: 43, ...(P.frontLeg || {}) };
+  const backLeg = { dx: 0, foot: 43, ...(P.backLeg || {}) };
 
-  const leg = (hipX, dx, pants, footRow) => {
-    for (let r = hip; r <= footRow; r++) {
-      const x = ox + hipX + Math.round((dx * (r - hip)) / Math.max(1, footRow - hip));
-      const isBoot = r >= footRow - 2;
-      pc.set(x, r, isBoot ? C.bootsShade : pants === C.pants ? C.pantsShade : pants);
-      pc.set(x + 1, r, isBoot ? C.boots : pants);
-      if (r === footRow) pc.set(x + 2, r, C.boots);
+  // Pierna de 3 px desde la cadera hasta el pie (con bota y punta hacia adelante)
+  const leg = (hipX, L, pants) => {
+    const fx = ox + hipX + L.dx;
+    for (let k = 0; k < 3; k++) {
+      pc.line(ox + hipX + hipShift + k, Y(hip), fx + k, Y(L.foot - 3), k === 0 ? C.pantsShade : pants);
     }
+    pc.rect(fx, Y(L.foot - 2), 3, 3, C.boots);
+    pc.rect(fx, Y(L.foot - 2), 1, 3, C.bootsShade);
+    pc.set(fx + 3, Y(L.foot), C.boots);
+    pc.set(fx + 3, Y(L.foot - 1), C.boots);
   };
-  const arm = (sx, hx, hy, color) => {
-    const top = 11 + bob;
-    for (let r = top; r < hy; r++) {
-      const x = ox + sx + Math.round(((hx - sx) * (r - top)) / Math.max(1, hy - top));
-      pc.set(x, r, color);
-      pc.set(x + 1, r, color);
-    }
-    pc.set(ox + hx, hy, C.skinShade);
-    pc.set(ox + hx + 1, hy, C.skin);
+  // Brazo de 3 px desde el hombro hasta la mano
+  const arm = (sx, hand, color) => {
+    const hx = ox + hand[0] + lean;
+    const hy = Y(hand[1] + bob);
+    for (let k = 0; k < 3; k++) pc.line(ux + sx + k, Y(shoulder), hx + k, hy - 1, color);
+    pc.rect(hx, hy, 3, 2, C.skin);
+    pc.set(hx, hy, C.skinShade);
   };
 
   // Brazo y pierna de atrás (más oscuros)
-  arm(6, 6 + Math.round(front / 2), 16 + bob, C.shirtShade);
-  leg(6, back, C.pantsShade, 23);
-  // Torso
-  pc.rect(ox + 5, 10 + bob, 6, hip - 10 - bob, C.shirt);
-  pc.rect(ox + 5, 10 + bob, 1, hip - 10 - bob, C.shirtShade);
-  pc.rect(ox + 8, 10 + bob, 3, 1, C.shirtLight);
-  pc.rect(ox + 5, hip - 1, 6, 1, C.pantsShade); // cinturón
+  arm(9, P.back || [9, 28], C.shirtShade);
+  leg(9, backLeg, C.pantsShade);
+
+  // Torso con sombra atrás, luz adelante, cuello y cinturón
+  pc.rect(ux + 8, Y(15 + bob), 8, 13, C.shirt);
+  pc.rect(ux + 8, Y(15 + bob), 2, 13, C.shirtShade);
+  pc.rect(ux + 14, Y(17 + bob), 1, 7, C.shirtLight);
+  pc.rect(ux + 11, Y(15 + bob), 3, 1, C.skinShade);
+  pc.rect(ux + 8, Y(hip - 1), 8, 1, C.belt);
+  pc.set(ux + 13, Y(hip - 1), C.buckle);
+
+  // Brazo de adelante levantado (mano por encima del hombro): va detrás de la cabeza
+  const front = P.front || [12, 28];
+  const raised = front[1] < 13;
+  if (raised) arm(12, front, C.shirt);
+
   // Cabeza
-  const hy = 2 + bob;
-  pc.rect(ox + 5, hy + 2, 7, 6, C.skin);
-  pc.rect(ox + 5, hy + 2, 1, 6, C.skinShade);
-  pc.rect(ox + 6, hy + 7, 5, 1, C.skinShade);
-  pc.set(ox + 9, hy + 4, C.eye);
-  pc.set(ox + 9, hy + 5, C.eye);
+  const hx = ux + (P.headDx || 0);
+  const hy = Y(3 + bob + (P.headDy || 0));
+  pc.rect(hx + 8, hy + 2, 9, 9, C.skin);
+  pc.rect(hx + 8, hy + 2, 1, 9, C.skinShade);
+  pc.rect(hx + 9, hy + 10, 7, 1, C.skinShade);
+  pc.rect(hx + 10, hy + 11, 4, 1, C.skinShade); // cuello
+  pc.set(hx + 10, hy + 6, C.skinShade); // oreja
+  // Ojos
+  const dark = '#3a2418';
+  const eye = (x, y, c) => pc.set(hx + x, hy + y, c);
+  switch (P.eyes || 'open') {
+    case 'closed':
+      eye(13, 6, dark);
+      eye(14, 6, dark);
+      break;
+    case 'happy':
+      eye(13, 6, dark);
+      eye(14, 5, dark);
+      eye(15, 6, dark);
+      break;
+    case 'wide':
+      for (const y of [4, 5, 6]) eye(13, y, C.eyeWhite);
+      eye(14, 4, C.eyeWhite);
+      eye(14, 6, C.eyeWhite);
+      eye(14, 5, C.eye);
+      break;
+    case 'back':
+      eye(14, 5, C.eyeWhite);
+      eye(14, 6, C.eyeWhite);
+      eye(13, 5, C.eye);
+      eye(13, 6, C.eye);
+      break;
+    case 'hurt':
+      eye(13, 5, dark);
+      eye(14, 6, dark);
+      eye(13, 6, dark);
+      break;
+    case 'sleepy':
+      eye(13, 5, C.skinShade);
+      eye(14, 5, C.skinShade);
+      eye(13, 6, C.eyeWhite);
+      eye(14, 6, C.eye);
+      break;
+    default:
+      eye(13, 5, C.eyeWhite);
+      eye(13, 6, C.eyeWhite);
+      eye(14, 5, C.eye);
+      eye(14, 6, C.eye);
+  }
+  // Boca
+  const inside = '#5a1a1a';
+  switch (P.mouth || 'line') {
+    case 'smile':
+      eye(13, 8, C.mouth);
+      eye(16, 8, C.mouth);
+      eye(14, 9, C.mouth);
+      eye(15, 9, C.mouth);
+      break;
+    case 'open':
+      pc.rect(hx + 14, hy + 8, 2, 2, inside);
+      break;
+    case 'frown':
+      eye(14, 8, C.mouth);
+      eye(15, 8, C.mouth);
+      eye(13, 9, C.mouth);
+      eye(16, 9, C.mouth);
+      break;
+    case 'o':
+      pc.rect(hx + 15, hy + 8, 1, 2, inside);
+      break;
+    case 'yawn':
+      pc.rect(hx + 14, hy + 7, 2, 3, inside);
+      break;
+    default:
+      pc.rect(hx + 14, hy + 8, 2, 1, C.mouth);
+  }
   // Pelo
-  pc.rect(ox + 4, hy, 8, 2, C.hair);
-  pc.rect(ox + 5, hy, 5, 1, C.hairLight);
-  pc.rect(ox + 4, hy + 2, 2, 5, C.hair);
-  pc.rect(ox + 6, hy + 2, 1, 1, C.hair);
-  pc.rect(ox + 10, hy + 2, 2, 1, C.hair);
+  pc.rect(hx + 7, hy, 10, 3, C.hair);
+  pc.rect(hx + 9, hy, 5, 1, C.hairLight);
+  pc.rect(hx + 7, hy + 3, 3, 6, C.hair);
+  pc.rect(hx + 10, hy + 3, 1, 2, C.hair);
+  pc.rect(hx + 15, hy + 3, 2, 1, C.hair);
+  pc.set(hx + 16, hy + 4, C.hair);
+
   // Pierna y brazo de adelante
-  leg(8, front, C.pants, frontFoot);
-  if (jump) arm(8, 11, 9 + bob, C.shirt);
-  else arm(8, 8 - Math.round(front / 2), 16 + bob, C.shirt);
+  leg(12, frontLeg, C.pants);
+  if (!raised) arm(12, front, C.shirt);
 }
 
 function drawCanopy(pc, ox, v) {
@@ -373,7 +448,8 @@ const PIXEL = {
 
   // ---------- jugador (hoja de 8 cuadros) ----------
   player(pc) {
-    for (let f = 0; f < 8; f++) drawPlayerFrame(pc, f * 16, f);
+    // Todas las poses de player/animations.js, 8 por fila
+    POSES.forEach((pose, i) => drawPose(pc, (i % SHEET_COLS) * ART_W, Math.floor(i / SHEET_COLS) * ART_H, pose));
     pc.outline('#1a120c');
   },
 

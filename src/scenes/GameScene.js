@@ -50,13 +50,17 @@ export class GameScene extends Phaser.Scene {
     if (save) this.inventory.deserialize(save.inventory);
 
     // --- Jugador ---
+    // El punto de aparición se calcula siempre (depende del tamaño actual del jugador)
     const spawnTile = this.world.generator.getSpawnTile();
-    this.spawn = save?.spawn ?? {
+    this.spawn = {
       x: spawnTile.tx * T + (T - PLAYER.WIDTH) / 2,
       y: spawnTile.ty * T - PLAYER.HEIGHT,
     };
     const start = save?.player ?? this.spawn;
     this.player = new Player(this, this.world, start.x, start.y);
+    // Partidas viejas (jugador más bajo): si quedó dentro de un bloque, subirlo hasta un lugar libre
+    for (let i = 0; i < 12 && this.player.collides(this.player.x, this.player.y); i++) this.player.y -= T;
+    this.player.peakY = this.player.y;
     if (save?.player?.health) this.player.health = Phaser.Math.Clamp(save.player.health, 1, PLAYER.MAX_HEALTH);
     this.respawnTimer = 0;
 
@@ -89,6 +93,30 @@ export class GameScene extends Phaser.Scene {
         emitting: false,
       })
       .setDepth(DEPTH.PARTICLES);
+    // Brillos (festejo, reaparecer) y gotas de sudor (poca vida) del personaje
+    this.sparkles = this.add
+      .particles(0, 0, 'fx_pixel', {
+        lifespan: { min: 450, max: 800 },
+        speed: { min: 40, max: 150 },
+        angle: { min: 0, max: 360 },
+        gravityY: 80,
+        scale: { start: 1.1, end: 0 },
+        tint: [0xfff1a8, 0xffd84a, 0xffffff, 0x9be7ff],
+        blendMode: Phaser.BlendModes.ADD,
+        emitting: false,
+      })
+      .setDepth(DEPTH.FLOATING_TEXT);
+    this.sweat = this.add
+      .particles(0, 0, 'fx_pixel', {
+        lifespan: 550,
+        speedX: { min: -40, max: 40 },
+        speedY: { min: -90, max: -50 },
+        gravityY: 420,
+        scale: { start: 0.9, end: 0.4 },
+        tint: 0x8fd3ff,
+        emitting: false,
+      })
+      .setDepth(DEPTH.PARTICLES);
     this._stations = { workbench: false };
 
     // --- Estado de controles (lo escriben el teclado y los controles táctiles) ---
@@ -97,6 +125,7 @@ export class GameScene extends Phaser.Scene {
     // aimX/aimY = hacia dónde apunta el joystick
     this.touchState = { moveX: 0, jump: false, mode: 'mine', action: false, actionPressed: false, aimX: 0, aimY: 0 };
     this.manualTarget = null; // bloque marcado al tocarlo (celular): { tx, ty, acted }
+    this.markPointer = null; // dedo apoyado en el mundo: el recuadro lo sigue mientras lo arrastra
     this._holdStop = false; // terminó con el bloque marcado: no seguir hasta soltar el botón
     this._actionWasDown = false;
     this.isTouch = window.matchMedia?.('(pointer: coarse)').matches || false;
@@ -134,8 +163,10 @@ export class GameScene extends Phaser.Scene {
     this.mouseInside = true;
     this.input.on('pointerdown', (pointer) => {
       if (this.uiBlocking) return;
-      // Celular: tocar un bloque lo MARCA (recuadro amarillo); el botón de acción lo mina o coloca
+      // Celular: tocar un bloque lo MARCA (recuadro amarillo); el botón de acción lo mina o coloca.
+      // Mientras el dedo siga apoyado, el recuadro lo sigue: se puede deslizar hasta el bloque exacto.
       if (pointer.wasTouch) {
+        this.markPointer = pointer;
         this.markTarget(pointer);
         return;
       }
@@ -183,6 +214,12 @@ export class GameScene extends Phaser.Scene {
 
     this.chunkManager.update(cam);
     this.chunkManager.animate(time);
+    // Dedo arrastrándose por el mundo: el recuadro amarillo lo sigue
+    const mp = this.markPointer;
+    if (mp) {
+      if (mp.isDown && !this.uiBlocking) this.markTarget(mp);
+      else this.markPointer = null;
+    }
     this.interaction.update(dt, this.getPointerAction());
     this.lighting.update(dt, cam);
 
@@ -251,11 +288,14 @@ export class GameScene extends Phaser.Scene {
     return null;
   }
 
-  /** Marca el bloque tocado como objetivo del botón de acción. */
+  /** Marca el bloque tocado como objetivo del botón de acción (con "imán" al bloque válido más cercano). */
   markTarget(pointer) {
     if (this.player.dead) return;
     this.cameras.main.getWorldPoint(pointer.x, pointer.y, this._tmpVec);
-    this.manualTarget = { tx: Math.floor(this._tmpVec.x / T), ty: Math.floor(this._tmpVec.y / T), acted: false };
+    const t = this.interaction.pickTouchTile(this._tmpVec.x, this._tmpVec.y, this.touchState.mode);
+    const mt = this.manualTarget;
+    if (mt && mt.tx === t.tx && mt.ty === t.ty) return; // sigue en el mismo bloque
+    this.manualTarget = { tx: t.tx, ty: t.ty, acted: false };
     this._holdStop = false;
   }
 
@@ -327,10 +367,13 @@ export class GameScene extends Phaser.Scene {
     if (msg) this.events.emit('toast', msg);
   }
 
-  /** Zoom de cámara: en pantallas chicas (celular) se aleja un poco para ver más mundo. */
+  /**
+   * Zoom de cámara: en pantallas chicas (celular) se aleja un poco para ver más mundo,
+   * sin achicar demasiado los bloques (tienen que poder tocarse con el dedo).
+   */
   applyZoom() {
     const { width, height } = this.scale;
-    const zoom = height < 640 || width < 800 ? Phaser.Math.Clamp(Math.min(height / 520, width / 800), 0.6, 1) : 1;
+    const zoom = height < 640 || width < 800 ? Phaser.Math.Clamp(Math.min(height / 440, width / 760), 0.7, 1) : 1;
     this.cameras.main.setZoom(zoom);
   }
 
@@ -361,6 +404,7 @@ export class GameScene extends Phaser.Scene {
   onPlayerDied() {
     this.respawnTimer = PLAYER.RESPAWN_SECONDS;
     this.worldPointer = null;
+    this.markPointer = null;
     this.events.emit('playerDied');
   }
 
@@ -380,6 +424,16 @@ export class GameScene extends Phaser.Scene {
 
   spawnDust(x, y, count) {
     this.dust.explode(count, x, y - 2);
+  }
+
+  spawnSparkles(x, y, count, tint) {
+    if (tint !== undefined) this.sparkles.setParticleTint(tint);
+    this.sparkles.explode(count, x, y);
+    if (tint !== undefined) this.sparkles.setParticleTint([0xfff1a8, 0xffd84a, 0xffffff, 0x9be7ff]);
+  }
+
+  spawnSweat(x, y) {
+    this.sweat.explode(2, x, y);
   }
 
   spawnDebris(x, y, color, count = 8) {
@@ -430,6 +484,7 @@ export class GameScene extends Phaser.Scene {
     window.removeEventListener('pagehide', this._onPageHide);
     this.scale.off('resize', this.applyZoom, this);
     this.interaction.destroy();
+    this.player.anim.destroy();
     this.lighting.destroy();
     this.chunkManager.destroy();
     this.world.removeAllListeners();
