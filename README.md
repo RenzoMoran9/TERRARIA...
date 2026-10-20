@@ -20,6 +20,20 @@ npm run dev        # abre http://localhost:5173
 3. En la consola aparece una línea `Network: http://192.168.x.x:5173/`: abre esa dirección en el navegador del celular.
 4. Gira el teléfono en **horizontal** (también funciona en vertical, pero se ve menos mundo).
 
+### Instalar en el celular (como una app)
+
+El juego se publica solo en **https://renzomoran9.github.io/TERRARIA.../** cada vez que se suben cambios
+(ver `.github/workflows/deploy-pages.yml`). Abre esa dirección en el celular y:
+
+- **Android (Chrome):** en el menú principal aparece el botón **Instalar en el celular** (o menú ⋮ → *Instalar app*).
+- **iPhone (Safari):** botón **Compartir** → **Agregar a inicio**.
+
+Queda un ícono en la pantalla de inicio; se abre a pantalla completa (también en iPhone) y **funciona sin internet**.
+La partida guardada de la app es independiente de la del navegador.
+
+> Para que la publicación funcione hay que activarla **una sola vez** en GitHub:
+> **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+
 ### Versión para publicar
 
 ```bash
@@ -35,11 +49,11 @@ La carpeta `dist/` se puede subir tal cual a cualquier hosting estático (GitHub
 | --------------------- | ----------------------------------- | ---------------------------------------------- |
 | Moverse               | `A` / `D` o flechas                 | Joystick (abajo a la izquierda)                |
 | Saltar                | `Espacio`, `W` o flecha arriba      | Botón grande con flecha, o joystick hacia arriba |
-| Minar / talar         | Mantener **clic izquierdo**         | Mantener el **botón de acción** (pico): actúa sobre el bloque marcado en amarillo, sin tocarlo |
-| Colocar bloque        | **Clic derecho**                    | Botón de acción en modo COLOCAR                |
-| Apuntar               | Con el ratón                        | Inclinar el joystick mientras se mantiene la acción (abajo = cavar hacia abajo) |
+| Elegir el bloque      | Con el ratón                        | **Tocar un bloque lo marca** con el recuadro amarillo (no lo mina). Sin marcar, el recuadro elige solo el bloque más cercano hacia donde miras |
+| Minar / talar         | Mantener **clic izquierdo**         | Mantener el **botón de acción** (pico): mina el bloque del recuadro y se detiene al terminar |
+| Colocar bloque        | **Clic derecho**                    | Botón de acción en modo COLOCAR (un toque = un bloque) |
+| Apuntar sin marcar    | —                                   | Inclinar el joystick mientras se mantiene la acción (abajo = cavar hacia abajo) |
 | Cambiar modo          | —                                   | Botón de flechas (MINAR ↔ COLOCAR). Elegir un bloque en la barra pasa solo a COLOCAR; un pico, a MINAR |
-| Precisión             | —                                   | También se puede tocar un bloque directamente  |
 | Barra rápida          | Teclas `1`–`9` o rueda del ratón    | Tocar la casilla                               |
 | Inventario y crafteo  | `E` (cerrar: `E` o `Esc`)           | Botón de cuadritos                             |
 | Modo debug (FPS)      | `F3`                                | Tocar el reloj                                 |

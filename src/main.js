@@ -49,5 +49,21 @@ setInterval(() => {
   }
 }, 400);
 
+// --- App instalable (PWA) ---
+// El service worker solo se registra en la versión publicada (no en `npm run dev`)
+// y nunca dentro de otra página (por ejemplo, la vista previa de claude.ai).
+const standalonePage = window.self === window.top;
+if (import.meta.env.PROD && standalonePage && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch((e) => console.warn('[pwa] No se pudo registrar:', e));
+  });
+}
+// Android/Chrome avisa cuando el juego se puede instalar: guardamos el aviso para el botón del menú
+window.addEventListener('beforeinstallprompt', (event) => {
+  event.preventDefault();
+  window.__installPrompt = event;
+  game.events.emit('installAvailable');
+});
+
 // Acceso desde la consola del navegador para depurar
 window.__game = game;

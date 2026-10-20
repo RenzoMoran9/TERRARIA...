@@ -15,6 +15,19 @@ function isTouchDevice() {
   return window.matchMedia?.('(pointer: coarse)').matches || 'ontouchstart' in window;
 }
 
+// ¿Ya se está jugando como app instalada?
+function isInstalledApp() {
+  return (
+    window.navigator.standalone === true ||
+    window.matchMedia?.('(display-mode: standalone)').matches ||
+    window.matchMedia?.('(display-mode: fullscreen)').matches
+  );
+}
+
+function isIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
 /** Menú principal: continuar partida guardada o crear un mundo nuevo. */
 export class MenuScene extends Phaser.Scene {
   constructor() {
@@ -26,7 +39,12 @@ export class MenuScene extends Phaser.Scene {
     this.confirmNew = false;
     this.build();
     this.scale.on('resize', this.build, this);
-    this.events.once('shutdown', () => this.scale.off('resize', this.build, this));
+    // Si el navegador avisa que el juego se puede instalar, aparece el botón "Instalar"
+    this.game.events.on('installAvailable', this.build, this);
+    this.events.once('shutdown', () => {
+      this.scale.off('resize', this.build, this);
+      this.game.events.off('installAvailable', this.build, this);
+    });
   }
 
   build() {
@@ -76,8 +94,20 @@ export class MenuScene extends Phaser.Scene {
     });
     if (this.confirmNew) newBtn.label.setText('¿Borrar el mundo guardado? Toca otra vez').setFontSize(14);
 
+    // Instalar como app en el celular (solo fuera de otras páginas y si aún no está instalado)
+    const topPage = window.self === window.top;
+    if (topPage && !isInstalledApp()) {
+      if (window.__installPrompt) {
+        createButton(this, W / 2, y + 62, bw, 40, 'Instalar en el celular', () => this.install(), { fontSize: '16px', color: 0x2f7a40, hover: 0x3c9450 });
+      } else if (isIOS()) {
+        this.add
+          .text(W / 2, y + 44, 'Para instalarlo: botón Compartir → "Agregar a inicio"', textStyle({ fontSize: '13px', color: '#ffe28a' }))
+          .setOrigin(0.5, 0);
+      }
+    }
+
     const help = touch
-      ? 'Joystick: moverse · Botón grande: saltar · Toca un bloque para minar/colocar\nBotón MINAR/COLOCAR: cambia el modo · Botón de cuadritos: inventario'
+      ? 'Joystick: moverse · Flecha: saltar · Toca un bloque para marcarlo\nBotón del pico: minar/colocar lo marcado · Flechas: cambiar modo · Cuadritos: inventario'
       : 'A/D o flechas: moverse · Espacio/W: saltar · Clic izq.: minar · Clic der.: colocar\n1-9 o rueda: barra rápida · E: inventario y crafteo · F3: debug';
     const helpText = this.add
       .text(W / 2, groundY - 44, help, textStyle({ fontSize: W < 640 ? '11px' : '13px', align: 'center', color: '#ffffff' }))
@@ -86,6 +116,15 @@ export class MenuScene extends Phaser.Scene {
     this.add
       .rectangle(W / 2, helpText.y - helpText.height / 2, Math.min(W - 16, helpText.width + 24), helpText.height + 12, 0x10163a, 0.6)
       .setStrokeStyle(1, 0x7d8fe0, 0.6);
+  }
+
+  /** Muestra el aviso del navegador para instalar el juego como app. */
+  install() {
+    const prompt = window.__installPrompt;
+    if (!prompt) return;
+    window.__installPrompt = null;
+    prompt.prompt();
+    prompt.userChoice.finally(() => this.build());
   }
 
   startGame(data) {
