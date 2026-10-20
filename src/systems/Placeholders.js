@@ -72,7 +72,7 @@ function pickaxe(pc, head, light, dark) {
   pc.outline('#20160e');
 }
 
-// Personaje (mirando a la derecha). Cuadros de 24×44 (arte) = 48×88 en pantalla, uno por
+// Personaje (mirando a la derecha). Cuadros de 24×32 (arte) = 48×64 en pantalla, uno por
 // pose de player/animations.js (8 por fila). Los pies tocan la última fila del cuadro.
 const PLAYER_COLORS = {
   skin: '#f2c18d',
@@ -99,12 +99,12 @@ function drawPose(pc, ox, oy, P) {
   const lean = P.lean || 0;
   const lift = P.lift || 0;
   const Y = (y) => oy + y - lift;
-  const hip = 28 + bob;
-  const shoulder = 16 + bob;
+  const hip = 22 + bob;
+  const shoulder = 14 + bob;
   const ux = ox + lean; // torso y cabeza se inclinan con lean
   const hipShift = P.sit ? lean : Math.round(lean / 2);
-  const frontLeg = { dx: 0, foot: 43, ...(P.frontLeg || {}) };
-  const backLeg = { dx: 0, foot: 43, ...(P.backLeg || {}) };
+  const frontLeg = { dx: 0, foot: 31, ...(P.frontLeg || {}) };
+  const backLeg = { dx: 0, foot: 31, ...(P.backLeg || {}) };
 
   // Pierna de 3 px desde la cadera hasta el pie (con bota y punta hacia adelante)
   const leg = (hipX, L, pants) => {
@@ -127,25 +127,25 @@ function drawPose(pc, ox, oy, P) {
   };
 
   // Brazo y pierna de atrás (más oscuros)
-  arm(9, P.back || [9, 28], C.shirtShade);
+  arm(9, P.back || [9, 22], C.shirtShade);
   leg(9, backLeg, C.pantsShade);
 
   // Torso con sombra atrás, luz adelante, cuello y cinturón
-  pc.rect(ux + 8, Y(15 + bob), 8, 13, C.shirt);
-  pc.rect(ux + 8, Y(15 + bob), 2, 13, C.shirtShade);
-  pc.rect(ux + 14, Y(17 + bob), 1, 7, C.shirtLight);
-  pc.rect(ux + 11, Y(15 + bob), 3, 1, C.skinShade);
+  pc.rect(ux + 8, Y(13 + bob), 8, 9, C.shirt);
+  pc.rect(ux + 8, Y(13 + bob), 2, 9, C.shirtShade);
+  pc.rect(ux + 14, Y(15 + bob), 1, 5, C.shirtLight);
+  pc.rect(ux + 11, Y(13 + bob), 3, 1, C.skinShade);
   pc.rect(ux + 8, Y(hip - 1), 8, 1, C.belt);
   pc.set(ux + 13, Y(hip - 1), C.buckle);
 
   // Brazo de adelante levantado (mano por encima del hombro): va detrás de la cabeza
-  const front = P.front || [12, 28];
-  const raised = front[1] < 13;
+  const front = P.front || [12, 22];
+  const raised = front[1] < 11;
   if (raised) arm(12, front, C.shirt);
 
   // Cabeza
   const hx = ux + (P.headDx || 0);
-  const hy = Y(3 + bob + (P.headDy || 0));
+  const hy = Y(1 + bob + (P.headDy || 0));
   pc.rect(hx + 8, hy + 2, 9, 9, C.skin);
   pc.rect(hx + 8, hy + 2, 1, 9, C.skinShade);
   pc.rect(hx + 9, hy + 10, 7, 1, C.skinShade);

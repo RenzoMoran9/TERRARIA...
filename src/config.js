@@ -17,12 +17,11 @@ export const CHUNK_LOAD_MARGIN = 1;
 export const CHUNKS_PER_FRAME = 1;
 
 export const PLAYER = {
-  // Proporción tipo Terraria: ~2,5 bloques de alto (necesita 3 bloques de espacio para pasar)
-  // y menos de 1 bloque de ancho (cabe por pozos de 1 bloque).
-  WIDTH: 26, // hitbox en píxeles
-  HEIGHT: 80,
+  // Casi 2 bloques de alto (pasa por túneles de 2 bloques) y menos de 1 de ancho (cabe por pozos de 1 bloque)
+  WIDTH: 24, // hitbox en píxeles
+  HEIGHT: 58,
   SPRITE_WIDTH: 48, // tamaño de cada cuadro del sprite (los pies van abajo al centro)
-  SPRITE_HEIGHT: 88,
+  SPRITE_HEIGHT: 64,
   SPEED: 220, // píxeles/segundo
   GROUND_ACCEL: 2000,
   AIR_ACCEL: 1300,

@@ -6,7 +6,7 @@ const smoothstep = (t) => t * t * (3 - 2 * t);
 
 // Forma de los túneles de las cuevas
 const TUNNEL_FREQ_Y = 0.028; // menor = túneles más altos
-const TUNNEL_WIDTH = 0.1; // mayor = túneles más anchos (81% del piso de las cuevas con 3 bloques de alto)
+const TUNNEL_WIDTH = 0.1; // mayor = túneles más anchos (cuevas espaciosas para recorrer)
 
 /**
  * Generador procedural del mundo.
@@ -83,7 +83,7 @@ export class WorldGenerator {
     if (distSpawn < 14 && depth < 18) return false;
 
     // Túneles: banda estrecha alrededor del cero del ruido (forma de gusano)
-    // (más gruesos y estirados en vertical: el jugador necesita 3 bloques de alto para pasar)
+    // (gruesos y estirados en vertical para que se puedan recorrer sin cavar a cada paso)
     const t = this.nCave(x * 0.03, y * TUNNEL_FREQ_Y);
     const width = TUNNEL_WIDTH + Math.min(depth, 120) * 0.0004;
     if (t > -width && t < width && this.nCaveMask(x * 0.012, y * 0.012) > -0.35) return true;

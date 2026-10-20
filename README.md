@@ -72,8 +72,8 @@ Las **antorchas y la mesa de trabajo** se ponen y se quitan **de a una por pulsa
   cavernas profundas, carbón e hierro, árboles, roca madre al fondo y paredes de fondo bajo tierra.
   El mundo mide 2048 × 384 bloques, dividido en **chunks de 32×32** que se generan, cargan y descargan según la cámara.
   Para usar una semilla concreta: `http://localhost:5173/?seed=12345` (también acepta texto: `?seed=hola`).
-- **Jugador**: proporción tipo Terraria (2,5 bloques de alto: necesita 3 bloques de espacio para pasar y cabe por
-  pozos de 1 bloque de ancho). Movimiento con aceleración, salto (más alto si se mantiene), gravedad, colisión con
+- **Jugador**: casi 2 bloques de alto (pasa por túneles de 2 bloques) y menos de 1 de ancho (cabe por pozos de
+  1 bloque), con cabeza grande como en Terraria. Movimiento con aceleración, salto (más alto si se mantiene), gravedad, colisión con
   bloques y subida automática de escalones de 1 bloque. La cámara lo sigue.
 - **Animaciones del personaje** (30 poses): respira y parpadea; camina (más rápido cuanto más corre) levantando polvo;
   salta estirándose, cae, agita los brazos en caídas largas y aterriza aplastándose; levanta y baja el pico al minar
@@ -141,7 +141,7 @@ redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pas
 | `items/coal.png`                     | 32 × 32     | Ícono de *Carbón*                                                           |
 | `items/wood_pickaxe.png`             | 32 × 32     | Ícono de *Pico de madera* (mango abajo a la izquierda, cabeza arriba a la derecha) |
 | `items/stone_pickaxe.png`            | 32 × 32     | Ícono de *Pico de piedra* (misma orientación)                               |
-| `player/player.png`                  | 384 × 352   | Jugador: **30 poses de 48×88**, 8 por fila, mirando a la derecha (los pies tocan el borde de abajo). Orden: quieto, respirar, parpadear, caminar ×8, saltar, caer, agitar brazos, aterrizar, golpe ×3 (levantar, bajar, impacto), usar, daño, festejo, empujar, mirar atrás, bostezo, cansado ×2, sentado/dormido ×2, saludo ×2 (ver `src/player/animations.js`) |
+| `player/player.png`                  | 384 × 256   | Jugador: **30 poses de 48×64**, 8 por fila, mirando a la derecha (los pies tocan el borde de abajo). Orden: quieto, respirar, parpadear, caminar ×8, saltar, caer, agitar brazos, aterrizar, golpe ×3 (levantar, bajar, impacto), usar, daño, festejo, empujar, mirar atrás, bostezo, cansado ×2, sentado/dormido ×2, saludo ×2 (ver `src/player/animations.js`) |
 | `backgrounds/mountains.png`          | 960 × 320   | Montañas lejanas (se repite en horizontal: los bordes izquierdo y derecho deben empalmar) |
 | `backgrounds/hills.png`              | 960 × 240   | Colinas intermedias (repetible en horizontal)                               |
 | `backgrounds/forest.png`             | 960 × 240   | Bosque cercano (repetible en horizontal)                                    |
@@ -164,7 +164,7 @@ redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pas
 | `ui/button_fullscreen.png`           | 48 × 48     | Botón táctil de pantalla completa                                           |
 
 Las hojas de sprites (`player.png`, `tree_top.png`, `crack.png`) también aceptan un solo cuadro: si el jugador tiene
-un único cuadro de 48×88, se usa sin animación. El pico y la antorcha se dibujan en la mano de adelante según la
+un único cuadro de 48×64, se usa sin animación. El pico y la antorcha se dibujan en la mano de adelante según la
 posición de la mano en cada pose de `src/player/animations.js` (si dibujas tus propias poses, respeta esas posiciones
 o ajústalas ahí).
 

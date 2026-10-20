@@ -49,8 +49,8 @@ export const ASSETS = {
   item_wood_pickaxe: { file: 'items/wood_pickaxe.png', width: 32, height: 32, placeholder: 'wood_pickaxe' },
   item_stone_pickaxe: { file: 'items/stone_pickaxe.png', width: 32, height: 32, placeholder: 'stone_pickaxe' },
 
-  // ---------- Jugador: 30 poses de 48×88, 8 por fila (ver player/animations.js), mirando a la derecha ----------
-  player: { file: 'player/player.png', width: 384, height: 352, frameWidth: 48, frameHeight: 88, placeholder: 'player' },
+  // ---------- Jugador: 30 poses de 48×64, 8 por fila (ver player/animations.js), mirando a la derecha ----------
+  player: { file: 'player/player.png', width: 384, height: 256, frameWidth: 48, frameHeight: 64, placeholder: 'player' },
 
   // ---------- Fondo y cielo ----------
   bg_mountains: { file: 'backgrounds/mountains.png', width: 960, height: 320, placeholder: 'mountains' },

@@ -1,10 +1,11 @@
 // Poses del personaje: cada una es un cuadro de la hoja de sprites (player.png).
-// Coordenadas en píxeles de arte dentro de un cuadro de 24×44 (mirando a la derecha):
+// Coordenadas en píxeles de arte dentro de un cuadro de 24×32 (mirando a la derecha).
+// Cuerpo en reposo: pelo desde la fila 1, cabeza 3-11, hombro 14, cadera 22, pies en la fila 31.
 //   bob   = baja la parte de arriba del cuerpo (respirar, agacharse)
 //   lean  = inclina el torso y la cabeza hacia adelante (+) o atrás (-)
 //   lift  = levanta todo el cuerpo (saltito)
 //   front/back = posición de la mano delantera/trasera [x, y] (antes de aplicar lean/bob/lift);
-//                si la mano de adelante está por encima del hombro (y < 13), el brazo va detrás de la cabeza
+//                si la mano de adelante está por encima del hombro (y < 11), el brazo va detrás de la cabeza
 //   frontLeg/backLeg = { dx: desplazamiento del pie, foot: fila del pie }
 //   eyes  = open | closed | happy | wide | back | hurt | sleepy
 //   mouth = line | smile | open | frown | o | yawn
@@ -20,8 +21,8 @@ const walk = (i) => {
     bob: i % 4 === 1 || i % 4 === 2 ? 1 : 0,
     frontLeg: { dx: front },
     backLeg: { dx: -front },
-    front: [12 - Math.round(front * 0.6), 28],
-    back: [9 + Math.round(front * 0.6), 28],
+    front: [12 - Math.round(front * 0.6), 22],
+    back: [9 + Math.round(front * 0.6), 22],
   };
 };
 
@@ -30,25 +31,25 @@ export const POSES = [
   { name: 'breath', bob: 1 },
   { name: 'blink', eyes: 'closed' },
   ...Array.from({ length: 8 }, (_, i) => walk(i)),
-  { name: 'jump', frontLeg: { dx: 4, foot: 40 }, backLeg: { dx: -3 }, front: [17, 12], back: [6, 24], eyes: 'wide', mouth: 'o' },
-  { name: 'fall', frontLeg: { dx: 2, foot: 42 }, backLeg: { dx: -2 }, front: [16, 10], back: [6, 11], eyes: 'wide', mouth: 'o' },
-  { name: 'flail', frontLeg: { dx: -2, foot: 42 }, backLeg: { dx: 3, foot: 41 }, front: [19, 15], back: [4, 9], eyes: 'wide', mouth: 'open' },
-  { name: 'land', bob: 4, frontLeg: { dx: 3 }, backLeg: { dx: -3 }, front: [17, 30], back: [5, 30], mouth: 'frown' },
-  { name: 'swing1', lean: -1, front: [13, 2], back: [8, 27], frontLeg: { dx: 2 }, backLeg: { dx: -2 }, mouth: 'frown' },
-  { name: 'swing2', lean: 1, front: [19, 16], back: [8, 26], frontLeg: { dx: 2 }, backLeg: { dx: -2 } },
-  { name: 'swing3', lean: 2, bob: 1, front: [18, 27], back: [9, 25], frontLeg: { dx: 3 }, backLeg: { dx: -2 }, mouth: 'open' },
-  { name: 'use', lean: 1, front: [19, 20], back: [9, 27], frontLeg: { dx: 2 }, backLeg: { dx: -1 } },
-  { name: 'hurt', lean: -2, headDx: -1, front: [17, 21], back: [4, 19], frontLeg: { dx: -1 }, backLeg: { dx: 2 }, eyes: 'hurt', mouth: 'open' },
-  { name: 'cheer', lift: 2, front: [17, 3], back: [6, 4], frontLeg: { dx: 2, foot: 42 }, backLeg: { dx: -2 }, eyes: 'happy', mouth: 'smile' },
-  { name: 'push', lean: 3, front: [17, 19], back: [16, 22], frontLeg: { dx: 2 }, backLeg: { dx: -5 }, mouth: 'frown' },
-  { name: 'look', front: [15, 27], eyes: 'back' },
+  { name: 'jump', frontLeg: { dx: 4, foot: 29 }, backLeg: { dx: -3 }, front: [17, 10], back: [6, 19], eyes: 'wide', mouth: 'o' },
+  { name: 'fall', frontLeg: { dx: 2, foot: 30 }, backLeg: { dx: -2 }, front: [16, 8], back: [6, 9], eyes: 'wide', mouth: 'o' },
+  { name: 'flail', frontLeg: { dx: -2, foot: 30 }, backLeg: { dx: 3, foot: 29 }, front: [19, 13], back: [4, 7], eyes: 'wide', mouth: 'open' },
+  { name: 'land', bob: 3, frontLeg: { dx: 3 }, backLeg: { dx: -3 }, front: [17, 23], back: [5, 23], mouth: 'frown' },
+  { name: 'swing1', lean: -1, front: [13, 1], back: [8, 21], frontLeg: { dx: 2 }, backLeg: { dx: -2 }, mouth: 'frown' },
+  { name: 'swing2', lean: 1, front: [19, 14], back: [8, 21], frontLeg: { dx: 2 }, backLeg: { dx: -2 } },
+  { name: 'swing3', lean: 2, bob: 1, front: [18, 21], back: [9, 20], frontLeg: { dx: 3 }, backLeg: { dx: -2 }, mouth: 'open' },
+  { name: 'use', lean: 1, front: [19, 17], back: [9, 21], frontLeg: { dx: 2 }, backLeg: { dx: -1 } },
+  { name: 'hurt', lean: -2, headDx: -1, front: [17, 17], back: [4, 16], frontLeg: { dx: -1 }, backLeg: { dx: 2 }, eyes: 'hurt', mouth: 'open' },
+  { name: 'cheer', lift: 1, front: [17, 2], back: [6, 2], frontLeg: { dx: 2, foot: 30 }, backLeg: { dx: -2 }, eyes: 'happy', mouth: 'smile' },
+  { name: 'push', lean: 3, front: [17, 16], back: [16, 18], frontLeg: { dx: 2 }, backLeg: { dx: -5 }, mouth: 'frown' },
+  { name: 'look', front: [15, 21], eyes: 'back' },
   { name: 'yawn', front: [16, 1], back: [8, 1], eyes: 'closed', mouth: 'yawn' },
-  { name: 'tired', bob: 2, lean: 1, headDy: 1, front: [15, 31], back: [10, 31], eyes: 'sleepy', mouth: 'frown' },
-  { name: 'tired2', bob: 3, lean: 1, headDy: 1, front: [15, 32], back: [10, 32], eyes: 'sleepy', mouth: 'open' },
-  { name: 'sit', bob: 9, front: [17, 36], back: [8, 36], frontLeg: { dx: 7 }, backLeg: { dx: 6 }, eyes: 'closed', sit: true },
-  { name: 'sit2', bob: 10, front: [17, 37], back: [8, 37], frontLeg: { dx: 7 }, backLeg: { dx: 6 }, eyes: 'closed', mouth: 'o', sit: true },
-  { name: 'wave1', front: [17, 6], eyes: 'happy', mouth: 'smile' },
-  { name: 'wave2', front: [19, 9], eyes: 'happy', mouth: 'smile' },
+  { name: 'tired', bob: 1, lean: 1, headDy: 1, front: [15, 24], back: [10, 24], eyes: 'sleepy', mouth: 'frown' },
+  { name: 'tired2', bob: 2, lean: 1, headDy: 1, front: [15, 24], back: [10, 24], eyes: 'sleepy', mouth: 'open' },
+  { name: 'sit', bob: 5, front: [17, 24], back: [8, 24], frontLeg: { dx: 7 }, backLeg: { dx: 6 }, eyes: 'closed', sit: true },
+  { name: 'sit2', bob: 6, front: [17, 23], back: [8, 23], frontLeg: { dx: 7 }, backLeg: { dx: 6 }, eyes: 'closed', mouth: 'o', sit: true },
+  { name: 'wave1', front: [17, 4], eyes: 'happy', mouth: 'smile' },
+  { name: 'wave2', front: [19, 7], eyes: 'happy', mouth: 'smile' },
 ];
 
 /** Índice de cuadro por nombre: FRAME.idle, FRAME.walk0, FRAME.swing1… */
@@ -59,11 +60,11 @@ export const WALK_FRAMES = 8;
 export const SHEET_COLS = 8;
 export const SHEET_ROWS = Math.ceil(POSES.length / SHEET_COLS);
 export const ART_W = 24; // ancho de un cuadro en píxeles de arte (×2 en pantalla)
-export const ART_H = 44;
+export const ART_H = 32;
 
 /** Mano delantera de una pose, en píxeles de arte dentro del cuadro (ya con lean/bob/lift). */
 export function frontHand(frame) {
   const p = POSES[frame] || POSES[0];
-  const [x, y] = p.front || [12, 28];
+  const [x, y] = p.front || [12, 22];
   return [x + (p.lean || 0) + 1, y + (p.bob || 0) - (p.lift || 0)];
 }
