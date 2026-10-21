@@ -1,5 +1,6 @@
 import { INVENTORY_SIZE, HOTBAR_SIZE } from '../config.js';
 import { ITEMS } from '../systems/items.js';
+import { addToSlots } from '../systems/Inventory.js';
 import { RECIPES, canCraft, craft, describeIngredients, hasIngredients, STATION_NAMES, STATION_SHORT } from '../systems/Crafting.js';
 import { createButton } from './Button.js';
 import { COLORS, textStyle } from './styles.js';
@@ -53,6 +54,8 @@ export class InventoryPanel {
       .setInteractive(); // absorbe los clics dentro del panel
     this.container.add(bg);
     this.container.add(scene.add.text(PAD, PAD - 2, 'Inventario', textStyle({ fontSize: '18px' })));
+    this.chest = null; // casillas del cofre abierto (o null: modo crafteo)
+    const craftStart = this.container.list.length;
     this.container.add(scene.add.text(CRAFT_X, PAD - 2, 'Crafteo', textStyle({ fontSize: '18px' })));
 
     // Botón cerrar
@@ -60,7 +63,11 @@ export class InventoryPanel {
     this.container.add(close);
 
     this._buildSlots();
+    const recipesStart = this.container.list.length;
     this._buildRecipes();
+    // Todo lo del crafteo (se oculta mientras hay un cofre abierto)
+    this.craftObjects = [this.container.list[craftStart], ...this.container.list.slice(recipesStart)];
+    this._buildChest();
 
     // Botones inferiores
     this.container.add(
@@ -88,7 +95,11 @@ export class InventoryPanel {
       // La primera fila (barra rápida) va separada del resto
       const y = GRID_Y + row * (SLOT + GAP) + (row > 0 ? 8 : 0);
       const bg = scene.add.image(x, y, 'ui_slot').setOrigin(0).setDisplaySize(SLOT, SLOT).setInteractive();
-      bg.on('pointerdown', (pointer) => this.inv.clickSlot(i, pointer.rightButtonDown()));
+      bg.on('pointerdown', (pointer) => {
+        // Con un cofre abierto, tocar una casilla pasa esa pila al cofre
+        if (this.chest && !this.inv.held) this.moveToChest(i);
+        else this.inv.clickSlot(i, pointer.rightButtonDown());
+      });
       const icon = scene.add.image(x + SLOT / 2, y + SLOT / 2, 'ui_slot').setVisible(false);
       const count = scene.add.text(x + SLOT - 3, y + SLOT - 1, '', textStyle({ fontSize: '13px' })).setOrigin(1, 1);
       this.container.add([bg, icon, count]);
@@ -168,6 +179,105 @@ export class InventoryPanel {
     this.craftBtnBg.on('pointerout', release);
   }
 
+  // ---------------------------------------------------------------- cofre
+
+  /** Casillas del cofre (6×5) y botones "Guardar todo" / "Sacar todo", en el lugar del crafteo. */
+  _buildChest() {
+    const scene = this.scene;
+    const CS = 40;
+    const CG = 4;
+    this.chestObjects = [];
+    this.chestViews = [];
+    const title = scene.add.text(CRAFT_X, PAD - 2, 'Cofre', textStyle({ fontSize: '18px' }));
+    const hint = scene.add.text(CRAFT_X, 34, 'Toca una pila para pasarla de un lado al otro', textStyle({ fontSize: '11px', color: '#c8c8d8' }));
+    this.chestObjects.push(title, hint);
+    for (let i = 0; i < 30; i++) {
+      const x = CRAFT_X + (i % 6) * (CS + CG) + 4;
+      const y = 52 + Math.floor(i / 6) * (CS + CG);
+      const bg = scene.add.image(x, y, 'ui_slot').setOrigin(0).setDisplaySize(CS, CS).setInteractive();
+      bg.on('pointerdown', () => this.moveFromChest(i));
+      const icon = scene.add.image(x + CS / 2, y + CS / 2, 'ui_slot').setVisible(false);
+      const count = scene.add.text(x + CS - 3, y + CS - 1, '', textStyle({ fontSize: '12px' })).setOrigin(1, 1);
+      this.chestObjects.push(bg, icon, count);
+      this.chestViews.push({ icon, count });
+    }
+    const half = (CRAFT_W - 8) / 2;
+    this.chestObjects.push(
+      createButton(scene, CRAFT_X + half / 2, FOOT_Y, half, BUTTON_H, 'Guardar todo', () => this.depositAll(), { fontSize: '14px' }),
+      createButton(scene, CRAFT_X + half * 1.5 + 8, FOOT_Y, half, BUTTON_H, 'Sacar todo', () => this.takeAll(), { fontSize: '14px' }),
+    );
+    this.container.add(this.chestObjects);
+    for (const o of this.chestObjects) o.setVisible(false);
+  }
+
+  /** Abre el inventario mostrando un cofre (slots = sus casillas). */
+  openChest(slots) {
+    this.chest = slots;
+    for (const o of this.craftObjects) o.setVisible(false);
+    for (const o of this.chestObjects) o.setVisible(true);
+    this.refresh();
+  }
+
+  _leaveChestMode() {
+    if (!this.chest) return;
+    this.chest = null;
+    for (const o of this.chestObjects) o.setVisible(false);
+    for (const o of this.craftObjects) o.setVisible(true);
+    this.gs.openChestKey = null;
+  }
+
+  moveToChest(i) {
+    const s = this.inv.slots[i];
+    if (!s) return;
+    const left = addToSlots(this.chest, s.id, s.count);
+    if (left === s.count) return; // el cofre está lleno
+    this.inv.slots[i] = left > 0 ? { id: s.id, count: left } : null;
+    this.inv.emit('change');
+  }
+
+  moveFromChest(i) {
+    const s = this.chest && this.chest[i];
+    if (!s) return;
+    const left = this.inv.add(s.id, s.count);
+    this.chest[i] = left > 0 ? { id: s.id, count: left } : null;
+    this.refresh();
+  }
+
+  /** Guarda todo lo de la mochila (no la barra rápida) en el cofre. */
+  depositAll() {
+    for (let i = HOTBAR_SIZE; i < INVENTORY_SIZE; i++) {
+      const s = this.inv.slots[i];
+      if (!s) continue;
+      const left = addToSlots(this.chest, s.id, s.count);
+      this.inv.slots[i] = left > 0 ? { id: s.id, count: left } : null;
+    }
+    this.inv.emit('change');
+  }
+
+  takeAll() {
+    for (let i = 0; i < this.chest.length; i++) {
+      const s = this.chest[i];
+      if (!s) continue;
+      const left = addToSlots(this.inv.slots, s.id, s.count);
+      this.chest[i] = left > 0 ? { id: s.id, count: left } : null;
+    }
+    this.inv.emit('change');
+  }
+
+  _refreshChest() {
+    if (!this.chest) return;
+    this.chestViews.forEach((v, i) => {
+      const s = this.chest[i];
+      if (s) {
+        v.icon.setTexture(ITEMS[s.id].icon).setDisplaySize(28, 28).setVisible(true);
+        v.count.setText(s.count > 1 ? String(s.count) : '');
+      } else {
+        v.icon.setVisible(false);
+        v.count.setText('');
+      }
+    });
+  }
+
   /** Desplaza la lista de recetas (positivo = hacia abajo). */
   scrollBy(rows) {
     this.scrollTo(this.scroll + rows);
@@ -224,6 +334,7 @@ export class InventoryPanel {
   }
 
   close() {
+    this._leaveChestMode();
     this.isOpen = false;
     this.holdPointer = null;
     this.feedback = null;
@@ -257,11 +368,13 @@ export class InventoryPanel {
       this.heldIcon.setVisible(false);
       this.heldCount.setText('');
     }
-    this.refreshCrafting(true);
+    if (this.chest) this._refreshChest();
+    else this.refreshCrafting(true);
   }
 
   /** Colorea las recetas según si se pueden craftear y actualiza el detalle y el botón. */
   refreshCrafting(force = false) {
+    if (this.chest) return; // con un cofre abierto no se muestra el crafteo
     const stations = this.gs.getStations();
     // Qué estaciones hay cerca, p. ej. "Cerca: Mesa sí · Horno no · Yunque no"
     const stationState = Object.keys(STATION_SHORT).map((k) => `${STATION_SHORT[k]} ${stations[k] ? 'sí' : 'no'}`).join(' · ');

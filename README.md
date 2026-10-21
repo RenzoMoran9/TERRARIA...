@@ -116,6 +116,12 @@ Las puertas se abren solas al caminar contra ellas y se cierran al alejarse. Par
   se hace el **Yunque de hierro**, donde se fabrican el pico (12 lingotes + 3 madera, el más rápido), la espada
   (8 lingotes, la más fuerte) y el martillo de hierro (10 lingotes + 3 madera). El horno ilumina y su fuego brilla.
   En el inventario se ve qué estaciones hay cerca (Mesa, Horno, Yunque).
+- **Objetos en el suelo**: lo que rompes, talas, sueltan los enemigos o los muebles que se caen salta al suelo y
+  vuela hacia ti cuando estás cerca (hasta ~6 bloques). Con el inventario lleno se queda esperando. Se guardan con la partida.
+- **Cofres** (8 tablones + 2 madera, en la mesa; 2×2 bloques): guardan 30 pilas. Se abren tocándolos (celular) o con
+  clic derecho (PC): el inventario se abre con el cofre al lado; **tocar una pila la pasa de un lado al otro**, y hay
+  botones *Guardar todo* (la mochila, sin la barra rápida) y *Sacar todo*. Un cofre con cosas no se puede romper;
+  si se le quita el suelo, se cae y suelta lo que tenía. Se cierra solo si te alejas.
 - **Inventario**: 36 casillas (9 de barra rápida), pilas de hasta 99.
 - **Crafteo**: Madera → Tablones → Mesa de trabajo; cerca de la mesa: Pico de madera y Pico de piedra (más rápido).
   Antorchas: 1 madera + 1 carbón → 4 (o 1 madera + 1 gel → 3). Cerca de la mesa: espada de madera (7 tablones) y
@@ -148,7 +154,7 @@ Con `npm run dev` la página se recarga sola al agregar o cambiar una imagen. Pa
 Se recomienda **PNG con transparencia**. Si una imagen tiene otro tamaño se escala al tamaño de dibujo
 (los bloques siempre se dibujan a 32×32), así que también se pueden usar imágenes al doble de resolución.
 
-### Lista completa de imágenes (80)
+### Lista completa de imágenes (82)
 
 **Bloques.** Basta con dibujar un bloque "entero" de 32×32: el juego genera solo el contorno oscuro y las esquinas
 redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pasto tapado por otro bloque usa la imagen de la tierra.
@@ -177,6 +183,7 @@ redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pas
 | `furniture/door_open.png`            | 32 × 96     | Puerta abierta (1×3 bloques; la hoja de canto del lado de las bisagras, a la izquierda) |
 | `furniture/chair.png`                | 32 × 64     | Silla (1×2) **mirando a la derecha**: respaldo a la izquierda, asiento a unos 20 px del piso (se refleja para la izquierda) |
 | `furniture/table.png`                | 96 × 64     | Mesa (3×2 bloques)                                                          |
+| `furniture/chest.png`                | 64 × 64     | Cofre (2×2 bloques)                                                         |
 | `furniture/furnace.png`              | 64 × 64     | Horno (2×2 bloques) con la boca y el fuego abajo                            |
 | `furniture/anvil.png`                | 64 × 32     | Yunque de hierro (2×1 bloques)                                              |
 | `furniture/bed.png`                  | 128 × 64    | Cama (4×2) con la cabecera y la almohada **a la izquierda**; el colchón a unos 32 px del piso (se refleja para el otro lado) |
@@ -194,6 +201,7 @@ redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pas
 | `items/chair.png`                    | 32 × 32     | Ícono de *Silla*                                                            |
 | `items/table.png`                    | 32 × 32     | Ícono de *Mesa*                                                             |
 | `items/bed.png`                      | 32 × 32     | Ícono de *Cama*                                                             |
+| `items/chest.png`                    | 32 × 32     | Ícono de *Cofre*                                                            |
 | `items/furnace.png`                  | 32 × 32     | Ícono de *Horno*                                                            |
 | `items/anvil.png`                    | 32 × 32     | Ícono de *Yunque de hierro*                                                 |
 | `items/iron_bar.png`                 | 32 × 32     | Ícono de *Lingote de hierro*                                                |

@@ -64,6 +64,12 @@ export class UIScene extends Phaser.Scene {
         this.deathText.setVisible(true);
       },
       playerRespawned: () => this.deathText.setVisible(false),
+      // Cofres: se abren con el inventario al lado
+      openChest: (slots) => {
+        this.toggleInventory(true);
+        this.inventoryPanel.openChest(slots);
+      },
+      closeChest: () => this.toggleInventory(false),
       touchModeChanged: (isTouch) => {
         this.touchControls.setVisible(isTouch);
         this.layout();

@@ -46,6 +46,7 @@ export const ASSETS = {
   obj_chair: { file: 'furniture/chair.png', width: 32, height: 64, placeholder: 'chair' },
   obj_table: { file: 'furniture/table.png', width: 96, height: 64, placeholder: 'table' },
   obj_bed: { file: 'furniture/bed.png', width: 128, height: 64, placeholder: 'bed' },
+  obj_chest: { file: 'furniture/chest.png', width: 64, height: 64, placeholder: 'chest' },
   obj_furnace: { file: 'furniture/furnace.png', width: 64, height: 64, placeholder: 'furnace' },
   obj_anvil: { file: 'furniture/anvil.png', width: 64, height: 32, placeholder: 'anvil' },
 
@@ -71,6 +72,7 @@ export const ASSETS = {
   item_gel: { file: 'items/gel.png', width: 32, height: 32, placeholder: 'gel' },
   item_wood_sword: { file: 'items/wood_sword.png', width: 32, height: 32, placeholder: 'wood_sword' },
   item_stone_sword: { file: 'items/stone_sword.png', width: 32, height: 32, placeholder: 'stone_sword' },
+  item_chest: { file: 'items/chest.png', width: 32, height: 32, placeholder: 'chest_item' },
   item_furnace: { file: 'items/furnace.png', width: 32, height: 32, placeholder: 'furnace_item' },
   item_anvil: { file: 'items/anvil.png', width: 32, height: 32, placeholder: 'anvil_item' },
   item_iron_bar: { file: 'items/iron_bar.png', width: 32, height: 32, placeholder: 'iron_bar' },

@@ -21,12 +21,17 @@ import { BlockInteraction } from '../systems/BlockInteraction.js';
 import { Furniture } from '../systems/Furniture.js';
 import { Enemies } from '../systems/Enemies.js';
 import { Projectiles } from '../systems/Projectiles.js';
+import { ItemDrops } from '../systems/ItemDrops.js';
+import { cloneSlots } from '../systems/Inventory.js';
+import { ITEMS, getMaxStack } from '../systems/items.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import { textStyle } from '../ui/styles.js';
 
 const T = TILE_SIZE;
 const NIGHT_SKIP_SPEED = 40; // durmiendo en la cama, la noche pasa 40 veces más rápido
 const TAP_MS = 350; // toque corto (celular): usa la puerta, silla o cama tocada
+export const CHEST_SIZE = 30; // casillas de cada cofre
+const CHEST_RANGE = 6; // si el jugador se aleja más (en bloques), el cofre abierto se cierra
 
 /**
  * Escena principal: mundo, jugador, cámara, luz, ciclo día/noche y guardado.
@@ -80,6 +85,20 @@ export class GameScene extends Phaser.Scene {
     this.interaction = new BlockInteraction(this, this.world, this.player, this.inventory, this.furniture);
     this.enemies = new Enemies(this, this.world, this.player, this.dayNight, this.inventory);
     this.projectiles = new Projectiles(this, this.world, this.enemies, this.player);
+    this.drops = new ItemDrops(this, this.world, this.player, this.inventory);
+    if (save) this.drops.restore(save.drops);
+    // Cofres: contenido de cada uno, por la posición de su esquina ("x,y" → casillas)
+    this.chests = new Map();
+    for (const [key, slots] of Object.entries(save?.chests || {})) {
+      this.chests.set(
+        key,
+        Array.from({ length: CHEST_SIZE }, (_, i) => {
+          const s = slots[i];
+          return Array.isArray(s) && ITEMS[s[0]] && s[1] > 0 ? { id: s[0], count: Math.min(s[1], getMaxStack(s[0])) } : null;
+        }),
+      );
+    }
+    this.openChestKey = null;
 
     // --- Partículas: polvo al correr/aterrizar y fragmentos al romper bloques ---
     this.makePixelTexture();
@@ -241,6 +260,13 @@ export class GameScene extends Phaser.Scene {
     this.furniture.update(dt);
     this.enemies.update(dt);
     this.projectiles.update(dt);
+    this.drops.update(dt);
+    // Cofre abierto: se cierra si el jugador se aleja o el cofre ya no está
+    if (this.openChestKey) {
+      const [cx, cy] = this.openChestKey.split(',').map(Number);
+      const far = Math.abs(this.player.centerX / T - (cx + 1)) > CHEST_RANGE || Math.abs(this.player.centerY / T - (cy + 1)) > CHEST_RANGE;
+      if (far || this.player.dead) this.events.emit('closeChest');
+    }
     if (this.player.dead) {
       this.respawnTimer -= dt;
       if (this.respawnTimer <= 0) this.respawn();
@@ -465,6 +491,41 @@ export class GameScene extends Phaser.Scene {
     this.events.emit('playerDied');
   }
 
+  // ------------------------------------------------------------- cofres
+
+  _chestKey(x0, y0) {
+    return `${x0},${y0}`;
+  }
+
+  /** Casillas del cofre con esquina en (x0, y0) (se crean vacías la primera vez). */
+  chestSlots(x0, y0) {
+    const key = this._chestKey(x0, y0);
+    if (!this.chests.has(key)) this.chests.set(key, new Array(CHEST_SIZE).fill(null));
+    return this.chests.get(key);
+  }
+
+  isChestEmpty(x0, y0) {
+    const slots = this.chests.get(this._chestKey(x0, y0));
+    return !slots || slots.every((s) => !s);
+  }
+
+  /** Abrir un cofre: muestra su contenido junto al inventario. */
+  openChest(x0, y0) {
+    this.openChestKey = this._chestKey(x0, y0);
+    this.events.emit('openChest', this.chestSlots(x0, y0));
+  }
+
+  closeChestAt(x0, y0) {
+    if (this.openChestKey === this._chestKey(x0, y0)) this.events.emit('closeChest');
+  }
+
+  /** El cofre se cayó (sin suelo): lo que tenía adentro queda tirado en el suelo. */
+  spillChest(x0, y0, x, y) {
+    const key = this._chestKey(x0, y0);
+    for (const s of this.chests.get(key) || []) if (s) this.drops.spawn(s.id, s.count, x, y);
+    this.chests.delete(key);
+  }
+
   /** Dormir en una cama la vuelve el punto de reaparición. */
   setBedSpawn(tx, ty) {
     const night = this.dayNight.isNight();
@@ -547,6 +608,11 @@ export class GameScene extends Phaser.Scene {
       inventory: this.inventory.serialize(),
       chunks: this.world.serialize(),
       walls: this.world.serializeWalls(),
+      drops: this.drops.serialize(),
+      // Solo los cofres con algo adentro
+      chests: Object.fromEntries(
+        [...this.chests].filter(([, slots]) => slots.some(Boolean)).map(([k, slots]) => [k, cloneSlots(slots).map((s) => (s ? [s.id, s.count] : null))]),
+      ),
     };
   }
 
@@ -569,6 +635,7 @@ export class GameScene extends Phaser.Scene {
     this.interaction.destroy();
     this.enemies.destroy();
     this.projectiles.destroy();
+    this.drops.destroy();
     this.player.anim.destroy();
     this.lighting.destroy();
     this.chunkManager.destroy();

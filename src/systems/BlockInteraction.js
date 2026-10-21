@@ -290,13 +290,8 @@ export class BlockInteraction {
     this.player.anim.swing(hammer.icon, (tx + 0.5) * T, (ty + 0.5) * T, def.color, hammer.speed);
     if (!this._advanceCrack(dt, tx, ty, WALL_HARDNESS / hammer.speed)) return;
     this._resetMining();
-    if (!this.inventory.canAdd(def.item, 1)) {
-      this.scene.events.emit('toast', 'Inventario lleno');
-      return;
-    }
     this.world.setWall(tx, ty, WALL.NONE);
-    this.inventory.add(def.item, 1);
-    this._pickupText(`+1 ${ITEMS[def.item].name}`);
+    this.scene.drops.spawn(def.item, 1, (tx + 0.5) * T, (ty + 0.5) * T);
     this.scene.spawnDebris((tx + 0.5) * T, (ty + 0.5) * T, def.color);
     // Una antorcha colgada de esa pared se cae
     const id = this.world.getTile(tx, ty);
@@ -316,15 +311,9 @@ export class BlockInteraction {
     if (PART[id]) return this._breakFurniture(tx, ty, id);
 
     const drop = BLOCK_DEFS[id].drop;
-    if (drop && !this.inventory.canAdd(drop, 1)) {
-      this.scene.events.emit('toast', 'Inventario lleno');
-      return false;
-    }
     this.world.setTile(tx, ty, BLOCK.AIR);
-    if (drop) {
-      this.inventory.add(drop, 1);
-      this._pickupText(`+1 ${ITEMS[drop].name}`);
-    }
+    // Lo obtenido salta al suelo y se recoge al pasar cerca
+    if (drop) this.scene.drops.spawn(drop, 1, (tx + 0.5) * T, (ty + 0.5) * T);
     this.scene.spawnDebris((tx + 0.5) * T, (ty + 0.5) * T, BLOCK_DEFS[id].color);
     this._checkSupportAround(tx, ty);
     return true;
@@ -334,14 +323,10 @@ export class BlockInteraction {
   _fellTree(tx, ty) {
     let top = ty;
     while (this.world.getTile(tx, top - 1) === BLOCK.LOG) top--;
-    const logs = ty - top + 1;
-    if (!this.inventory.canAdd('wood', logs)) {
-      this.scene.events.emit('toast', 'Inventario lleno');
-      return false;
-    }
     for (let y = ty; y >= top; y--) {
       this.world.setTile(tx, y, BLOCK.AIR);
       this.scene.spawnDebris((tx + 0.5) * T, (y + 0.5) * T, y < top + 3 ? BLOCK_DEFS[BLOCK.LEAVES].color : BLOCK_DEFS[BLOCK.LOG].color, 5);
+      this.scene.drops.spawn('wood', 1, (tx + 0.5) * T, (y + 0.5) * T); // la madera cae por todo el tronco
     }
     // Hojas alrededor de la punta (los árboles están separados ≥6 columnas)
     for (let dy = -4; dy <= 2; dy++) {
@@ -349,8 +334,6 @@ export class BlockInteraction {
         if (this.world.getTile(tx + dx, top + dy) === BLOCK.LEAVES) this.world.setTile(tx + dx, top + dy, BLOCK.AIR);
       }
     }
-    this.inventory.add('wood', logs);
-    this._pickupText(`+${logs} ${ITEMS.wood.name}`);
     this.player.anim.cheer(0.8); // ¡árbol talado!
     return true;
   }
@@ -358,24 +341,19 @@ export class BlockInteraction {
   /** Quita un mueble entero (desde cualquiera de sus partes) y lo devuelve al inventario. */
   _breakFurniture(tx, ty, id) {
     const def = BLOCK_DEFS[id];
-    if (!this.inventory.canAdd(def.drop, 1)) {
-      this.scene.events.emit('toast', 'Inventario lleno');
+    // Un cofre con cosas adentro no se puede romper (como en Terraria)
+    const at = this.furniture.at(tx, ty);
+    if (at && at.type === 'chest' && !this.scene.isChestEmpty(at.x0, at.y0)) {
+      this._warnOnce('Vacía el cofre antes de romperlo');
       return false;
     }
     const f = this.furniture.remove(tx, ty);
     if (!f) return false;
-    this.inventory.add(def.drop, 1);
-    this._pickupText(`+1 ${ITEMS[def.drop].name}`);
+    this.scene.drops.spawn(def.drop, 1, (f.x0 + f.obj.w / 2) * T, (f.y0 + f.obj.h - 0.5) * T);
     for (let dy = 0; dy < f.obj.h; dy++) {
       for (let dx = 0; dx < f.obj.w; dx++) this.scene.spawnDebris((f.x0 + dx + 0.5) * T, (f.y0 + dy + 0.5) * T, def.color, 4);
     }
     return true;
-  }
-
-  /** Texto flotante sobre el jugador al recoger algo (como en Terraria). */
-  _pickupText(text) {
-    const p = this.player;
-    this.scene.showFloatingText(p.centerX + (Math.random() - 0.5) * 16, p.y - 10, text, '#ffffff', 13);
   }
 
   /** Si se quitó un bloque que sostenía una antorcha, una mesa, una planta o un mueble, estos se caen. */
@@ -391,15 +369,14 @@ export class BlockInteraction {
         this._dropBlock(x, y, id);
       }
     }
-    const fallen = this.furniture.checkSupport(tx, ty);
-    if (fallen && this.inventory.add(fallen, 1) > 0) this.scene.events.emit('toast', 'Inventario lleno');
+    this.furniture.checkSupport(tx, ty); // un mueble sin suelo se cae (suelta su ítem)
   }
 
-  /** Quita un bloque que se quedó sin apoyo y lo devuelve al inventario. */
+  /** Quita un bloque que se quedó sin apoyo: cae al suelo como objeto. */
   _dropBlock(x, y, id) {
     this.world.setTile(x, y, BLOCK.AIR);
     const drop = BLOCK_DEFS[id].drop;
-    if (drop && this.inventory.add(drop, 1) > 0) this.scene.events.emit('toast', 'Inventario lleno');
+    if (drop) this.scene.drops.spawn(drop, 1, (x + 0.5) * T, (y + 0.5) * T);
   }
 
   /** ¿Puede este bloque estar en (x, y)? */

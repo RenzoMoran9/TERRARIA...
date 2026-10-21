@@ -1,6 +1,5 @@
 import { TILE_SIZE, DEPTH } from '../config.js';
 import { BLOCK } from '../world/blocks.js';
-import { ITEMS } from './items.js';
 import { frameCount } from './Placeholders.js';
 
 const T = TILE_SIZE;
@@ -418,9 +417,7 @@ export class Enemies {
     for (const [id, min, max, chance] of e.def.drops) {
       if (Math.random() > chance) continue;
       const n = min + Math.floor(Math.random() * (max - min + 1));
-      if (n <= 0) continue;
-      const left = this.inventory.add(id, n);
-      if (left < n) this.scene.showFloatingText(this.player.centerX, this.player.y - 10, `+${n - left} ${ITEMS[id].name}`, '#ffffff', 13);
+      if (n > 0) this.scene.drops.spawn(id, n, e.centerX, e.centerY); // cae al suelo donde murió
     }
   }
 

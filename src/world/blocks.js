@@ -62,6 +62,7 @@ export const FURNITURE = {
   door: { name: 'Puerta', item: 'door', hardness: 0.8, color: 0x9a6a35, interactive: true },
   furnace: { name: 'Horno', item: 'furnace', hardness: 1.4, color: 0x7a7a7a, station: 'furnace', light: 0.8 },
   anvil: { name: 'Yunque de hierro', item: 'anvil', hardness: 1.6, color: 0x6b6b75, station: 'anvil' },
+  chest: { name: 'Cofre', item: 'chest', hardness: 0.8, color: 0xa3733a, interactive: true },
   chair: { name: 'Silla', item: 'chair', hardness: 0.6, color: 0xa3733a, interactive: true },
   table: { name: 'Mesa', item: 'table', hardness: 0.7, color: 0xa3733a },
   bed: { name: 'Cama', item: 'bed', hardness: 0.8, color: 0xc0392b, interactive: true },
@@ -125,6 +126,11 @@ const STATIONS = {
 };
 addObjectParts(STATIONS);
 Object.assign(OBJECTS, STATIONS);
+
+// Cofre (2×2): guarda objetos (ver GameScene.chests)
+const STORAGE = { chest: { type: 'chest', texture: 'obj_chest', w: 2, h: 2 } };
+addObjectParts(STORAGE);
+Object.assign(OBJECTS, STORAGE);
 
 // ---------------------------------------------------------------------------
 // Paredes de fondo. Las naturales las calcula el generador; las que pone o quita el

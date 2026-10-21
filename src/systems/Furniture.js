@@ -91,6 +91,7 @@ export class Furniture {
   remove(tx, ty) {
     const f = this.at(tx, ty);
     if (!f) return null;
+    if (f.type === 'chest') this.scene.closeChestAt?.(f.x0, f.y0);
     const seat = this.player.seat;
     if (seat && seat.x0 === f.x0 && seat.y0 === f.y0) this.player.standUp();
     this.autoDoors.delete(this._key(f.x0, f.y0));
@@ -108,7 +109,12 @@ export class Furniture {
     const f = this.at(tx, ty - 1);
     if (!f || f.y0 + f.obj.h - 1 !== ty - 1 || this.supported(f.obj, f.x0, f.y0)) return null;
     this.remove(f.x0, f.y0);
-    return FURNITURE[f.type].item;
+    const item = FURNITURE[f.type].item;
+    const x = (f.x0 + f.obj.w / 2) * T;
+    const y = (f.y0 + f.obj.h - 0.5) * T;
+    this.scene.drops.spawn(item, 1, x, y);
+    if (f.type === 'chest') this.scene.spillChest(f.x0, f.y0, x, y); // lo que tenía adentro cae al suelo
+    return item;
   }
 
   // -------------------------------------------------------------- puertas
@@ -197,6 +203,10 @@ export class Furniture {
     if (f.type === 'bed') {
       p.sit(this.bedSeat(f));
       this.scene.setBedSpawn(f.x0, f.y0);
+      return true;
+    }
+    if (f.type === 'chest') {
+      this.scene.openChest(f.x0, f.y0);
       return true;
     }
     return false;

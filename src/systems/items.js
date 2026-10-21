@@ -37,6 +37,7 @@ export const ITEMS = {
   stone_sword: { name: 'Espada de piedra', icon: 'item_stone_sword', maxStack: 1, weapon: { damage: 15, knockback: 300, speed: 2.2, reach: 58 } },
   // Progresión: horno, hierro y yunque
   furnace: { name: 'Horno', icon: 'item_furnace', object: 'furnace' },
+  chest: { name: 'Cofre', icon: 'item_chest', object: 'chest' },
   anvil: { name: 'Yunque de hierro', icon: 'item_anvil', object: 'anvil' },
   iron_bar: { name: 'Lingote de hierro', icon: 'item_iron_bar' },
   stone_brick: { name: 'Ladrillo de piedra', icon: 'tile_stone_brick', places: BLOCK.STONE_BRICK },

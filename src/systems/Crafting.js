@@ -30,6 +30,7 @@ export const RECIPES = [
   { result: 'iron_bow', count: 1, ingredients: [['iron_bar', 8], ['wood', 2]], station: 'anvil' },
   { result: 'throwing_knife', count: 15, ingredients: [['iron_bar', 1]], station: 'anvil' },
   // Casas
+  { result: 'chest', count: 1, ingredients: [['planks', 8], ['wood', 2]], station: 'workbench' },
   { result: 'wood_hammer', count: 1, ingredients: [['planks', 8]], station: 'workbench' },
   { result: 'wood_wall', count: 4, ingredients: [['planks', 1]], station: 'workbench' },
   { result: 'stone_wall', count: 4, ingredients: [['stone', 1]], station: 'workbench' },

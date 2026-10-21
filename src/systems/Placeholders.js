@@ -739,6 +739,31 @@ const PIXEL = {
       }
     }
   },
+  chest(pc) {
+    // Cofre de madera (2×2 bloques) con zunchos de hierro y cerradura
+    pc.rect(2, 10, 28, 22, WOOD.mid);
+    pc.rect(2, 6, 28, 6, WOOD.light);
+    pc.rect(3, 4, 26, 2, WOOD.light);
+    pc.rect(2, 12, 28, 2, WOOD.dark); // borde de la tapa
+    for (let y = 16; y < 32; y += 4) pc.rect(3, y, 26, 1, WOOD.seam);
+    for (const x of [4, 26]) {
+      pc.rect(x, 4, 2, 28, '#8a929c');
+      pc.rect(x, 4, 1, 28, '#c8ced6');
+    }
+    pc.rect(13, 11, 6, 6, '#c9a64a');
+    pc.rect(14, 12, 4, 4, '#e0c060');
+    pc.rect(15, 14, 2, 2, '#3a2a10');
+    pc.outline(WOOD.line);
+  },
+  chest_item(pc) {
+    pc.rect(1, 5, 14, 9, WOOD.mid);
+    pc.rect(1, 3, 14, 3, WOOD.light);
+    pc.rect(1, 6, 14, 1, WOOD.dark);
+    pc.rect(2, 3, 1, 11, '#8a929c');
+    pc.rect(13, 3, 1, 11, '#8a929c');
+    pc.rect(7, 6, 2, 3, '#e0c060');
+    pc.outline(WOOD.line);
+  },
   furnace(pc) {
     // Horno de piedra (2×2 bloques): boca con fuego abajo y chimenea
     pc.disc(16, 16, 14, '#7d7d84');
