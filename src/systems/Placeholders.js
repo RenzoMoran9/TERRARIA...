@@ -1671,6 +1671,165 @@ const PIXEL = {
     pc.outline('#1a0806');
   },
 
+  // ---------- fauna (bichos inofensivos de cada zona) ----------
+  // Pájaros: 4 cuadros de 12×10 (posado, picoteando, alas arriba, alas abajo)
+  critter_bird(pc, v, asset) {
+    const [body, belly, wing, beak] = asset.colors;
+    for (let f = 0; f < 4; f++) {
+      const ox = f * 12;
+      const peck = f === 1;
+      const fly = f >= 2;
+      pc.disc(ox + 5.5, 6, 3.2, (x, y) => (y > 6 ? belly : body));
+      pc.rect(ox + 1, 4, 2, 2, wing); // cola
+      pc.set(ox + 0, 3, wing);
+      const hx = ox + 8;
+      const hy = peck ? 7 : 3;
+      pc.disc(hx, hy, 2, body);
+      pc.set(hx + 2, hy, beak);
+      pc.set(hx + 3, hy, beak);
+      pc.set(hx + 1, hy - 1, '#1a120c');
+      if (!fly) {
+        pc.set(ox + 5, 9, '#4a3020');
+        pc.set(ox + 7, 9, '#4a3020');
+        pc.rect(ox + 4, 5, 3, 2, wing);
+      } else if (f === 2) {
+        for (let k = 0; k < 4; k++) pc.rect(ox + 3 + k, 1 + k, 1, 4 - k, wing);
+      } else {
+        for (let k = 0; k < 4; k++) pc.rect(ox + 3 + k, 7, 1, 3 - Math.floor(k / 2), wing);
+      }
+    }
+    pc.outline('#1a120c');
+  },
+  // Conejo: 3 cuadros de 14×12 (sentado, agachado, saltando)
+  critter_bunny(pc, v, asset) {
+    const [fur, light] = asset.colors;
+    for (let f = 0; f < 3; f++) {
+      const ox = f * 14;
+      const hop = f === 2;
+      const low = f === 1 ? 1 : 0;
+      pc.disc(ox + 6, 8 + low - (hop ? 2 : 0), hop ? 3 : 3.5, fur);
+      if (hop) pc.rect(ox + 3, 8, 6, 2, fur);
+      pc.disc(ox + 10, 6 + low - (hop ? 2 : 0), 2.4, fur);
+      pc.rect(ox + 9, 1 + low - (hop ? 2 : 0), 1, 4, fur); // orejas
+      pc.rect(ox + 11, 1 + low - (hop ? 2 : 0), 1, 4, fur);
+      pc.set(ox + 9, 2 + low - (hop ? 2 : 0), '#f0a0b0');
+      pc.set(ox + 11, 6 + low - (hop ? 2 : 0), '#1a120c');
+      pc.set(ox + 12, 7 + low - (hop ? 2 : 0), '#f0a0b0');
+      pc.disc(ox + 2.5, 7 + low - (hop ? 2 : 0), 1.2, light); // colita
+      pc.rect(ox + 4, 10 + low - (hop ? 1 : 0), 2, 1, light);
+      pc.rect(ox + 8, 10 + low - (hop ? 1 : 0), 2, 1, light);
+    }
+    pc.outline('#1a120c');
+  },
+  // Rana: 2 cuadros de 12×10 (sentada, saltando)
+  critter_frog(pc, v, asset) {
+    const [skin, belly] = asset.colors;
+    for (let f = 0; f < 2; f++) {
+      const ox = f * 12;
+      const up = f ? 2 : 0;
+      pc.disc(ox + 6, 7 - up, 3.4, (x, y) => (y > 7 - up ? belly : skin));
+      pc.disc(ox + 4, 4 - up, 1.3, skin);
+      pc.disc(ox + 8, 4 - up, 1.3, skin);
+      pc.set(ox + 4, 4 - up, '#1a120c');
+      pc.set(ox + 8, 4 - up, '#1a120c');
+      if (f) {
+        pc.rect(ox + 1, 8, 2, 1, skin);
+        pc.rect(ox + 9, 8, 2, 1, skin);
+      } else {
+        pc.rect(ox + 2, 9, 3, 1, skin);
+        pc.rect(ox + 7, 9, 3, 1, skin);
+      }
+    }
+    pc.outline('#14200c');
+  },
+  // Caminadores (pingüino, lagartija, ratón, caracol): 2 cuadros
+  critter_penguin(pc) {
+    for (let f = 0; f < 2; f++) {
+      const ox = f * 10;
+      pc.disc(ox + 5, 7, 3.4, (x) => (x > ox + 5 ? '#f4f4f4' : '#22262e'));
+      pc.disc(ox + 5.5, 3, 2.3, '#22262e');
+      pc.set(ox + 6, 2, '#ffffff');
+      pc.set(ox + 7, 3, '#f0a020');
+      pc.set(ox + 8, 3, '#f0a020');
+      pc.set(ox + (f ? 3 : 4), 11, '#f0a020');
+      pc.set(ox + (f ? 6 : 7), 11, '#f0a020');
+    }
+    pc.outline('#0c0e12');
+  },
+  critter_lizard(pc, v, asset) {
+    const [skin, dark] = asset.colors;
+    for (let f = 0; f < 2; f++) {
+      const ox = f * 16;
+      pc.rect(ox + 1, 5, 4, 1, dark); // cola
+      pc.rect(ox + 4, 4, 8, 2, skin);
+      pc.rect(ox + 11, 3, 3, 2, skin);
+      pc.set(ox + 13, 3, '#1a120c');
+      pc.set(ox + (f ? 5 : 6), 6, dark);
+      pc.set(ox + (f ? 10 : 9), 6, dark);
+      pc.set(ox + 7, 4, dark);
+    }
+    pc.outline('#1a120c');
+  },
+  critter_mouse(pc) {
+    for (let f = 0; f < 2; f++) {
+      const ox = f * 12;
+      pc.disc(ox + 5, 5, 2.6, '#8a8078');
+      pc.disc(ox + 8, 4.5, 1.6, '#8a8078');
+      pc.set(ox + 7, 2, '#c8a0a0');
+      pc.set(ox + 9, 4, '#1a120c');
+      pc.set(ox + 10, 5, '#f0a0b0');
+      pc.rect(ox + 0, 5 + f, 3, 1, '#c8a0a0');
+      pc.set(ox + (f ? 4 : 5), 7, '#5a5048');
+    }
+    pc.outline('#1a120c');
+  },
+  critter_snail(pc) {
+    for (let f = 0; f < 2; f++) {
+      const ox = f * 12;
+      pc.rect(ox + 1, 6, 9, 2, '#b8d8e8');
+      pc.set(ox + 9, 4 + f, '#b8d8e8');
+      pc.set(ox + 10, 3 + f, '#b8d8e8');
+      pc.disc(ox + 5, 4, 2.8, (x, y, d) => (d < 0.4 ? '#c8f0ff' : d < 0.75 ? '#4a8aff' : '#2a5ad0'));
+    }
+    pc.outline('#0c1a30');
+  },
+  // Mariposa / polilla: 2 cuadros de 8×8 (alas abiertas, cerradas)
+  critter_butterfly(pc, v, asset) {
+    const [wing, spot] = asset.colors;
+    for (let f = 0; f < 2; f++) {
+      const ox = f * 8;
+      pc.rect(ox + 3, 2, 1, 5, '#2a2216');
+      if (f === 0) {
+        pc.disc(ox + 1.5, 3, 1.6, wing);
+        pc.disc(ox + 5.5, 3, 1.6, wing);
+        pc.disc(ox + 1.8, 5.5, 1.1, wing);
+        pc.disc(ox + 5.2, 5.5, 1.1, wing);
+        pc.set(ox + 1, 3, spot);
+        pc.set(ox + 6, 3, spot);
+      } else {
+        pc.rect(ox + 2, 1, 1, 4, wing);
+        pc.rect(ox + 4, 1, 1, 4, wing);
+      }
+    }
+  },
+  // Buitre: 2 cuadros de 22×10 (alas extendidas, alas bajas)
+  critter_vulture(pc) {
+    for (let f = 0; f < 2; f++) {
+      const ox = f * 22;
+      const d = f ? 2 : 0;
+      for (let k = 0; k < 8; k++) {
+        pc.set(ox + 10 - k, 4 + Math.round(k * 0.2) + d * (k > 4 ? 1 : 0), '#3a2a20');
+        pc.set(ox + 12 + k, 4 + Math.round(k * 0.2) + d * (k > 4 ? 1 : 0), '#3a2a20');
+        pc.set(ox + 10 - k, 5 + Math.round(k * 0.2) + d * (k > 4 ? 1 : 0), '#5a4434');
+        pc.set(ox + 12 + k, 5 + Math.round(k * 0.2) + d * (k > 4 ? 1 : 0), '#5a4434');
+      }
+      pc.rect(ox + 9, 4, 5, 3, '#4a3828');
+      pc.rect(ox + 14, 3, 2, 2, '#d8a0a0');
+      pc.set(ox + 16, 4, '#e0c060');
+    }
+    pc.outline('#1a120c');
+  },
+
   // ---------- armaduras (el color sale de ARMOR_COLORS según asset.set) ----------
   armor_helmet(pc, v, asset) {
     const [dark, mid, light] = ARMOR_ICON[asset.set];

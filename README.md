@@ -201,6 +201,12 @@ Las puertas se abren solas al caminar contra ellas y se cierran al alejarse. Par
   Aparecen fuera de la pantalla y nunca donde hay paredes de fondo puestas por ti. Hacen daño al tocarte, te
   empujan y quedas invulnerable un momento (parpadeas). Espadas de madera y de piedra; los slimes sueltan **gel**
   (1 madera + 1 gel → 3 antorchas). Al reaparecer se van los enemigos cercanos.
+- **Fauna** (como los bichos de Terraria): pájaros, conejos, mariposas y otros animales inofensivos aparecen cerca
+  de ti según la zona y la hora, y **huyen si te acercas** (los pájaros levantan vuelo aleteando):
+  bosque (pájaros, conejos, mariposas), desierto (lagartijas, buitres que planean), tundra (pingüinos, pájaros
+  de las nieves), selva (loros, ranas), Tierras Sombrías (cuervos), Tierras de Cristal (mariposas que brillan),
+  volcán e inframundo (polillas de brasa), islas flotantes (gaviotas), cuevas (ratones) y cuevas de hongos
+  (caracoles brillantes). De noche quedan menos (conejos, ranas…). Se los oye: cantos, graznidos, croar, aleteos.
 - **Mapa y orientación** (como en Terraria):
   - **Minimapa** (arriba a la derecha en la PC, a la izquierda en el celular): muestra lo que ya exploraste,
     con tu cabeza, **tu casa** (tu cama, o el inicio si no dormiste en una), los **aldeanos** y tus marcadores.
@@ -301,7 +307,7 @@ Con `npm run dev` la página se recarga sola al agregar o cambiar una imagen. Pa
 Se recomienda **PNG con transparencia**. Si una imagen tiene otro tamaño se escala al tamaño de dibujo
 (los bloques siempre se dibujan a 32×32), así que también se pueden usar imágenes al doble de resolución.
 
-### Lista completa de imágenes (207)
+### Lista completa de imágenes (222)
 
 **Fachadas.** Desde afuera, cada casa muestra la imagen del bloque que corresponde a sus paredes
 (pared de madera → `tiles/planks.png`, de piedra → `tiles/stone_brick.png`, de tierra → `tiles/dirt.png`) y
@@ -465,6 +471,21 @@ redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pas
 | `enemies/wasp.png`                   | 64 × 28     | Avispa: **2 cuadros de 32×28** (alas arriba y abajo) |
 | `enemies/eye.png`                    | 64 × 24     | Ojo volador: **2 cuadros de 32×24**, mirando a la derecha |
 | `enemies/firebat.png`                | 108 × 24    | Murciélago de fuego: **3 cuadros de 36×24** (aleteo) |
+| `critters/bird.png`                  | 96 × 20     | Pájaro (bosque): 4 cuadros de 24×20 (posado, picoteando, alas arriba, alas abajo) |
+| `critters/parrot.png`                | 96 × 20     | Loro (selva), mismos 4 cuadros |
+| `critters/crow.png`                  | 96 × 20     | Cuervo (Tierras Sombrías) |
+| `critters/snowbird.png`              | 96 × 20     | Pájaro de las nieves (tundra) |
+| `critters/gull.png`                  | 96 × 20     | Gaviota (islas flotantes) |
+| `critters/bunny.png`                 | 84 × 24     | Conejo: 3 cuadros de 28×24 (sentado, agachado, saltando) |
+| `critters/frog.png`                  | 48 × 20     | Rana (selva): 2 cuadros de 24×20 (sentada, saltando) |
+| `critters/penguin.png`               | 40 × 24     | Pingüino (tundra): 2 cuadros de 20×24 |
+| `critters/lizard.png`                | 64 × 16     | Lagartija (desierto, volcán): 2 cuadros de 32×16 |
+| `critters/mouse.png`                 | 48 × 16     | Ratón (cuevas): 2 cuadros de 24×16 |
+| `critters/snail.png`                 | 48 × 18     | Caracol brillante (cuevas de hongos): 2 cuadros de 24×18 |
+| `critters/butterfly.png`             | 32 × 16     | Mariposa: 2 cuadros de 16×16 (alas abiertas y cerradas) |
+| `critters/crystalfly.png`            | 32 × 16     | Mariposa de cristal (brilla) |
+| `critters/emberfly.png`              | 32 × 16     | Polilla de brasa (volcán, inframundo; brilla) |
+| `critters/vulture.png`               | 88 × 20     | Buitre (desierto): 2 cuadros de 44×20 |
 | `npcs/guide.png`                     | 288 × 64    | Guía: **6 cuadros de 48×64** (quieto, caminar ×4, hablando), mirando a la derecha |
 | `npcs/merchant.png`                  | 288 × 64    | Comerciante (igual que el Guía) |
 | `npcs/nurse.png`                     | 288 × 64    | Enfermera (igual que el Guía) |
@@ -539,7 +560,7 @@ src/
   scenes/              BootScene (carga), BackgroundScene (cielo y paisaje), MenuScene, GameScene (mundo) y UIScene (interfaz)
   world/               Ruido con semilla, bloques, generador, datos por chunks, renderizado de chunks y tileset
   player/              Jugador: física, colisiones, vida y daño por caída (Player), poses (animations), combos de las armas (attacks) y animaciones y efectos (PlayerAnimator)
-  systems/             Sonido y música (Audio), inventario, ítems, crafteo, minar/colocar, muebles (Furniture), casas y fachadas (Housing), experiencia y habilidades (Skills, Abilities), aldeanos (Npcs), enemigos, zonas (Zones) y sus partículas (Ambience), neblina de las islas (IslandMist), mapa explorado (WorldMap), día/noche, iluminación, guardado y placeholders (pixel art por código)
+  systems/             Sonido y música (Audio), inventario, ítems, crafteo, minar/colocar, muebles (Furniture), casas y fachadas (Housing), experiencia y habilidades (Skills, Abilities), aldeanos (Npcs), enemigos, zonas (Zones) y sus partículas (Ambience), neblina de las islas (IslandMist), mapa explorado (WorldMap), fauna (Critters), día/noche, iluminación, guardado y placeholders (pixel art por código)
   ui/                  HUD, barra rápida, inventario, mapa y minimapa (MapPanel), controles táctiles, debug y avisos
 ```
 

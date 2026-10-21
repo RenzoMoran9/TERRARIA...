@@ -23,6 +23,7 @@ const SAMPLE_URLS = import.meta.glob('../sounds/*.mp3', { eager: true, query: '?
 // Volumen de cada sonido real (1 = normal): los que suenan muy seguido van más bajos
 const SAMPLE_VOL = {
   step: 0.3, dig_soft: 0.55, dig_stone: 0.5, dig_wood: 0.55, swing: 0.5, pickup: 0.45, coin: 0.5, xp: 0.35, click: 0.45,
+  chirp: 0.35, crow: 0.4, gull: 0.4, croak: 0.4, flap: 0.35,
   place: 0.8, jump: 0.45, zombie: 0.5, slimeHop: 0.4, flyer: 0.45, drink: 0.8, teleport: 0.8, land: 0.55, hit: 0.75, hurt: 0.8, open: 0.5, lava: 0.7, levelUp: 0.8, zone: 0.75, house: 0.8,
 };
 
@@ -593,6 +594,11 @@ const SFX = {
   flyer: { gap: 1, fn: (a, o) => a.tone(o, { type: 'square', f0: 2400, f1: 1600, dur: 0.12, vol: 0.06 }) },
   drink: { gap: 0.3, fn: (a, o) => [0, 0.18].forEach((d) => a.tone(o, { type: 'sine', f0: 320, f1: 200, dur: 0.12, vol: 0.25, delay: d })) },
   teleport: { gap: 0.3, fn: (a, o) => a.tone(o, { type: 'sine', f0: 400, f1: 1600, dur: 0.5, vol: 0.25 }) },
+  chirp: { gap: 0.5, fn: (a, o) => [0, 0.09].forEach((d) => a.tone(o, { type: 'sine', f0: 3200, f1: 4200, dur: 0.06, vol: 0.08, delay: d })) },
+  crow: { gap: 1, fn: (a, o) => a.noise(o, { filter: 'bandpass', f0: 900, f1: 600, q: 3, dur: 0.25, vol: 0.2 }) },
+  gull: { gap: 1, fn: (a, o) => a.tone(o, { type: 'triangle', f0: 1400, f1: 900, dur: 0.3, vol: 0.08 }) },
+  croak: { gap: 0.6, fn: (a, o) => a.tone(o, { type: 'square', f0: 120, f1: 90, dur: 0.15, vol: 0.08 }) },
+  flap: { gap: 0.3, fn: (a, o) => a.noise(o, { f0: 800, f1: 300, dur: 0.15, vol: 0.15 }) },
   land: {
     gap: 0.1,
     fn: (a, o, { fall = 1 }) => {

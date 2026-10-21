@@ -37,6 +37,7 @@ import { Npcs, roomKey } from '../systems/Npcs.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import { IslandMist } from '../systems/IslandMist.js';
 import { WorldMap } from '../systems/WorldMap.js';
+import { Critters } from '../systems/Critters.js';
 import { textStyle } from '../ui/styles.js';
 
 const T = TILE_SIZE;
@@ -122,6 +123,8 @@ export class GameScene extends Phaser.Scene {
     this.zones = new Zones(this, this.world.generator, Array.isArray(save?.zones) ? save.zones : []);
     this.ambience = new Ambience(this, this.world, this.zones, this.dayNight);
     this.islandMist = new IslandMist(this, this.world.generator);
+    // Fauna: pájaros y bichos inofensivos de cada zona
+    this.critters = new Critters(this, this.world, this.player, this.dayNight, this.zones);
     // Mapa: se descubre al explorar; marcadores del jugador
     this.worldMap = new WorldMap(this, this.world, save?.pins);
     if (save) this.worldMap.load();
@@ -368,6 +371,7 @@ export class GameScene extends Phaser.Scene {
     this.npcs.update(dt);
     this.ambience.update(dt);
     this.islandMist.update(dt);
+    this.critters.update(dt);
     this.worldMap.update(dt, this.player);
 
     this.autosaveTimer += dt;
@@ -936,6 +940,7 @@ export class GameScene extends Phaser.Scene {
     this.housing.destroy();
     this.npcs.destroy();
     this.worldMap.destroy();
+    this.critters.destroy();
     this.player.anim.destroy();
     this.lighting.destroy();
     this.chunkManager.destroy();

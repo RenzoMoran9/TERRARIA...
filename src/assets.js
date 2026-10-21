@@ -191,6 +191,22 @@ export const ASSETS = {
   enemy_wasp: { file: 'enemies/wasp.png', width: 64, height: 28, frameWidth: 32, frameHeight: 28, placeholder: 'wasp' },
   enemy_eye: { file: 'enemies/eye.png', width: 64, height: 24, frameWidth: 32, frameHeight: 24, placeholder: 'eye' },
   enemy_firebat: { file: 'enemies/firebat.png', width: 108, height: 24, frameWidth: 36, frameHeight: 24, placeholder: 'firebat' },
+  // Fauna (pájaros y bichos que dan vida a cada zona)
+  critter_bird: { file: 'critters/bird.png', width: 96, height: 20, frameWidth: 24, frameHeight: 20, placeholder: 'critter_bird', colors: ['#a0603a', '#e8a070', '#7a4428', '#f0c040'] },
+  critter_parrot: { file: 'critters/parrot.png', width: 96, height: 20, frameWidth: 24, frameHeight: 20, placeholder: 'critter_bird', colors: ['#e83030', '#f0d040', '#3080e0', '#2a2216'] },
+  critter_crow: { file: 'critters/crow.png', width: 96, height: 20, frameWidth: 24, frameHeight: 20, placeholder: 'critter_bird', colors: ['#2a2430', '#3a3044', '#4a3a6a', '#3a3440'] },
+  critter_snowbird: { file: 'critters/snowbird.png', width: 96, height: 20, frameWidth: 24, frameHeight: 20, placeholder: 'critter_bird', colors: ['#c8d4e0', '#ffffff', '#6a90c0', '#f0a020'] },
+  critter_gull: { file: 'critters/gull.png', width: 96, height: 20, frameWidth: 24, frameHeight: 20, placeholder: 'critter_bird', colors: ['#f4f4f4', '#ffffff', '#9aa4b0', '#f0c040'] },
+  critter_bunny: { file: 'critters/bunny.png', width: 84, height: 24, frameWidth: 28, frameHeight: 24, placeholder: 'critter_bunny', colors: ['#b8aca0', '#f4f0ea'] },
+  critter_frog: { file: 'critters/frog.png', width: 48, height: 20, frameWidth: 24, frameHeight: 20, placeholder: 'critter_frog', colors: ['#4aa83a', '#c8e890'] },
+  critter_penguin: { file: 'critters/penguin.png', width: 40, height: 24, frameWidth: 20, frameHeight: 24, placeholder: 'critter_penguin' },
+  critter_lizard: { file: 'critters/lizard.png', width: 64, height: 16, frameWidth: 32, frameHeight: 16, placeholder: 'critter_lizard', colors: ['#c8a050', '#8a6a30'] },
+  critter_mouse: { file: 'critters/mouse.png', width: 48, height: 16, frameWidth: 24, frameHeight: 16, placeholder: 'critter_mouse' },
+  critter_snail: { file: 'critters/snail.png', width: 48, height: 18, frameWidth: 24, frameHeight: 18, placeholder: 'critter_snail' },
+  critter_butterfly: { file: 'critters/butterfly.png', width: 32, height: 16, frameWidth: 16, frameHeight: 16, placeholder: 'critter_butterfly', colors: ['#f0902a', '#2a2216'] },
+  critter_crystalfly: { file: 'critters/crystalfly.png', width: 32, height: 16, frameWidth: 16, frameHeight: 16, placeholder: 'critter_butterfly', colors: ['#ff9ee8', '#8ef0ff'] },
+  critter_emberfly: { file: 'critters/emberfly.png', width: 32, height: 16, frameWidth: 16, frameHeight: 16, placeholder: 'critter_butterfly', colors: ['#ff7020', '#ffe070'] },
+  critter_vulture: { file: 'critters/vulture.png', width: 88, height: 20, frameWidth: 44, frameHeight: 20, placeholder: 'critter_vulture' },
 
   // Aldeanos: 6 cuadros de 48×64 (quieto, caminar ×4, hablando), mirando a la derecha
   npc_guide: { file: 'npcs/guide.png', width: 288, height: 64, frameWidth: 48, frameHeight: 64, placeholder: 'npc_guide' },
