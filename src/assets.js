@@ -137,6 +137,7 @@ export const ASSETS = {
   item_magic_mirror: { file: 'items/magic_mirror.png', width: 32, height: 32, placeholder: 'magic_mirror' },
   item_compass: { file: 'items/compass.png', width: 32, height: 32, placeholder: 'compass' },
   item_depth_meter: { file: 'items/depth_meter.png', width: 32, height: 32, placeholder: 'depth_meter' },
+  item_bone: { file: 'items/bone.png', width: 32, height: 32, placeholder: 'bone' },
   item_relic_crown: { file: 'items/relic_crown.png', width: 32, height: 32, placeholder: 'relic_crown' },
   item_relic_stinger: { file: 'items/relic_stinger.png', width: 32, height: 32, placeholder: 'relic_stinger' },
   item_relic_hive: { file: 'items/relic_hive.png', width: 32, height: 32, placeholder: 'relic_hive' },
@@ -206,6 +207,9 @@ export const ASSETS = {
   boss_crystal_golem: { file: 'bosses/crystal_golem.png', width: 224, height: 128, frameWidth: 112, frameHeight: 128, placeholder: 'boss_crystal_golem' },
   boss_flame_lord: { file: 'bosses/flame_lord.png', width: 240, height: 120, frameWidth: 120, frameHeight: 120, placeholder: 'boss_flame_lord' },
   proj_boss: { file: 'bosses/projectiles.png', width: 64, height: 16, frameWidth: 16, frameHeight: 16, placeholder: 'proj_boss' },
+  // Mascotas: 5 cuadros (sentado, corriendo ×2, saltando, mordiendo)
+  pet_dog: { file: 'pets/dog.png', width: 180, height: 28, frameWidth: 36, frameHeight: 28, placeholder: 'pet_dog', colors: ['#b07a4a', '#e8c8a0', '#6a4428', '#2a1a14'] },
+  pet_wolf: { file: 'pets/wolf.png', width: 220, height: 32, frameWidth: 44, frameHeight: 32, placeholder: 'pet_wolf', colors: ['#8a8c94', '#d8dce4', '#4a4c54', '#1a1a1a'] },
   // Fauna (pájaros y bichos que dan vida a cada zona)
   critter_bird: { file: 'critters/bird.png', width: 96, height: 20, frameWidth: 24, frameHeight: 20, placeholder: 'critter_bird', colors: ['#a0603a', '#e8a070', '#7a4428', '#f0c040'] },
   critter_parrot: { file: 'critters/parrot.png', width: 96, height: 20, frameWidth: 24, frameHeight: 20, placeholder: 'critter_bird', colors: ['#e83030', '#f0d040', '#3080e0', '#2a2216'] },

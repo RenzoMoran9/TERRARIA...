@@ -40,6 +40,7 @@ import { WorldMap } from '../systems/WorldMap.js';
 import { Critters } from '../systems/Critters.js';
 import { Bosses, BOSSES } from '../systems/Bosses.js';
 import { RELICS } from '../systems/Skills.js';
+import { Pets } from '../systems/Pets.js';
 import { textStyle } from '../ui/styles.js';
 
 const T = TILE_SIZE;
@@ -129,6 +130,8 @@ export class GameScene extends Phaser.Scene {
     this.critters = new Critters(this, this.world, this.player, this.dayNight, this.zones);
     // Jefes: guardianes de las reliquias en sus guaridas
     this.bosses = new Bosses(this, this.world, this.enemies, this.player, this.dayNight, save?.bosses);
+    // Mascotas: perros y lobos que se domestican con huesos
+    this.pets = new Pets(this, this.world, this.player, this.enemies, this.dayNight, save?.pets);
     // El jefe brilla (si no, en su sala oscura no se vería)
     this.lighting.extraLights = () => {
       const b = this.bosses.active;
@@ -382,6 +385,7 @@ export class GameScene extends Phaser.Scene {
     this.islandMist.update(dt);
     this.critters.update(dt);
     this.bosses.update(dt);
+    this.pets.update(dt);
     this.worldMap.update(dt, this.player);
 
     this.autosaveTimer += dt;
@@ -749,6 +753,7 @@ export class GameScene extends Phaser.Scene {
       npcs: this.npcs.serialize(),
       pins: this.worldMap.pins,
       bosses: this.bosses.serialize(),
+      pets: this.pets.serialize(),
       // Solo los cofres con algo adentro
       chests: Object.fromEntries(
         [...this.chests].filter(([, slots]) => slots.some(Boolean)).map(([k, slots]) => [k, cloneSlots(slots).map((s) => (s ? [s.id, s.count] : null))]),
@@ -896,6 +901,16 @@ export class GameScene extends Phaser.Scene {
 
   /** Hablar con un aldeano en la posición del mundo (x, y). Devuelve true si había uno. */
   talkAt(x, y) {
+    // Mascotas: la salvaje se domestica (con huesos); la tuya abre el panel de órdenes
+    const pet = !this.player.dead && this.pets.at(x, y);
+    if (pet) {
+      if (pet.tame) this.events.emit('openPets');
+      else {
+        const msg = this.pets.tame(pet);
+        if (msg) this.events.emit('toast', msg);
+      }
+      return true;
+    }
     const npc = this.npcs.at(x, y);
     if (!npc || this.player.dead) return false;
     this.events.emit('talkNpc', npc);
@@ -966,6 +981,7 @@ export class GameScene extends Phaser.Scene {
     this.worldMap.destroy();
     this.critters.destroy();
     this.bosses.destroy();
+    this.pets.destroy();
     this.player.anim.destroy();
     this.lighting.destroy();
     this.chunkManager.destroy();

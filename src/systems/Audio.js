@@ -23,7 +23,7 @@ const SAMPLE_URLS = import.meta.glob('../sounds/*.mp3', { eager: true, query: '?
 // Volumen de cada sonido real (1 = normal): los que suenan muy seguido van más bajos
 const SAMPLE_VOL = {
   step: 0.3, dig_soft: 0.55, dig_stone: 0.5, dig_wood: 0.55, swing: 0.5, pickup: 0.45, coin: 0.5, xp: 0.35, click: 0.45,
-  roar: 0.9, bossDie: 1, relic: 0.8,
+  roar: 0.9, bossDie: 1, relic: 0.8, bark: 0.6, growl: 0.6, whine: 0.5, howl: 0.5,
   chirp: 0.35, crow: 0.4, gull: 0.4, croak: 0.4, flap: 0.35,
   place: 0.8, jump: 0.45, zombie: 0.5, slimeHop: 0.4, flyer: 0.45, drink: 0.8, teleport: 0.8, land: 0.55, hit: 0.75, hurt: 0.8, open: 0.5, lava: 0.7, levelUp: 0.8, zone: 0.75, house: 0.8,
 };
@@ -604,6 +604,10 @@ const SFX = {
   roar: { gap: 1, fn: (a, o) => { a.noise(o, { f0: 400, f1: 120, dur: 0.9, vol: 0.5, attack: 0.08 }); a.tone(o, { type: 'sawtooth', f0: 90, f1: 55, dur: 0.9, vol: 0.3, attack: 0.08 }); } },
   bossDie: { gap: 1, fn: (a, o) => { a.noise(o, { f0: 1500, f1: 80, dur: 1.4, vol: 0.7 }); a.tone(o, { type: 'sine', f0: 120, f1: 30, dur: 1.2, vol: 0.5 }); } },
   relic: { gap: 0.5, fn: (a, o) => [0, 0.12, 0.24, 0.36].forEach((d, i) => a.tone(o, { type: 'triangle', f0: midiHz(72 + [0, 4, 7, 12][i]), dur: 0.5, vol: 0.2, delay: d })) },
+  bark: { gap: 0.4, fn: (a, o) => a.noise(o, { filter: 'bandpass', f0: 700, f1: 400, q: 2, dur: 0.12, vol: 0.4 }) },
+  growl: { gap: 0.6, fn: (a, o) => a.tone(o, { type: 'sawtooth', f0: 90, f1: 70, dur: 0.4, vol: 0.15 }) },
+  whine: { gap: 0.5, fn: (a, o) => a.tone(o, { type: 'sine', f0: 900, f1: 600, dur: 0.25, vol: 0.12 }) },
+  howl: { gap: 3, fn: (a, o) => a.tone(o, { type: 'sine', f0: 500, f1: 800, dur: 1.2, vol: 0.12, attack: 0.3 }) },
   land: {
     gap: 0.1,
     fn: (a, o, { fall = 1 }) => {

@@ -781,6 +781,67 @@ function drawMapHead(pc, hair, hat = null, beard = null) {
   pc.outline('#1a120c');
 }
 
+// Perro o lobo de costado (mirando a la derecha) en un cuadro de fw×fh: [pelo, panza, oscuro, nariz]
+function drawPet(pc, fw, fh, [fur, belly, dark, nose], wolf) {
+  const k = fw / 18; // el lobo es un poco más grande
+  const r = (x) => Math.round(x * k);
+  for (let f = 0; f < 5; f++) {
+    const ox = f * fw;
+    const sit = f === 0;
+    const jump = f === 3;
+    const bite = f === 4;
+    const by = jump ? r(4) : r(6); // lomo
+    const bodyX0 = r(4);
+    const bodyX1 = r(13);
+    // Cola (el lobo, peluda y baja; el perro, arriba)
+    if (wolf) {
+      pc.rect(ox + r(1), by + 1, r(4), r(2), fur);
+      pc.set(ox + r(1), by + r(2) + 1, dark);
+    } else {
+      pc.rect(ox + r(2), by - 2, 1, 3, fur);
+      pc.rect(ox + r(3), by, 2, 1, fur);
+    }
+    // Cuerpo (sentado: la cola baja y el cuerpo inclinado)
+    for (let x = bodyX0; x <= bodyX1; x++) {
+      const drop = sit ? Math.max(0, Math.round((bodyX1 - x) * 0.35)) : 0;
+      pc.rect(ox + x, by + drop, 1, r(3), fur);
+      pc.set(ox + x, by + drop + r(3), belly);
+    }
+    // Patas
+    const legY = by + r(4);
+    const legH = fh - legY;
+    const legs = sit
+      ? [[r(5), 0], [r(7), 0], [r(11), 0], [r(13), 0]]
+      : jump
+        ? [[r(3), -1], [r(5), -1], [r(13), 1], [r(15), 1]]
+        : f === 1
+          ? [[r(4), -1], [r(8), 1], [r(10), -1], [r(14), 1]]
+          : [[r(6), 0], [r(7), 0], [r(12), 0], [r(13), 0]];
+    for (const [lx, lean] of legs) {
+      const h = sit && lx < r(9) ? 1 : legH;
+      for (let j = 0; j < h; j++) pc.set(ox + lx + (j > h / 2 ? lean : 0), legY + j, j === h - 1 ? dark : fur);
+    }
+    // Cabeza, orejas, ojo y hocico
+    const hx = bite ? r(14) : r(13);
+    const hy = sit ? by - r(3) : jump ? by - r(2) : by - r(3);
+    pc.rect(ox + hx, hy, r(4), r(4), fur);
+    pc.rect(ox + hx + r(3), hy + r(2), r(2), r(2), fur); // hocico
+    pc.set(ox + hx + r(4) + 1, hy + r(2), nose);
+    pc.set(ox + hx + r(2), hy + 1, '#1a120c'); // ojo
+    if (wolf) {
+      pc.rect(ox + hx, hy - 2, 1, 2, fur);
+      pc.rect(ox + hx + 1, hy - 3, 1, 3, dark);
+    } else {
+      pc.rect(ox + hx, hy, 1, r(3), dark); // oreja caída
+    }
+    if (bite) {
+      pc.rect(ox + hx + r(3), hy + r(4), r(2), 1, '#c03040');
+      pc.set(ox + hx + r(4), hy + r(4) + 1, '#ffffff');
+    }
+  }
+  pc.outline('#1a120c');
+}
+
 // Lingote en perspectiva: [claro, medio, oscuro]
 function drawBar(pc, [light, mid, dark]) {
   pc.rect(2, 7, 12, 5, mid);
@@ -1930,6 +1991,20 @@ const PIXEL = {
     pc.set(8, 10, '#1a120c');
     for (const x of [6, 8, 10]) pc.set(x, 13, '#8a7a6a');
     pc.outline('#1a120c');
+  },
+
+  // ---------- mascotas: 5 cuadros (sentado, corriendo ×2, saltando, mordiendo) ----------
+  pet_dog(pc, v, asset) {
+    drawPet(pc, 18, 14, asset.colors, false);
+  },
+  pet_wolf(pc, v, asset) {
+    drawPet(pc, 22, 16, asset.colors, true);
+  },
+  bone(pc) {
+    pc.rect(4, 7, 8, 2, '#f0ead8');
+    for (const [x, y] of [[3, 6], [3, 9], [12, 6], [12, 9]]) pc.disc(x, y, 1.6, '#f0ead8');
+    pc.rect(5, 7, 6, 1, '#ffffff');
+    pc.outline('#3a3020');
   },
 
   // ---------- fauna (bichos inofensivos de cada zona) ----------

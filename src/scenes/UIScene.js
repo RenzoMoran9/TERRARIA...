@@ -12,6 +12,7 @@ import { SkillsPanel } from '../ui/SkillsPanel.js';
 import { NpcDialog } from '../ui/NpcDialog.js';
 import { Minimap, FullMap, HomeArrows } from '../ui/MapPanel.js';
 import { BossBar } from '../ui/BossBar.js';
+import { PetPanel } from '../ui/PetPanel.js';
 import { RELICS } from '../systems/Skills.js';
 import { ITEMS } from '../systems/items.js';
 import { textStyle } from '../ui/styles.js';
@@ -46,6 +47,7 @@ export class UIScene extends Phaser.Scene {
     this.minimap = new Minimap(this, gs);
     this.fullMap = new FullMap(this, gs);
     this.bossBar = new BossBar(this);
+    this.petPanel = new PetPanel(this, gs);
 
     this.deathText = this.add
       .text(0, 0, '', textStyle({ fontSize: '30px', strokeThickness: 5, color: '#ff6b6b', align: 'center' }))
@@ -58,6 +60,7 @@ export class UIScene extends Phaser.Scene {
     kb.addCapture(['F3']);
     kb.on('keydown-E', () => this.toggleInventory());
     kb.on('keydown-ESC', () => {
+      this.togglePets(false);
       this.toggleMap(false);
       this.closeNpcDialog();
       this.toggleInventory(false);
@@ -67,6 +70,7 @@ export class UIScene extends Phaser.Scene {
     kb.on('keydown-H', () => this.checkHouse());
     kb.on('keydown-K', () => this.toggleSkills());
     kb.on('keydown-M', () => this.toggleMap());
+    kb.on('keydown-G', () => this.togglePets());
     // N: mostrar u ocultar el minimapa
     kb.on('keydown-N', () => this.minimap.setVisible(!this.minimap.visible));
     // R: curación rápida (toma una poción)
@@ -120,6 +124,8 @@ export class UIScene extends Phaser.Scene {
         this.bossBar.hide();
         if (won) this.zoneBanner.showCustom('¡Jefe derrotado!', boss.def.name, `Soltó: ${ITEMS[boss.def.relic].name}`, 'Úsala para hacerte más fuerte o véndela al Comerciante');
       },
+      openPets: () => this.togglePets(true),
+      petTamed: (pet) => this.zoneBanner.showCustom('¡Nueva mascota!', pet.name, `Tu ${pet.pdef.name.toLowerCase()} te seguirá y te defenderá`, this.gs.isTouch ? 'Tócala para darle órdenes' : 'G o clic derecho sobre ella: órdenes'),
       relicUsed: (id) =>
         this.zoneBanner.showCustom('¡Reliquia usada!', ITEMS[id].name, `${RELICS[id].text} · +${RELICS[id].points} punto${RELICS[id].points > 1 ? 's' : ''} de habilidad`, `+${RELICS[id].xp} XP`),
       zoneDiscovered: (biome) => this.zoneBanner.show(biome, gs.zones.discovered.size, gs.zones.total),
@@ -154,6 +160,21 @@ export class UIScene extends Phaser.Scene {
     if (!this.npcDialog.isOpen) return;
     this.npcDialog.close();
     this.gs.uiBlocking = this.inventoryPanel.isOpen || this.skillsPanel.isOpen;
+  }
+
+  /** Abre o cierra el panel de mascotas. */
+  togglePets(force) {
+    const open = force ?? !this.petPanel.isOpen;
+    if (open === this.petPanel.isOpen) return;
+    if (open) {
+      if (this.gs.player.dead) return;
+      this.toggleInventory(false);
+      this.toggleSkills(false);
+      this.toggleMap(false);
+      this.closeNpcDialog();
+      this.petPanel.open();
+    } else this.petPanel.close();
+    this.gs.uiBlocking = open;
   }
 
   /** Abre o cierra el mapa completo. */
@@ -237,6 +258,7 @@ export class UIScene extends Phaser.Scene {
     this.skillsPanel.layout(W, H);
     this.npcDialog.layout(W, H);
     this.fullMap.layout(W, H);
+    this.petPanel.layout(W, H);
     // Minimapa: en la PC arriba a la derecha (bajo la zona); en el celular a la izquierda, bajo el nivel
     if (this.gs.isTouch) {
       const levelY = y === 42 ? hotbarBottom + 14 : 54;
@@ -266,6 +288,7 @@ export class UIScene extends Phaser.Scene {
     this.fullMap.update();
     this.homeArrows.update();
     this.bossBar.update();
+    if (this.petPanel.isOpen) this.petPanel.refresh();
     this.inventoryPanel.update(delta);
     this.debug.update(delta);
     if (this.gs.player.dead) {

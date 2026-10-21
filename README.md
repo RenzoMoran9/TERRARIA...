@@ -64,6 +64,7 @@ La carpeta `dist/` se puede subir tal cual a cualquier hosting estático (GitHub
 | Barra rápida          | Teclas `1`–`9` o rueda del ratón    | Tocar la casilla                               |
 | Inventario y crafteo  | `E` (cerrar: `E` o `Esc`)           | Botón de cuadritos                             |
 | Revisar casa          | `H` (o el botón del inventario)     | Botón *Revisar casa* del inventario            |
+| Mascotas              | `G` (o clic derecho sobre tu mascota) | Tocar a tu mascota o el cartel 🐾 |
 | Mapa                  | `M` (o el botón *Mapa* del inventario); `N` muestra u oculta el minimapa | Tocar el minimapa (a la izquierda, bajo el nivel) |
 | Hablar con un aldeano | **Clic derecho** sobre él           | **Tocarlo**                                    |
 | Tomar una poción      | `R`                                 | Botón de poción (aparece si tienes)            |
@@ -201,6 +202,16 @@ Las puertas se abren solas al caminar contra ellas y se cierran al alejarse. Par
   Aparecen fuera de la pantalla y nunca donde hay paredes de fondo puestas por ti. Hacen daño al tocarte, te
   empujan y quedas invulnerable un momento (parpadeas). Espadas de madera y de piedra; los slimes sueltan **gel**
   (1 madera + 1 gel → 3 antorchas). Al reaparecer se van los enemigos cercanos.
+- **Mascotas** (perro y lobo): de vez en cuando aparece un **perro salvaje** en el Bosque (de día) o un **lobo** en
+  la Tundra (y de noche en el Bosque). Para que sea tuyo, **dale huesos**: tócalo (celular) o clic derecho (PC)
+  con huesos en el inventario (el perro pide 1, el lobo 3). Los **huesos** los sueltan los zombis y los vende el
+  Comerciante. Tu mascota tiene nombre, vida y **nivel** (sube venciendo enemigos: más vida y mordida), muerde a
+  los enemigos, te sigue saltando obstáculos y aparece a tu lado si quedó lejos. Si la lastiman mucho se
+  **desmaya** y vuelve a los 30 s. Puedes tener hasta 3.
+  **Órdenes** (panel de mascotas: tecla **G**, tocar el cartel 🐾 bajo tu nivel, o tocar / clic derecho sobre ella):
+  **Sígueme** (te sigue y te defiende si te atacan cerca), **Quieto** (se queda y cuida ese lugar), **¡Ataca!**
+  (sale a buscar enemigos), **A casa** (se va a tu cama y te espera ahí); además **Acariciar** (la cura un poco)
+  y **Dejar libre**. De noche se oye aullar a los lobos salvajes.
 - **Jefes y reliquias**: seis **guardianes** viven en guaridas bajo sus zonas (se baja por un **pozo con
   plataformas**) y protegen una **reliquia** que flota sobre un altar. Al acercarte al altar el jefe despierta
   (rugido, temblor, barra de vida arriba y música de pelea); dentro de su sala te ataca con sus propios
@@ -324,7 +335,7 @@ Con `npm run dev` la página se recarga sola al agregar o cambiar una imagen. Pa
 Se recomienda **PNG con transparencia**. Si una imagen tiene otro tamaño se escala al tamaño de dibujo
 (los bloques siempre se dibujan a 32×32), así que también se pueden usar imágenes al doble de resolución.
 
-### Lista completa de imágenes (237)
+### Lista completa de imágenes (240)
 
 **Fachadas.** Desde afuera, cada casa muestra la imagen del bloque que corresponde a sus paredes
 (pared de madera → `tiles/planks.png`, de piedra → `tiles/stone_brick.png`, de tierra → `tiles/dirt.png`) y
@@ -444,6 +455,7 @@ redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pas
 | `items/magic_mirror.png`             | 32 × 32     | Espejo mágico |
 | `items/compass.png`                  | 32 × 32     | Brújula |
 | `items/depth_meter.png`              | 32 × 32     | Medidor de profundidad |
+| `items/bone.png`                     | 32 × 32     | Hueso (para domesticar mascotas) |
 | `items/relic_crown.png`              | 32 × 32     | Corona del Rey Slime |
 | `items/relic_stinger.png`            | 32 × 32     | Aguijón dorado |
 | `items/relic_hive.png`               | 32 × 32     | Corazón de la colmena |
@@ -510,6 +522,8 @@ redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pas
 | `critters/crystalfly.png`            | 32 × 16     | Mariposa de cristal (brilla) |
 | `critters/emberfly.png`              | 32 × 16     | Polilla de brasa (volcán, inframundo; brilla) |
 | `critters/vulture.png`               | 88 × 20     | Buitre (desierto): 2 cuadros de 44×20 |
+| `pets/dog.png`                       | 180 × 28    | Perro: 5 cuadros de 36×28 (sentado, corriendo ×2, saltando, mordiendo) |
+| `pets/wolf.png`                      | 220 × 32    | Lobo: 5 cuadros de 44×32 (igual que el perro) |
 | `bosses/slime_king.png`              | 288 × 72    | Rey Slime: 3 cuadros de 96×72 (quieto, aplastado, en el aire) |
 | `bosses/scorpion_king.png`           | 240 × 56    | Escorpión Rey: 2 cuadros de 120×56 (caminando, disparando) |
 | `bosses/queen_wasp.png`              | 192 × 80    | Reina Avispa: 2 cuadros de 96×80 (aleteo) |
@@ -592,7 +606,7 @@ src/
   scenes/              BootScene (carga), BackgroundScene (cielo y paisaje), MenuScene, GameScene (mundo) y UIScene (interfaz)
   world/               Ruido con semilla, bloques, generador, datos por chunks, renderizado de chunks y tileset
   player/              Jugador: física, colisiones, vida y daño por caída (Player), poses (animations), combos de las armas (attacks) y animaciones y efectos (PlayerAnimator)
-  systems/             Sonido y música (Audio), inventario, ítems, crafteo, minar/colocar, muebles (Furniture), casas y fachadas (Housing), experiencia y habilidades (Skills, Abilities), aldeanos (Npcs), enemigos, zonas (Zones) y sus partículas (Ambience), neblina de las islas (IslandMist), mapa explorado (WorldMap), fauna (Critters), jefes y guaridas (Bosses), día/noche, iluminación, guardado y placeholders (pixel art por código)
+  systems/             Sonido y música (Audio), inventario, ítems, crafteo, minar/colocar, muebles (Furniture), casas y fachadas (Housing), experiencia y habilidades (Skills, Abilities), aldeanos (Npcs), enemigos, zonas (Zones) y sus partículas (Ambience), neblina de las islas (IslandMist), mapa explorado (WorldMap), fauna (Critters), jefes y guaridas (Bosses), mascotas (Pets), día/noche, iluminación, guardado y placeholders (pixel art por código)
   ui/                  HUD, barra rápida, inventario, mapa y minimapa (MapPanel), controles táctiles, debug y avisos
 ```
 

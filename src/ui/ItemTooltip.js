@@ -10,6 +10,7 @@ const HOVER_MS = 300; // con el ratón, basta con pasar por encima
 
 // Para qué sirve cada material o mueble
 const USES = {
+  bone: 'Dáselo a un perro (1) o a un lobo (3) salvaje para que sea tu mascota',
   wood: 'Material básico: tablones, antorchas, arcos, flechas…',
   planks: 'Bloque sólido de construcción. Material de casi todo lo de madera',
   dirt: 'Bloque. También se hace pared de tierra',

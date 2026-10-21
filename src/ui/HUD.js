@@ -50,6 +50,14 @@ export class HUD {
     this.pointsText.on('pointerdown', () => scene.toggleSkills(true));
     this.levelText.setInteractive({ useHandCursor: true }).on('pointerdown', () => scene.toggleSkills(true));
     this.lastLevel = '';
+    // Mascotas: tocar abre el panel de órdenes
+    this.petText = scene.add
+      .text(0, 0, '', textStyle({ fontSize: '13px', color: '#ffd8e8', backgroundColor: 'rgba(60,20,40,0.75)' }))
+      .setPadding(5, 2, 5, 2)
+      .setDepth(10)
+      .setVisible(false)
+      .setInteractive({ useHandCursor: true });
+    this.petText.on('pointerdown', () => scene.togglePets(true));
     this.levelY = 54;
 
     // Zona actual (debajo del reloj)
@@ -85,6 +93,7 @@ export class HUD {
     this.enBg.setPosition(56, y + 9);
     this.enBar.setPosition(56, y + 9);
     this.pointsText.setPosition(10, y + 16);
+    this.petText.setPosition(this.pointsText.visible ? 10 + this.pointsText.width + 6 : 10, y + 16);
   }
 
   updateLevel() {
@@ -115,6 +124,13 @@ export class HUD {
   }
 
   update() {
+    const pets = this.gs.pets?.list || [];
+    const petLabel = pets.length ? `🐾 ${pets.map((p) => p.name).join(', ')}` : '';
+    if (petLabel !== this.lastPets) {
+      this.lastPets = petLabel;
+      this.petText.setText(petLabel).setVisible(!!petLabel);
+      this.layoutLevel(this.levelY);
+    }
     this.updateLevel();
     const p = this.gs.player;
     const hp = Math.max(0, Math.round(p.health));

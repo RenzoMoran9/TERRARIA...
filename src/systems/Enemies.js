@@ -47,7 +47,7 @@ export const ENEMY_TYPES = {
     speed: 72,
     nightOnly: true,
     blood: 0x7fae6a,
-    drops: [['gel', 0, 1, 0.3]],
+    drops: [['gel', 0, 1, 0.3], ['bone', 1, 1, 0.5]],
   },
   // Desierto: camina rápido hacia el jugador, de día y de noche
   scorpion: {

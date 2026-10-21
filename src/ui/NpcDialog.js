@@ -15,6 +15,7 @@ const GAP = 5;
 export const SHOP = [
   ['healing_potion', 1, 200],
   ['torch', 5, 25],
+  ['bone', 1, 30],
   ['wood_arrow', 20, 30],
   ['wood_platform', 20, 15],
   ['glass', 10, 40],
