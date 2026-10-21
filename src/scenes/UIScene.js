@@ -9,6 +9,7 @@ import { Toast } from '../ui/Toast.js';
 import { ZoneBanner } from '../ui/ZoneBanner.js';
 import { HouseReport } from '../ui/HouseReport.js';
 import { SkillsPanel } from '../ui/SkillsPanel.js';
+import { NpcDialog } from '../ui/NpcDialog.js';
 import { textStyle } from '../ui/styles.js';
 
 /**
@@ -35,6 +36,7 @@ export class UIScene extends Phaser.Scene {
     this.zoneBanner = new ZoneBanner(this);
     this.houseReport = new HouseReport(this);
     this.skillsPanel = new SkillsPanel(this, gs);
+    this.npcDialog = new NpcDialog(this, gs);
 
     this.deathText = this.add
       .text(0, 0, '', textStyle({ fontSize: '30px', strokeThickness: 5, color: '#ff6b6b', align: 'center' }))
@@ -47,12 +49,18 @@ export class UIScene extends Phaser.Scene {
     kb.addCapture(['F3']);
     kb.on('keydown-E', () => this.toggleInventory());
     kb.on('keydown-ESC', () => {
+      this.closeNpcDialog();
       this.toggleInventory(false);
       this.toggleSkills(false);
     });
     kb.on('keydown-F3', () => this.debug.toggle());
     kb.on('keydown-H', () => this.checkHouse());
     kb.on('keydown-K', () => this.toggleSkills());
+    // T: tira al suelo lo que tienes en la mano (la pila entera, como en Terraria)
+    kb.on('keydown-T', () => {
+      if (gs.uiBlocking || gs.player.dead) return;
+      gs.throwStack(gs.inventory.takeSlot(gs.inventory.selected));
+    });
     kb.on('keydown', (event) => {
       const n = Number(event.key);
       if (n >= 1 && n <= 9) gs.inventory.select(n - 1);
@@ -74,6 +82,12 @@ export class UIScene extends Phaser.Scene {
     this._handlers = {
       toast: (msg) => this.toast.show(msg),
       houseReport: (result) => this.houseReport.show(result),
+      talkNpc: (npc) => {
+        this.toggleInventory(false);
+        this.toggleSkills(false);
+        this.npcDialog.open(npc);
+        this.gs.uiBlocking = true;
+      },
       levelUp: (level) =>
         this.zoneBanner.showCustom(
           '¡Subiste de nivel!',
@@ -107,6 +121,12 @@ export class UIScene extends Phaser.Scene {
     if (gs.isTouch && this.scale.height > this.scale.width) {
       this.toast.show('Gira el teléfono (horizontal) para jugar mejor');
     }
+  }
+
+  closeNpcDialog() {
+    if (!this.npcDialog.isOpen) return;
+    this.npcDialog.close();
+    this.gs.uiBlocking = this.inventoryPanel.isOpen || this.skillsPanel.isOpen;
   }
 
   /** Abre o cierra el panel de habilidades. */
@@ -172,6 +192,7 @@ export class UIScene extends Phaser.Scene {
     this.layoutToast();
     this.inventoryPanel.layout(W, H);
     this.skillsPanel.layout(W, H);
+    this.npcDialog.layout(W, H);
     this.hud.layoutLevel(y === 42 ? hotbarBottom + 14 : 54);
     this.touchControls.layout(W, H, y === 42 ? hotbarBottom + 28 : 62);
     this.deathText.setPosition(W / 2, H / 2);
@@ -184,6 +205,10 @@ export class UIScene extends Phaser.Scene {
 
   update(time, delta) {
     this.hud.update();
+    // El diálogo se cierra si el jugador se aleja del aldeano
+    const d = this.npcDialog;
+    if (d.isOpen && (this.gs.player.dead || Math.hypot(d.npc.centerX - this.gs.player.centerX, d.npc.centerY - this.gs.player.centerY) > 8 * 32)) this.closeNpcDialog();
+    if (d.isOpen && d.npc.talkTime < 1) d.npc.talkTime = 1;
     this.touchControls.update();
     this.inventoryPanel.update(delta);
     this.debug.update(delta);

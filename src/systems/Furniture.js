@@ -180,8 +180,8 @@ export class Furniture {
         continue;
       }
       // Lejos = fuera de la columna de la puerta con un margen (para no cerrarla en la cara)
-      const near =
-        p.x < (d.x0 + 1) * T + 10 && p.x + p.w > d.x0 * T - 10 && p.y < (d.y0 + f.obj.h) * T && p.y + p.h > d.y0 * T;
+      const inDoor = (b) => b.x < (d.x0 + 1) * T + 10 && b.x + b.w > d.x0 * T - 10 && b.y < (d.y0 + f.obj.h) * T && b.y + b.h > d.y0 * T;
+      const near = inDoor(p) || (this.bodies ? this.bodies().some(inDoor) : false);
       d.away = near || p.dead ? 0 : d.away + dt;
       if (d.away >= DOOR_CLOSE_DELAY) {
         this._setDoor(f, false);

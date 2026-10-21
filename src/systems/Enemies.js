@@ -431,6 +431,8 @@ class Enemy {
       this.scene.spawnDebris(this.centerX, this.centerY, this.blood, 10);
       audio.play(this.type === 'slime' ? 'slimeDie' : 'enemyDie', { x: this.centerX, y: this.centerY });
       this.manager.giveDrops(this);
+      // Monedas: más cuanto más fuerte es el enemigo
+      this.scene.dropCoins?.(Math.max(1, Math.round(this.maxHp * 0.35 * (0.7 + Math.random() * 0.6))), this.centerX, this.centerY);
       // Experiencia: más por los enemigos fuertes (y los de las zonas lejanas)
       this.scene.gainXp?.(Math.max(3, Math.round(this.maxHp * 0.5 + this.damage * 0.3)), this.centerX, this.y - 8);
     }

@@ -35,6 +35,10 @@ export const ITEMS = {
   cactus: { name: 'Cactus', icon: 'item_cactus' },
   cactus_sword: { name: 'Espada de cactus', icon: 'item_cactus_sword', maxStack: 1, weapon: { damage: 12, knockback: 240, speed: 2.4, reach: 54 } },
   crystal_sword: { name: 'Espada de cristal', icon: 'item_crystal_sword', maxStack: 1, weapon: { damage: 30, knockback: 320, speed: 3, reach: 64 } },
+  // Monedas (no van al inventario: se suman a la bolsa de monedas). value = en monedas de cobre
+  coin_copper: { name: 'Moneda de cobre', icon: 'item_coin_copper', coin: 1 },
+  coin_silver: { name: 'Moneda de plata', icon: 'item_coin_silver', coin: 100 },
+  coin_gold: { name: 'Moneda de oro', icon: 'item_coin_gold', coin: 10000 },
   // Casas
   wood_hammer: { name: 'Martillo de madera', icon: 'item_wood_hammer', maxStack: 1, hammer: { speed: 2.5 } },
   wood_wall: { name: 'Pared de fondo de madera', icon: 'item_wood_wall', wall: WALL.WOOD },
@@ -83,4 +87,53 @@ export const HAND = { name: 'Mano', icon: null, tier: 0, speed: 1 };
 
 export function getMaxStack(id) {
   return ITEMS[id]?.maxStack ?? MAX_STACK;
+}
+
+// ---------------------------------------------------------------------------
+// Monedas: 100 de cobre = 1 de plata; 100 de plata = 1 de oro (como Terraria)
+// ---------------------------------------------------------------------------
+
+/** "2 oro 5 plata 30 cobre" (o "0 cobre") */
+export function formatCoins(n) {
+  n = Math.max(0, Math.floor(n));
+  const gold = Math.floor(n / 10000);
+  const silver = Math.floor((n % 10000) / 100);
+  const copper = n % 100;
+  const parts = [];
+  if (gold) parts.push(`${gold} oro`);
+  if (silver) parts.push(`${silver} plata`);
+  if (copper || parts.length === 0) parts.push(`${copper} cobre`);
+  return parts.join(' ');
+}
+
+/** Monedas que valen n de cobre, en la menor cantidad de piezas: [[id, cantidad], ...] */
+export function coinStacks(n) {
+  const out = [];
+  const gold = Math.floor(n / 10000);
+  const silver = Math.floor((n % 10000) / 100);
+  const copper = Math.floor(n % 100);
+  if (gold) out.push(['coin_gold', gold]);
+  if (silver) out.push(['coin_silver', silver]);
+  if (copper) out.push(['coin_copper', copper]);
+  return out;
+}
+
+// Precio de algunos ítems (en cobre); el resto se calcula según qué es
+const VALUES = {
+  wood: 2, planks: 1, dirt: 0, stone: 1, sand: 1, coal: 6, iron_ore: 12, iron_bar: 40, gel: 3, torch: 4, cactus: 3,
+  crystal: 25, shadow_stone: 8, glass: 4, workbench: 10, furnace: 60, anvil: 220, chest: 30, bed: 50, door: 12,
+};
+
+/** Cuánto vale un ítem (en cobre); el Comerciante paga 1/5 al comprárselo. */
+export function itemValue(id) {
+  const d = ITEMS[id];
+  if (!d || d.coin) return 0;
+  if (VALUES[id] !== undefined) return VALUES[id];
+  if (d.weapon) return Math.round(d.weapon.damage * d.weapon.speed * 12);
+  if (d.tool) return Math.round(d.tool.tier * d.tool.speed * 40);
+  if (d.hammer) return Math.round(d.hammer.speed * 30);
+  if (d.ammo) return 1;
+  if (d.object !== undefined) return 20;
+  if (d.wall !== undefined) return 1;
+  return 2;
 }

@@ -5,6 +5,7 @@ import { RECIPES, canCraft, craft, describeIngredients, hasIngredients, STATION_
 import { createButton } from './Button.js';
 import { COLORS, textStyle } from './styles.js';
 import { audio } from '../systems/Audio.js';
+import { formatCoins } from '../systems/items.js';
 
 // Medidas del panel sin escalar (luego se escala para que quepa en pantallas pequeñas)
 const SLOT = 44;
@@ -45,7 +46,11 @@ export class InventoryPanel {
 
     // Fondo oscuro de pantalla completa: tocar fuera del panel lo cierra
     this.blocker = scene.add.rectangle(0, 0, 10, 10, 0x000000, 0.35).setOrigin(0).setDepth(29).setVisible(false);
-    this.blocker.setInteractive().on('pointerdown', () => scene.toggleInventory(false));
+    // Tocar fuera del panel: con algo en el cursor lo tira al suelo; si no, cierra
+    this.blocker.setInteractive().on('pointerdown', () => {
+      if (this.inv.held) this.gs.throwStack(this.inv.takeHeld());
+      else scene.toggleInventory(false);
+    });
 
     this.container = scene.add.container(0, 0).setDepth(30).setVisible(false);
     const bg = scene.add
@@ -63,6 +68,18 @@ export class InventoryPanel {
       fontSize: '13px',
     });
     this.container.add(this.soundBtn);
+    // Bolsa de monedas
+    const extraY = GRID_Y + 4 * (SLOT + GAP) + 10;
+    this.coinsText = scene.add.text(PAD, extraY, '', textStyle({ fontSize: '14px', color: '#ffd84a' }));
+    this.container.add(this.coinsText);
+    // Basura (borra lo que se pone; lo último se puede recuperar) y "Tirar" al suelo
+    const tx = PAD + (HOTBAR_SIZE - 1) * (SLOT + GAP);
+    this.trashBg = scene.add.image(tx, extraY - 6, 'ui_slot').setOrigin(0).setDisplaySize(SLOT, SLOT).setTint(0xff9a9a).setInteractive();
+    this.trashIcon = scene.add.image(tx + SLOT / 2, extraY - 6 + SLOT / 2, 'ui_slot').setVisible(false);
+    this.trashLabel = scene.add.text(tx - 6, extraY + 16, 'Basura', textStyle({ fontSize: '12px', color: '#ffb0b0' })).setOrigin(1, 0.5);
+    scene.tooltip.attach(this.trashBg, () => this.inv.trash?.id, () => this.inv.clickTrash());
+    this.throwBtn = createButton(scene, tx - 120, extraY + 16, 120, 30, 'Tirar al suelo', () => this.gs.throwStack(this.inv.takeHeld()), { fontSize: '13px' });
+    this.container.add([this.trashBg, this.trashIcon, this.trashLabel, this.throwBtn]);
     this.chest = null; // casillas del cofre abierto (o null: modo crafteo)
     const craftStart = this.container.list.length;
     this.container.add(scene.add.text(CRAFT_X, PAD - 2, 'Crafteo', textStyle({ fontSize: '18px' })));
@@ -351,6 +368,7 @@ export class InventoryPanel {
   open() {
     audio.play('open');
     this.isOpen = true;
+    this.coinsText.setText(`Monedas: ${formatCoins(this.gs.coins)}`);
     this.blocker.setVisible(true);
     this.container.setVisible(true);
     this.refresh();
@@ -385,6 +403,14 @@ export class InventoryPanel {
         view.count.setText('');
       }
     }
+    const trash = inv.trash;
+    // Vacía: dibujo del tacho; con algo tirado: ese ítem (tocarlo lo recupera)
+    this.trashIcon.setVisible(true);
+    if (trash) this.trashIcon.setTexture(ITEMS[trash.id].icon).setDisplaySize(ICON, ICON).setAlpha(0.6);
+    else this.trashIcon.setTexture('ui_trash').setDisplaySize(ICON, ICON).setAlpha(0.8);
+    this.throwBtn.setVisible(!!inv.held && !this.chest);
+    this.trashLabel.setVisible(!inv.held || !!this.chest);
+    this.coinsText.setText(`Monedas: ${formatCoins(this.gs.coins)}`).setVisible(!inv.held || !!this.chest);
     const held = inv.held;
     if (held) {
       this.heldIcon.setTexture(ITEMS[held.id].icon).setDisplaySize(this.heldIconSize, this.heldIconSize).setVisible(true);

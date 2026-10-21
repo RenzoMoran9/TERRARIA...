@@ -60,6 +60,35 @@ export class Inventory extends Phaser.Events.EventEmitter {
     this.slots = new Array(size).fill(null);
     this.selected = 0;
     this.held = null;
+    this.trash = null; // última pila tirada a la basura (se puede recuperar hasta tirar otra)
+  }
+
+  /** Casilla de basura: con algo en el cursor, lo borra; sin nada, recupera lo último que se tiró. */
+  clickTrash() {
+    if (this.held) {
+      this.trash = this.held;
+      this.held = null;
+    } else if (this.trash) {
+      this.held = this.trash;
+      this.trash = null;
+    }
+    this.emit('change');
+  }
+
+  /** Saca y devuelve lo que se lleva en el cursor (para tirarlo al suelo). */
+  takeHeld() {
+    const h = this.held;
+    this.held = null;
+    if (h) this.emit('change');
+    return h;
+  }
+
+  /** Saca y devuelve la pila de una casilla. */
+  takeSlot(index) {
+    const s = this.slots[index];
+    this.slots[index] = null;
+    if (s) this.emit('change');
+    return s;
   }
 
   get selectedStack() {

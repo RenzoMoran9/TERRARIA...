@@ -728,6 +728,24 @@ function drawShingles(pc, v, [dark, mid, base, light]) {
   }
 }
 
+// Aldeano: las poses del jugador con otros colores (y un adorno opcional en la cabeza)
+function drawNpc(pc, colors, extra) {
+  const C = { ...PLAYER_COLORS, ...colors };
+  const frames = [POSES[0], POSES[3], POSES[5], POSES[7], POSES[9], { name: 'talk', front: [17, 12], eyes: 'happy', mouth: 'open' }];
+  frames.forEach((pose, i) => {
+    drawPose(pc, i * ART_W, 0, pose, C);
+    if (extra) extra(i * ART_W, i * ART_W + (pose.lean || 0), 1 + (pose.bob || 0));
+  });
+}
+
+// Moneda redonda con brillo (en el centro del ícono)
+function drawCoin(pc, [dark, mid, light]) {
+  pc.disc(7.5, 8.5, 5.2, (x, y, d) => (d > 0.82 ? dark : y < 7 ? light : mid));
+  pc.rect(6, 6, 3, 5, dark);
+  pc.rect(7, 6, 1, 5, light);
+  pc.outline('#1a120c');
+}
+
 // ---------------------------------------------------------------- pintores en pixel art
 const PIXEL = {
   dirt(pc, v) {
@@ -1606,6 +1624,59 @@ const PIXEL = {
       pc.set(ox + 10, 5, '#ffe060');
     }
     pc.outline('#1a0806');
+  },
+
+  trash(pc) {
+    // Tacho de basura con tapa
+    pc.rect(3, 3, 10, 2, '#c8ccd4');
+    pc.rect(6, 1, 4, 2, '#c8ccd4');
+    pc.rect(4, 5, 8, 10, '#9aa0aa');
+    for (const x of [6, 8, 10]) pc.rect(x, 7, 1, 7, '#6a707a');
+    pc.rect(4, 5, 1, 10, '#c8ccd4');
+    pc.outline('#1e2024');
+  },
+  coin_copper(pc) {
+    drawCoin(pc, ['#8a4a1e', '#c8743a', '#f0a868']);
+  },
+  coin_silver(pc) {
+    drawCoin(pc, ['#6a7078', '#b8c0c8', '#f0f4f8']);
+  },
+  coin_gold(pc) {
+    drawCoin(pc, ['#9a6a10', '#e0b030', '#fff0a0']);
+  },
+  // ---------- aldeanos (6 cuadros: quieto, caminar ×4, hablando) ----------
+  npc_guide(pc) {
+    drawNpc(pc, { hair: '#6b3d1a', hairLight: '#8a5228', shirt: '#4f8a3a', shirtShade: '#386629', shirtLight: '#6fae55', pants: '#6b5638', pantsShade: '#4d3e28' });
+    pc.outline('#1a120c');
+  },
+  npc_merchant(pc) {
+    drawNpc(
+      pc,
+      { hair: '#c8c8c8', hairLight: '#e8e8e8', shirt: '#7a3e9a', shirtShade: '#5a2b74', shirtLight: '#9a5ec0', pants: '#3e3a5a', pantsShade: '#2a2740', skin: '#e8b88a' },
+      (ox, hx, hy) => {
+        // Sombrero de ala ancha y barba blanca
+        pc.rect(hx + 6, hy + 2, 13, 1, '#5a3a1e');
+        pc.rect(hx + 8, hy - 1, 9, 3, '#7a5228');
+        pc.rect(hx + 8, hy + 1, 9, 1, '#3e2810');
+        pc.rect(hx + 11, hy + 8, 6, 3, '#f0f0f0');
+        pc.rect(hx + 12, hy + 11, 4, 1, '#d8d8d8');
+      },
+    );
+    pc.outline('#1a120c');
+  },
+  npc_nurse(pc) {
+    drawNpc(
+      pc,
+      { hair: '#d86a8a', hairLight: '#f08aa8', shirt: '#f2f2f2', shirtShade: '#c8c8d0', shirtLight: '#ffffff', pants: '#f2f2f2', pantsShade: '#c8c8d0', belt: '#e04848', buckle: '#ffffff' },
+      (ox, hx, hy) => {
+        // Cofia blanca con cruz roja y pelo largo
+        pc.rect(hx + 8, hy - 1, 8, 3, '#ffffff');
+        pc.rect(hx + 11, hy - 1, 2, 3, '#e03030');
+        pc.rect(hx + 10, hy, 4, 1, '#e03030');
+        pc.rect(hx + 7, hy + 3, 3, 9, '#d86a8a');
+      },
+    );
+    pc.outline('#1a120c');
   },
 
   // ---------- jugador (hoja de 8 cuadros) ----------

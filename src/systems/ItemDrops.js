@@ -27,10 +27,20 @@ export class ItemDrops {
   }
 
   /** Tira `count` de `id` en (x, y). pop = salta un poco hacia arriba. */
-  spawn(id, count, x, y, pop = true) {
+  /** Tirar una pila al suelo hacia un costado: tarda unos segundos en poder recogerse (para alejarse). */
+  throw(id, count, x, y, dir) {
+    const d = this.spawn(id, count, x, y, true, false);
+    if (!d) return null;
+    d.vx = dir * 240;
+    d.vy = -220;
+    d.pickDelay = 3;
+    return d;
+  }
+
+  spawn(id, count, x, y, pop = true, merge = true) {
     if (!ITEMS[id] || count <= 0) return null;
     // Se junta con una pila igual que ya está en el suelo al lado
-    for (const d of this.list) {
+    for (const d of merge ? this.list : []) {
       if (d.id === id && !d.dead && Math.abs(d.x - x) < MERGE && Math.abs(d.y - y) < MERGE) {
         d.count += count;
         return d;
@@ -66,7 +76,7 @@ export class ItemDrops {
       const dx = px - d.x;
       const dy = py - d.y;
       const dist = Math.hypot(dx, dy);
-      const canTake = !p.dead && d.age > PICK_DELAY && this.inventory.canAdd(d.id, 1);
+      const canTake = !p.dead && d.age > (d.pickDelay ?? PICK_DELAY) && (ITEMS[d.id].coin || this.inventory.canAdd(d.id, 1));
       const magnet = MAGNET * (this.scene.progress?.magnetMultiplier ?? 1); // habilidad Imán: el doble
       if (canTake && dist < magnet) {
         // Vuela hacia el jugador (atraviesa los bloques, como en Terraria)
@@ -122,6 +132,13 @@ export class ItemDrops {
   }
 
   _pickUp(d) {
+    if (ITEMS[d.id].coin) {
+      // Monedas: a la bolsa de monedas (no ocupan lugar en el inventario)
+      this.scene.addCoins(ITEMS[d.id].coin * d.count, this.player.centerX, this.player.y - 6);
+      d.dead = true;
+      audio.play('pickup', { vol: 1.2 });
+      return;
+    }
     audio.play('pickup');
     const left = this.inventory.add(d.id, d.count);
     const got = d.count - left;

@@ -30,7 +30,8 @@ import { Abilities } from '../systems/Abilities.js';
 import { audio } from '../systems/Audio.js';
 import { BIOME } from '../world/WorldGenerator.js';
 import { cloneSlots } from '../systems/Inventory.js';
-import { ITEMS, getMaxStack } from '../systems/items.js';
+import { ITEMS, getMaxStack, coinStacks, formatCoins } from '../systems/items.js';
+import { Npcs, roomKey } from '../systems/Npcs.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import { textStyle } from '../ui/styles.js';
 
@@ -114,6 +115,11 @@ export class GameScene extends Phaser.Scene {
     this.ambience = new Ambience(this, this.world, this.zones, this.dayNight);
     // Casas: cuartos cerrados, fachada vista desde afuera y la consulta "Revisar casa"
     this.housing = new Housing(this, this.world, this.player);
+    // Monedas (en cobre) y aldeanos que viven en las casas
+    this.coins = Math.max(0, Number(save?.coins) || 0);
+    this.npcs = new Npcs(this, this.world, this.housing, save?.npcs);
+    this.furniture.bodies = () => this.npcs.list; // las puertas no se cierran en la cara de un aldeano
+    this.events.on('npcArrived', (type) => this.events.emit('toast', `¡Llegó ${type === 'nurse' ? 'la Enfermera' : 'el Comerciante'}!`));
     this.events.on('zoneDiscovered', () => {
       audio.play('zone');
       this.gainXp(XP.zone, this.player.centerX, this.player.y - 20);
@@ -242,6 +248,10 @@ export class GameScene extends Phaser.Scene {
         this._tap = { id: pointer.id, time: this.time.now, tx: Math.floor(this._tmpVec.x / T), ty: Math.floor(this._tmpVec.y / T) };
         return;
       }
+      if (pointer.button === 2) {
+        this.cameras.main.getWorldPoint(pointer.x, pointer.y, this._tmpVec);
+        if (this.talkAt(this._tmpVec.x, this._tmpVec.y)) return; // clic derecho sobre un aldeano: hablar
+      }
       this.worldPointer = pointer;
       this.pressPending = true;
       if (pointer.wasTouch) this.pressAction = this.touchState.mode;
@@ -254,6 +264,11 @@ export class GameScene extends Phaser.Scene {
       if (!tap || tap.id !== pointer.id || this.uiBlocking || this.player.dead) return;
       if (this.time.now - tap.time > TAP_MS) return;
       this.cameras.main.getWorldPoint(pointer.x, pointer.y, this._tmpVec);
+      // Tocar a un aldeano: hablar
+      if (this.talkAt(this._tmpVec.x, this._tmpVec.y)) {
+        this.manualTarget = null;
+        return;
+      }
       if (Math.floor(this._tmpVec.x / T) !== tap.tx || Math.floor(this._tmpVec.y / T) !== tap.ty) return;
       if (this.furniture.isInteractive(tap.tx, tap.ty) && this.interaction.inReach(tap.tx, tap.ty)) {
         this.furniture.interact(tap.tx, tap.ty);
@@ -335,6 +350,7 @@ export class GameScene extends Phaser.Scene {
       audio.setMood(this.musicMood());
     }
     this.housing.update(dt);
+    this.npcs.update(dt);
     this.ambience.update(dt);
 
     this.autosaveTimer += dt;
@@ -673,6 +689,8 @@ export class GameScene extends Phaser.Scene {
       drops: this.drops.serialize(),
       zones: this.zones.serialize(),
       progress: this.progress.serialize(),
+      coins: this.coins,
+      npcs: this.npcs.serialize(),
       // Solo los cofres con algo adentro
       chests: Object.fromEntries(
         [...this.chests].filter(([, slots]) => slots.some(Boolean)).map(([k, slots]) => [k, cloneSlots(slots).map((s) => (s ? [s.id, s.count] : null))]),
@@ -706,6 +724,35 @@ export class GameScene extends Phaser.Scene {
     return p.facing > 0 ? 0 : Math.PI;
   }
 
+  /** Tira una pila al suelo delante del jugador (se puede volver a recoger después de unos segundos). */
+  throwStack(stack) {
+    if (!stack) return;
+    const p = this.player;
+    this.drops.throw(stack.id, stack.count, p.centerX + p.facing * 14, p.y + 20, p.facing);
+    audio.play('throw');
+    this.events.emit('toast', `Tiraste ${ITEMS[stack.id].name}${stack.count > 1 ? ` ×${stack.count}` : ''}`);
+  }
+
+  /** Monedas recogidas (no van al inventario: se suman a la bolsa). */
+  addCoins(amount, x, y) {
+    if (amount <= 0) return;
+    this.coins += amount;
+    this.showFloatingText(x, y, `+${formatCoins(amount)}`, '#ffd84a', 13);
+  }
+
+  /** Suelta monedas que valen 'amount' de cobre en (x, y). */
+  dropCoins(amount, x, y) {
+    for (const [id, n] of coinStacks(Math.round(amount))) this.drops.spawn(id, n, x, y);
+  }
+
+  /** Hablar con un aldeano en la posición del mundo (x, y). Devuelve true si había uno. */
+  talkAt(x, y) {
+    const npc = this.npcs.at(x, y);
+    if (!npc || this.player.dead) return false;
+    this.events.emit('talkNpc', npc);
+    return true;
+  }
+
   /** Suma experiencia y muestra "+N XP" donde ocurrió. */
   gainXp(amount, x, y) {
     if (!amount || this.player.dead) return;
@@ -734,6 +781,9 @@ export class GameScene extends Phaser.Scene {
     if (!result.room) result = this.housing.check(tx, Math.floor((p.y + 4) / T));
     if (!result.room) {
       result.checks.push({ ok: false, text: 'Párate dentro de la casa y vuelve a revisar' });
+    } else if (result.ok) {
+      const owner = this.npcs.list.find((n) => n.home === roomKey(result.room));
+      result.checks.push({ ok: true, text: owner ? `Aquí vive: ${owner.def.name}` : 'Está libre: un aldeano puede mudarse' });
     }
     this.housing.showRoom(result);
     this.events.emit('houseReport', result);
@@ -762,6 +812,7 @@ export class GameScene extends Phaser.Scene {
     this.drops.destroy();
     this.ambience.destroy();
     this.housing.destroy();
+    this.npcs.destroy();
     this.player.anim.destroy();
     this.lighting.destroy();
     this.chunkManager.destroy();

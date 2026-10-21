@@ -107,6 +107,9 @@ export const ASSETS = {
   item_stone_pickaxe: { file: 'items/stone_pickaxe.png', width: 32, height: 32, placeholder: 'stone_pickaxe' },
   item_wood_hammer: { file: 'items/wood_hammer.png', width: 32, height: 32, placeholder: 'wood_hammer' },
   item_glass_wall: { file: 'items/glass_wall.png', width: 32, height: 32, placeholder: 'glass_wall_item' },
+  item_coin_copper: { file: 'items/coin_copper.png', width: 32, height: 32, placeholder: 'coin_copper' },
+  item_coin_silver: { file: 'items/coin_silver.png', width: 32, height: 32, placeholder: 'coin_silver' },
+  item_coin_gold: { file: 'items/coin_gold.png', width: 32, height: 32, placeholder: 'coin_gold' },
   item_wood_wall: { file: 'items/wood_wall.png', width: 32, height: 32, placeholder: 'wood_wall_item' },
   item_stone_wall: { file: 'items/stone_wall.png', width: 32, height: 32, placeholder: 'stone_wall_item' },
   item_dirt_wall: { file: 'items/dirt_wall.png', width: 32, height: 32, placeholder: 'dirt_wall_item' },
@@ -147,6 +150,11 @@ export const ASSETS = {
   enemy_wasp: { file: 'enemies/wasp.png', width: 64, height: 28, frameWidth: 32, frameHeight: 28, placeholder: 'wasp' },
   enemy_eye: { file: 'enemies/eye.png', width: 64, height: 24, frameWidth: 32, frameHeight: 24, placeholder: 'eye' },
   enemy_firebat: { file: 'enemies/firebat.png', width: 108, height: 24, frameWidth: 36, frameHeight: 24, placeholder: 'firebat' },
+
+  // Aldeanos: 6 cuadros de 48×64 (quieto, caminar ×4, hablando), mirando a la derecha
+  npc_guide: { file: 'npcs/guide.png', width: 288, height: 64, frameWidth: 48, frameHeight: 64, placeholder: 'npc_guide' },
+  npc_merchant: { file: 'npcs/merchant.png', width: 288, height: 64, frameWidth: 48, frameHeight: 64, placeholder: 'npc_merchant' },
+  npc_nurse: { file: 'npcs/nurse.png', width: 288, height: 64, frameWidth: 48, frameHeight: 64, placeholder: 'npc_nurse' },
 
   // ---------- Jugador: 31 poses de 48×64, 8 por fila (ver player/animations.js), mirando a la derecha ----------
   player: { file: 'player/player.png', width: 384, height: 256, frameWidth: 48, frameHeight: 64, placeholder: 'player' },
@@ -196,6 +204,7 @@ export const ASSETS = {
   ui_button_attack: { file: 'ui/button_attack.png', width: 80, height: 80, placeholder: 'button_attack', smooth: true },
   ui_button_dash: { file: 'ui/button_dash.png', width: 64, height: 64, placeholder: 'button_dash', smooth: true },
   ui_button_fire: { file: 'ui/button_fire.png', width: 64, height: 64, placeholder: 'button_fire', smooth: true },
+  ui_trash: { file: 'ui/trash.png', width: 32, height: 32, placeholder: 'trash' },
   ui_button_swap: { file: 'ui/button_swap.png', width: 64, height: 64, placeholder: 'button_swap', smooth: true },
   ui_button_inventory: { file: 'ui/button_inventory.png', width: 64, height: 64, placeholder: 'button_inventory', smooth: true },
   ui_button_fullscreen: { file: 'ui/button_fullscreen.png', width: 48, height: 48, placeholder: 'button_fullscreen', smooth: true },

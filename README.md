@@ -64,6 +64,8 @@ La carpeta `dist/` se puede subir tal cual a cualquier hosting estático (GitHub
 | Barra rápida          | Teclas `1`–`9` o rueda del ratón    | Tocar la casilla                               |
 | Inventario y crafteo  | `E` (cerrar: `E` o `Esc`)           | Botón de cuadritos                             |
 | Revisar casa          | `H` (o el botón del inventario)     | Botón *Revisar casa* del inventario            |
+| Hablar con un aldeano | **Clic derecho** sobre él           | **Tocarlo**                                    |
+| Tirar lo de la mano   | `T`                                 | En el inventario: *Tirar al suelo* o la *Basura* |
 | Sonido / música       | Botón *Sonido* (menú o inventario)  | Botón *Sonido* (menú o inventario)             |
 | Modo debug (FPS)      | `F3`                                | Tocar el reloj                                 |
 | Pantalla completa     | —                                   | Botón de esquinas (arriba a la derecha)        |
@@ -111,6 +113,17 @@ Las puertas se abren solas al caminar contra ellas y se cierran al alejarse. Par
   martillo), puertas de 3 bloques, sillas, mesas y camas. La silla y la cama miran hacia el jugador al colocarlas.
   Los muebles se quitan enteros y se caen si se les quita el suelo (también se apoyan sobre plataformas).
   **Cama**: dormir en ella la vuelve el punto de reaparición; de noche, la noche pasa rápido hasta la mañana.
+- **Aldeanos y monedas** (como los NPC de Terraria): los enemigos sueltan **monedas** de cobre, plata y oro
+  (100 cobre = 1 plata, 100 plata = 1 oro; van a la bolsa, no ocupan lugar). Los aldeanos viven en **casas válidas**
+  (cada uno en la suya), pasean de día y vuelven a casa de noche, abren puertas y se esconden tras la fachada:
+  - **Guía**: está desde el principio; da consejos y dice qué falta para que vengan los demás.
+  - **Comerciante**: llega cuando juntas 50 de cobre y hay una casa libre. Vende antorchas, flechas, plataformas,
+    vidrio, carbón, lingotes, cofres, camas, armas y hasta un pico de hierro; compra lo tuyo a 1/5 de su valor.
+  - **Enfermera**: llega cuando tienes más de 100 de vida máxima y ya vive el Comerciante; te cura por monedas.
+  Para hablar: **tocarlo** (celular) o **clic derecho** (PC) estando cerca. *Revisar casa* dice quién vive ahí.
+- **Tirar y borrar ítems**: en el inventario, la casilla **Basura** borra lo que pongas (lo último se puede
+  recuperar tocándola); con un ítem agarrado, **Tirar al suelo** (o tocar fuera del inventario) lo deja en el
+  suelo; en la PC, **T** tira lo que tienes en la mano. Lo tirado tarda unos segundos en poder recogerse.
 - **Experiencia, niveles y habilidades**: ganas **XP** venciendo enemigos (más por los fuertes y los de zonas
   lejanas), minando minerales (carbón, hierro, cristal, piedra sombría), talando árboles, descubriendo zonas, cuando
   una casa queda válida y al fabricar algo por primera vez. Cada **nivel** cura toda la vida y da **1 punto de
@@ -218,7 +231,7 @@ Con `npm run dev` la página se recarga sola al agregar o cambiar una imagen. Pa
 Se recomienda **PNG con transparencia**. Si una imagen tiene otro tamaño se escala al tamaño de dibujo
 (los bloques siempre se dibujan a 32×32), así que también se pueden usar imágenes al doble de resolución.
 
-### Lista completa de imágenes (152)
+### Lista completa de imágenes (159)
 
 **Fachadas.** Desde afuera, cada casa muestra la imagen del bloque que corresponde a sus paredes
 (pared de madera → `tiles/planks.png`, de piedra → `tiles/stone_brick.png`, de tierra → `tiles/dirt.png`) y
@@ -307,6 +320,9 @@ redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pas
 | `items/stone_wall.png`               | 32 × 32     | Ícono de *Pared de piedra*                                                  |
 | `items/dirt_wall.png`                | 32 × 32     | Ícono de *Pared de tierra*                                                  |
 | `items/glass_wall.png`               | 32 × 32     | Ícono de *Ventana de vidrio* |
+| `items/coin_copper.png`              | 32 × 32     | Moneda de cobre |
+| `items/coin_silver.png`              | 32 × 32     | Moneda de plata |
+| `items/coin_gold.png`                | 32 × 32     | Moneda de oro |
 | `items/door.png`                     | 32 × 32     | Ícono de *Puerta*                                                           |
 | `items/chair.png`                    | 32 × 32     | Ícono de *Silla*                                                            |
 | `items/table.png`                    | 32 × 32     | Ícono de *Mesa*                                                             |
@@ -338,6 +354,9 @@ redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pas
 | `enemies/wasp.png`                   | 64 × 28     | Avispa: **2 cuadros de 32×28** (alas arriba y abajo) |
 | `enemies/eye.png`                    | 64 × 24     | Ojo volador: **2 cuadros de 32×24**, mirando a la derecha |
 | `enemies/firebat.png`                | 108 × 24    | Murciélago de fuego: **3 cuadros de 36×24** (aleteo) |
+| `npcs/guide.png`                     | 288 × 64    | Guía: **6 cuadros de 48×64** (quieto, caminar ×4, hablando), mirando a la derecha |
+| `npcs/merchant.png`                  | 288 × 64    | Comerciante (igual que el Guía) |
+| `npcs/nurse.png`                     | 288 × 64    | Enfermera (igual que el Guía) |
 | `player/player.png`                  | 384 × 256   | Jugador: **31 poses de 48×64**, 8 por fila, mirando a la derecha (los pies tocan el borde de abajo). Orden: quieto, respirar, parpadear, caminar ×8, saltar, caer, agitar brazos, aterrizar, golpe ×3 (levantar, bajar, impacto), usar, daño, festejo, empujar, mirar atrás, bostezo, cansado ×2, sentado/dormido ×2, saludo ×2, sentado en una silla (ver `src/player/animations.js`) |
 | `backgrounds/mountains.png`          | 960 × 320   | Montañas lejanas (se repite en horizontal: los bordes izquierdo y derecho deben empalmar) |
 | `backgrounds/hills.png`              | 960 × 240   | Colinas intermedias (repetible en horizontal)                               |
@@ -377,6 +396,7 @@ redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pas
 | `ui/button_place.png`                | 80 × 80     | Botón táctil de acción en modo COLOCAR                                      |
 | `ui/button_attack.png`               | 80 × 80     | Botón táctil de acción con una espada elegida (ATACAR)                      |
 | `ui/button_swap.png`                 | 64 × 64     | Botón táctil para cambiar entre MINAR y COLOCAR                             |
+| `ui/trash.png`                       | 32 × 32     | Tacho de la casilla Basura del inventario |
 | `ui/button_dash.png`                 | 64 × 64     | Botón táctil de la Embestida |
 | `ui/button_fire.png`                 | 64 × 64     | Botón táctil de la Bola de fuego |
 | `ui/button_inventory.png`            | 64 × 64     | Botón táctil de inventario                                                  |
@@ -400,7 +420,7 @@ src/
   scenes/              BootScene (carga), BackgroundScene (cielo y paisaje), MenuScene, GameScene (mundo) y UIScene (interfaz)
   world/               Ruido con semilla, bloques, generador, datos por chunks, renderizado de chunks y tileset
   player/              Jugador: física, colisiones, vida y daño por caída (Player), poses (animations) y animaciones y efectos (PlayerAnimator)
-  systems/             Sonido y música (Audio), inventario, ítems, crafteo, minar/colocar, muebles (Furniture), casas y fachadas (Housing), experiencia y habilidades (Skills, Abilities), enemigos, zonas (Zones) y sus partículas (Ambience), día/noche, iluminación, guardado y placeholders (pixel art por código)
+  systems/             Sonido y música (Audio), inventario, ítems, crafteo, minar/colocar, muebles (Furniture), casas y fachadas (Housing), experiencia y habilidades (Skills, Abilities), aldeanos (Npcs), enemigos, zonas (Zones) y sus partículas (Ambience), día/noche, iluminación, guardado y placeholders (pixel art por código)
   ui/                  HUD, barra rápida, inventario, controles táctiles, debug y avisos
 ```
 
