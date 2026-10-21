@@ -124,6 +124,20 @@ export const MAX_LIFE_CRYSTALS = 15; // como Terraria: hasta +300 de vida
  * Experiencia, nivel y habilidades del jugador (se guardan con la partida).
  * Eventos: 'xp' (cantidad), 'levelUp' (nivel), 'skills' (cambió algo).
  */
+/**
+ * Reliquias de los jefes: usarlas (una vez cada una) da experiencia, puntos de habilidad y una
+ * mejora para siempre. Las repetidas se pueden vender al Comerciante.
+ */
+export const RELICS = {
+  relic_crown: { boss: 'slime_king', xp: 400, points: 1, hp: 20, text: '+20 de vida máxima' },
+  relic_stinger: { boss: 'scorpion_king', xp: 700, points: 1, defense: 2, text: '+2 de defensa' },
+  relic_hive: { boss: 'queen_wasp', xp: 1000, points: 2, regen: 1, text: 'Recuperas vida más rápido' },
+  relic_eye: { boss: 'shadow_eye', xp: 1500, points: 2, damage: 0.1, text: '+10% de daño' },
+  relic_core: { boss: 'crystal_golem', xp: 2200, points: 2, hp: 40, text: '+40 de vida máxima' },
+  relic_flame: { boss: 'flame_lord', xp: 3500, points: 3, defense: 4, damage: 0.15, text: '+4 de defensa y +15% de daño' },
+};
+const relicSum = (set, key) => [...set].reduce((a, id) => a + (RELICS[id]?.[key] || 0), 0);
+
 export class Progression extends Phaser.Events.EventEmitter {
   constructor(saved) {
     super();
@@ -133,6 +147,7 @@ export class Progression extends Phaser.Events.EventEmitter {
     this.ranks = {}; // habilidad → nivel aprendido
     this.crafted = new Set(); // ítems ya fabricados alguna vez (dan experiencia la primera vez)
     this.lifeCrystals = 0; // cristales de vida usados (+20 de vida máxima cada uno)
+    this.relics = new Set(); // reliquias ya usadas
     if (saved && typeof saved === 'object') {
       this.level = Phaser.Math.Clamp(saved.level | 0 || 1, 1, MAX_LEVEL);
       this.xp = Math.max(0, saved.xp | 0);
@@ -140,6 +155,7 @@ export class Progression extends Phaser.Events.EventEmitter {
       for (const [id, r] of Object.entries(saved.ranks || {})) if (SKILLS[id]) this.ranks[id] = Math.min(r | 0, SKILLS[id].ranks || 1);
       for (const id of saved.crafted || []) this.crafted.add(id);
       this.lifeCrystals = Math.max(0, Math.min(MAX_LIFE_CRYSTALS, saved.lifeCrystals | 0));
+      for (const id of saved.relics || []) if (RELICS[id]) this.relics.add(id);
     }
   }
 
@@ -189,17 +205,31 @@ export class Progression extends Phaser.Events.EventEmitter {
     if (this.level >= MAX_LEVEL) this.xp = 0;
   }
 
-  /** Bonos de las pasivas */
+  /** Usa una reliquia (una vez por tipo): puntos de habilidad y su mejora. La experiencia la da la escena. */
+  useRelic(id) {
+    if (!RELICS[id] || this.relics.has(id)) return false;
+    this.relics.add(id);
+    this.points += RELICS[id].points;
+    this.emit('skills', id);
+    return true;
+  }
+
+  /** Bonos de las pasivas (y de las reliquias usadas) */
   get maxHealthBonus() {
-    return this.rank('extraLife') * 20 + this.lifeCrystals * 20;
+    return this.rank('extraLife') * 20 + this.lifeCrystals * 20 + relicSum(this.relics, 'hp');
   }
 
   get defense() {
-    return this.rank('toughSkin') * 2;
+    return this.rank('toughSkin') * 2 + relicSum(this.relics, 'defense');
   }
 
   get regenMultiplier() {
-    return 1 + this.rank('regen');
+    return 1 + this.rank('regen') + relicSum(this.relics, 'regen');
+  }
+
+  /** Multiplicador del daño de las armas */
+  get damageMultiplier() {
+    return 1 + relicSum(this.relics, 'damage');
   }
 
   get mineMultiplier() {
@@ -211,6 +241,6 @@ export class Progression extends Phaser.Events.EventEmitter {
   }
 
   serialize() {
-    return { level: this.level, xp: this.xp, points: this.points, ranks: { ...this.ranks }, crafted: [...this.crafted], lifeCrystals: this.lifeCrystals };
+    return { level: this.level, xp: this.xp, points: this.points, ranks: { ...this.ranks }, crafted: [...this.crafted], lifeCrystals: this.lifeCrystals, relics: [...this.relics] };
   }
 }

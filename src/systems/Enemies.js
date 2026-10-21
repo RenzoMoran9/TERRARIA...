@@ -175,7 +175,7 @@ function pickWeighted(list) {
 }
 
 /** Un enemigo: física propia contra los bloques (como el jugador) y una IA simple. */
-class Enemy {
+export class Enemy {
   /** opts: { kind (variante de slime), tint, level (1 = normal; más alto = más vida y daño) } */
   constructor(manager, type, x, y, opts = {}) {
     const def = ENEMY_TYPES[type];
@@ -542,7 +542,8 @@ export class Enemies {
 
     // Aparecer (en las zonas peligrosas aparecen más y más seguido)
     this.spawnTimer -= dt;
-    if (this.spawnTimer <= 0 && !p.dead) {
+    // Durante la pelea con un jefe no aparecen otros enemigos (los suyos los llama él)
+    if (this.spawnTimer <= 0 && !p.dead && !this.list.some((e) => e.def.boss)) {
       const danger = this.levelOf(Math.floor(p.centerX / T));
       this.spawnTimer = (night ? 1.5 + Math.random() * 2.5 : 4 + Math.random() * 5) / (1 + (danger - 1) * 0.25);
       const max = (night ? 6 : 2) + danger - 1;
@@ -554,7 +555,7 @@ export class Enemies {
       e.update(dt, p, night);
       // Daño por contacto (el jugador queda invulnerable un momento después de cada golpe)
       if (!p.dead && e.overlaps(p)) p.hit(e.damage, e.centerX);
-      if (e.dead) continue;
+      if (e.dead || e.def.boss) continue; // los jefes no se van solos (ver Bosses)
       // Muy lejos (o zombi de día fuera de la pantalla): desaparece
       const dist = Math.abs(e.centerX - p.centerX) / T;
       if (dist > DESPAWN_DIST || (e.def.nightOnly && !night && dist > SPAWN_MIN) || e.y > this.world.height * T) {
@@ -662,7 +663,7 @@ export class Enemies {
       }
       return false;
     };
-    const damage = Math.max(1, Math.round(weapon.damage * (move.dmg || 1)));
+    const damage = Math.max(1, Math.round(weapon.damage * (move.dmg || 1) * (this.scene.progress?.damageMultiplier ?? 1)));
     const kb = weapon.knockback * (move.kb || 1);
     let hits = 0;
     for (const e of this.list) {

@@ -78,6 +78,13 @@ export const ITEMS = {
   magic_mirror: { name: 'Espejo mágico', icon: 'item_magic_mirror', maxStack: 1, use: { recall: true, keep: true } },
   compass: { name: 'Brújula', icon: 'item_compass', maxStack: 1, info: 'compass' },
   depth_meter: { name: 'Medidor de profundidad', icon: 'item_depth_meter', maxStack: 1, info: 'depth' },
+  // Reliquias de los jefes (ver RELICS en Skills.js)
+  relic_crown: { name: 'Corona del Rey Slime', icon: 'item_relic_crown', maxStack: 9, use: { relic: true } },
+  relic_stinger: { name: 'Aguijón dorado', icon: 'item_relic_stinger', maxStack: 9, use: { relic: true } },
+  relic_hive: { name: 'Corazón de la colmena', icon: 'item_relic_hive', maxStack: 9, use: { relic: true } },
+  relic_eye: { name: 'Ojo de las sombras', icon: 'item_relic_eye', maxStack: 9, use: { relic: true } },
+  relic_core: { name: 'Núcleo de cristal', icon: 'item_relic_core', maxStack: 9, use: { relic: true } },
+  relic_flame: { name: 'Llama eterna', icon: 'item_relic_flame', maxStack: 9, use: { relic: true } },
   flower: { name: 'Flor', icon: 'item_flower' },
   // Casas
   wood_hammer: { name: 'Martillo de madera', icon: 'item_wood_hammer', maxStack: 1, hammer: { speed: 2.5 } },
@@ -162,6 +169,7 @@ export function coinStacks(n) {
 const VALUES = {
   wood: 2, planks: 1, dirt: 0, stone: 1, sand: 1, coal: 6, iron_ore: 12, iron_bar: 40, gel: 3, torch: 4, cactus: 3,
   recall_potion: 60, magic_mirror: 600, compass: 250, depth_meter: 250,
+  relic_crown: 50000, relic_stinger: 100000, relic_hive: 150000, relic_eye: 250000, relic_core: 400000, relic_flame: 750000,
   crystal: 25, shadow_stone: 8, gold_ore: 30, gold_bar: 120, hellstone: 50, hellstone_bar: 250, glowing_mushroom: 15, cloud: 2, glass: 4, workbench: 10, furnace: 60, anvil: 220, chest: 30, bed: 50, door: 12,
 };
 

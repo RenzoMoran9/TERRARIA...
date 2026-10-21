@@ -38,6 +38,8 @@ import { SaveSystem } from '../systems/SaveSystem.js';
 import { IslandMist } from '../systems/IslandMist.js';
 import { WorldMap } from '../systems/WorldMap.js';
 import { Critters } from '../systems/Critters.js';
+import { Bosses, BOSSES } from '../systems/Bosses.js';
+import { RELICS } from '../systems/Skills.js';
 import { textStyle } from '../ui/styles.js';
 
 const T = TILE_SIZE;
@@ -125,6 +127,13 @@ export class GameScene extends Phaser.Scene {
     this.islandMist = new IslandMist(this, this.world.generator);
     // Fauna: pájaros y bichos inofensivos de cada zona
     this.critters = new Critters(this, this.world, this.player, this.dayNight, this.zones);
+    // Jefes: guardianes de las reliquias en sus guaridas
+    this.bosses = new Bosses(this, this.world, this.enemies, this.player, this.dayNight, save?.bosses);
+    // El jefe brilla (si no, en su sala oscura no se vería)
+    this.lighting.extraLights = () => {
+      const b = this.bosses.active;
+      return b ? [{ tx: Math.floor(b.centerX / T), ty: Math.floor(b.centerY / T), light: 1 }] : null;
+    };
     // Mapa: se descubre al explorar; marcadores del jugador
     this.worldMap = new WorldMap(this, this.world, save?.pins);
     if (save) this.worldMap.load();
@@ -372,6 +381,7 @@ export class GameScene extends Phaser.Scene {
     this.ambience.update(dt);
     this.islandMist.update(dt);
     this.critters.update(dt);
+    this.bosses.update(dt);
     this.worldMap.update(dt, this.player);
 
     this.autosaveTimer += dt;
@@ -738,6 +748,7 @@ export class GameScene extends Phaser.Scene {
       coins: this.coins,
       npcs: this.npcs.serialize(),
       pins: this.worldMap.pins,
+      bosses: this.bosses.serialize(),
       // Solo los cofres con algo adentro
       chests: Object.fromEntries(
         [...this.chests].filter(([, slots]) => slots.some(Boolean)).map(([k, slots]) => [k, cloneSlots(slots).map((s) => (s ? [s.id, s.count] : null))]),
@@ -748,6 +759,7 @@ export class GameScene extends Phaser.Scene {
   /** Qué música corresponde: cuevas, la zona donde está o (en el bosque) día/noche. */
   musicMood() {
     const p = this.player;
+    if (this.bosses?.active) return 'boss';
     const gen = this.world.generator;
     const tx = Phaser.Math.Clamp(Math.floor(p.centerX / T), 0, WORLD_WIDTH - 1);
     const biome = gen.biome[tx];
@@ -806,6 +818,18 @@ export class GameScene extends Phaser.Scene {
       this.showFloatingText(p.centerX, p.y - 8, `+${Math.round(p.health - before)}`, '#7dff8a', 16);
       this.spawnSparkles(p.centerX, p.centerY, 12, 0xff6a8a);
       audio.play('drink');
+    } else if (use.relic) {
+      // Reliquia: da experiencia, puntos y una mejora para siempre (una vez por cada tipo)
+      const r = RELICS[stack.id];
+      if (!this.progress.useRelic(stack.id)) {
+        this.events.emit('toast', 'Ya usaste esta reliquia: puedes vendérsela al Comerciante');
+        return false;
+      }
+      p.refreshStats();
+      this.gainXp(r.xp, p.centerX, p.y - 20);
+      this.spawnSparkles(p.centerX, p.centerY, 30, 0xffe08a);
+      audio.play('relic');
+      this.events.emit('relicUsed', stack.id);
     } else if (use.recall) {
       this.recallHome();
       if (use.keep) return true; // el espejo mágico no se gasta
@@ -941,6 +965,7 @@ export class GameScene extends Phaser.Scene {
     this.npcs.destroy();
     this.worldMap.destroy();
     this.critters.destroy();
+    this.bosses.destroy();
     this.player.anim.destroy();
     this.lighting.destroy();
     this.chunkManager.destroy();

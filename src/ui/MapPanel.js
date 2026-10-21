@@ -45,6 +45,8 @@ function mapMarkers(gs) {
   const home = gs.homeSpot();
   const list = [{ key: 'pin', icons: gs.worldMap.pins.map((q) => ({ x: q.x + 0.5, y: q.y + 0.5, tex: 'ui_map_pin' })) }];
   list.push({ key: 'npc', icons: gs.npcs.list.map((n) => ({ x: n.centerX / T, y: n.centerY / T, tex: NPC_ICON[n.type] || 'ui_map_guide' })) });
+  // Guaridas de los jefes que ya viste (calavera)
+  list.push({ key: 'boss', icons: gs.bosses.lairs.filter((L) => gs.worldMap.isExplored(L.altar.x, L.altar.y)).map((L) => ({ x: L.altar.x + 0.5, y: L.altar.y, tex: 'ui_map_boss' })) });
   list.push({ key: 'home', icons: [{ x: (home.x + p.w / 2) / T, y: (home.y + p.h / 2) / T, tex: 'ui_map_home' }] });
   list.push({ key: 'player', icons: [{ x: p.centerX / T, y: p.centerY / T, tex: 'ui_map_player' }] });
   return list.flatMap((g) => g.icons);

@@ -201,6 +201,23 @@ Las puertas se abren solas al caminar contra ellas y se cierran al alejarse. Par
   Aparecen fuera de la pantalla y nunca donde hay paredes de fondo puestas por ti. Hacen daño al tocarte, te
   empujan y quedas invulnerable un momento (parpadeas). Espadas de madera y de piedra; los slimes sueltan **gel**
   (1 madera + 1 gel → 3 antorchas). Al reaparecer se van los enemigos cercanos.
+- **Jefes y reliquias**: seis **guardianes** viven en guaridas bajo sus zonas (se baja por un **pozo con
+  plataformas**) y protegen una **reliquia** que flota sobre un altar. Al acercarte al altar el jefe despierta
+  (rugido, temblor, barra de vida arriba y música de pelea); dentro de su sala te ataca con sus propios
+  movimientos y, con la mitad de la vida, **se enfurece** (más rápido y más ataques). Si te alejas o mueres,
+  vuelve a dormir. El **Guía** (botón *¿Hay jefes?*) te dice dónde está cada uno, y en el mapa aparece una
+  calavera cuando ves su guarida.
+  | Jefe | Dónde | Cómo pelea | Reliquia (usarla una vez) |
+  | --- | --- | --- | --- |
+  | Rey Slime (700) | Bajo el Bosque | Saltos, salto gigante que aplasta, llama slimes; se teletransporta | Corona: +20 vida máx., +1 punto, +400 XP |
+  | Escorpión Rey (1100) | Bajo la pirámide | Te persigue, abanico de aguijones; embiste | Aguijón dorado: +2 defensa, +1 punto, +700 XP |
+  | Reina Avispa (1500) | Bajo la Selva | Aguijones desde arriba, embestidas de lado a lado, avispas | Corazón de la colmena: más regeneración, +2 puntos, +1000 XP |
+  | Ojo Sombrío (2000) | Bajo las Tierras Sombrías | Orbes, ojitos, embestidas; abre la boca y acelera | Ojo de las sombras: +10% daño, +2 puntos, +1500 XP |
+  | Golem de Cristal (2800) | Bajo las Tierras de Cristal | Astillas en todas direcciones, saltos que aplastan | Núcleo de cristal: +40 vida máx., +2 puntos, +2200 XP |
+  | Señor de las Llamas (3800) | Inframundo, bajo el Volcán | Ráfagas de fuego, lluvia de fuego, aparece a tu lado | Llama eterna: +4 defensa, +15% daño, +3 puntos, +3500 XP |
+  Al vencerlos sueltan su reliquia, **monedas de oro**, pociones y mucha **experiencia**. Cada reliquia se puede
+  **usar una sola vez** (la mejora es para siempre) o **vendérsela al Comerciante** a buen precio. Al día
+  siguiente la reliquia vuelve al altar y se puede pelear la revancha (da la mitad de premio).
 - **Fauna** (como los bichos de Terraria): pájaros, conejos, mariposas y otros animales inofensivos aparecen cerca
   de ti según la zona y la hora, y **huyen si te acercas** (los pájaros levantan vuelo aleteando):
   bosque (pájaros, conejos, mariposas), desierto (lagartijas, buitres que planean), tundra (pingüinos, pájaros
@@ -307,7 +324,7 @@ Con `npm run dev` la página se recarga sola al agregar o cambiar una imagen. Pa
 Se recomienda **PNG con transparencia**. Si una imagen tiene otro tamaño se escala al tamaño de dibujo
 (los bloques siempre se dibujan a 32×32), así que también se pueden usar imágenes al doble de resolución.
 
-### Lista completa de imágenes (222)
+### Lista completa de imágenes (237)
 
 **Fachadas.** Desde afuera, cada casa muestra la imagen del bloque que corresponde a sus paredes
 (pared de madera → `tiles/planks.png`, de piedra → `tiles/stone_brick.png`, de tierra → `tiles/dirt.png`) y
@@ -371,6 +388,7 @@ redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pas
 | `tiles/mushroom_grass.png`           | 32 × 32     | Pasto de hongos (cuevas de hongos, sobre barro) |
 | `tiles/mushroom_plant.png`           | 32 × 32     | Hongo brillante (planta, transparente; también ícono del ítem) |
 | `tiles/mushroom_plant2.png`          | 32 × 32     | Hongo brillante, otra forma (transparente) |
+| `tiles/relic_altar.png`              | 32 × 32     | Altar de la reliquia (guaridas de los jefes; no se rompe) |
 | `walls/dirt_wall.png`                | 32 × 32     | Pared de fondo de tierra (más oscura que el bloque)                         |
 | `walls/stone_wall.png`               | 32 × 32     | Pared de fondo de piedra (más oscura que el bloque)                         |
 | `walls/wood_wall.png`                | 32 × 32     | Pared de fondo de madera (más oscura que los tablones)                      |
@@ -426,6 +444,12 @@ redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pas
 | `items/magic_mirror.png`             | 32 × 32     | Espejo mágico |
 | `items/compass.png`                  | 32 × 32     | Brújula |
 | `items/depth_meter.png`              | 32 × 32     | Medidor de profundidad |
+| `items/relic_crown.png`              | 32 × 32     | Corona del Rey Slime |
+| `items/relic_stinger.png`            | 32 × 32     | Aguijón dorado |
+| `items/relic_hive.png`               | 32 × 32     | Corazón de la colmena |
+| `items/relic_eye.png`                | 32 × 32     | Ojo de las sombras |
+| `items/relic_core.png`               | 32 × 32     | Núcleo de cristal |
+| `items/relic_flame.png`              | 32 × 32     | Llama eterna |
 | `items/gold_bar.png`                 | 32 × 32     | Lingote de oro |
 | `items/hellstone_bar.png`            | 32 × 32     | Lingote infernal |
 | `items/glowing_mushroom.png`         | 32 × 32     | Hongo brillante (ítem) |
@@ -486,6 +510,13 @@ redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pas
 | `critters/crystalfly.png`            | 32 × 16     | Mariposa de cristal (brilla) |
 | `critters/emberfly.png`              | 32 × 16     | Polilla de brasa (volcán, inframundo; brilla) |
 | `critters/vulture.png`               | 88 × 20     | Buitre (desierto): 2 cuadros de 44×20 |
+| `bosses/slime_king.png`              | 288 × 72    | Rey Slime: 3 cuadros de 96×72 (quieto, aplastado, en el aire) |
+| `bosses/scorpion_king.png`           | 240 × 56    | Escorpión Rey: 2 cuadros de 120×56 (caminando, disparando) |
+| `bosses/queen_wasp.png`              | 192 × 80    | Reina Avispa: 2 cuadros de 96×80 (aleteo) |
+| `bosses/shadow_eye.png`              | 192 × 96    | Ojo Sombrío: 2 cuadros de 96×96 (ojo; boca en la 2.ª fase) |
+| `bosses/crystal_golem.png`           | 224 × 128   | Golem de Cristal: 2 cuadros de 112×128 (de pie, brazos arriba) |
+| `bosses/flame_lord.png`              | 240 × 120   | Señor de las Llamas: 2 cuadros de 120×120 |
+| `bosses/projectiles.png`             | 64 × 16     | Proyectiles de los jefes: 4 cuadros de 16×16 (aguijón, orbe sombrío, astilla de cristal, bola de fuego) |
 | `npcs/guide.png`                     | 288 × 64    | Guía: **6 cuadros de 48×64** (quieto, caminar ×4, hablando), mirando a la derecha |
 | `npcs/merchant.png`                  | 288 × 64    | Comerciante (igual que el Guía) |
 | `npcs/nurse.png`                     | 288 × 64    | Enfermera (igual que el Guía) |
@@ -540,6 +571,7 @@ redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pas
 | `ui/map_guide.png`                   | 32 × 32     | Guía en el mapa |
 | `ui/map_merchant.png`                | 32 × 32     | Comerciante en el mapa |
 | `ui/map_nurse.png`                   | 32 × 32     | Enfermera en el mapa |
+| `ui/map_boss.png`                    | 32 × 32     | Guarida de un jefe en el mapa (calavera) |
 
 Las hojas de sprites (`player.png`, `tree_top.png`, `crack.png`) también aceptan un solo cuadro: si el jugador tiene
 un único cuadro de 48×64, se usa sin animación. El pico y la antorcha se dibujan en la mano de adelante según la
@@ -560,7 +592,7 @@ src/
   scenes/              BootScene (carga), BackgroundScene (cielo y paisaje), MenuScene, GameScene (mundo) y UIScene (interfaz)
   world/               Ruido con semilla, bloques, generador, datos por chunks, renderizado de chunks y tileset
   player/              Jugador: física, colisiones, vida y daño por caída (Player), poses (animations), combos de las armas (attacks) y animaciones y efectos (PlayerAnimator)
-  systems/             Sonido y música (Audio), inventario, ítems, crafteo, minar/colocar, muebles (Furniture), casas y fachadas (Housing), experiencia y habilidades (Skills, Abilities), aldeanos (Npcs), enemigos, zonas (Zones) y sus partículas (Ambience), neblina de las islas (IslandMist), mapa explorado (WorldMap), fauna (Critters), día/noche, iluminación, guardado y placeholders (pixel art por código)
+  systems/             Sonido y música (Audio), inventario, ítems, crafteo, minar/colocar, muebles (Furniture), casas y fachadas (Housing), experiencia y habilidades (Skills, Abilities), aldeanos (Npcs), enemigos, zonas (Zones) y sus partículas (Ambience), neblina de las islas (IslandMist), mapa explorado (WorldMap), fauna (Critters), jefes y guaridas (Bosses), día/noche, iluminación, guardado y placeholders (pixel art por código)
   ui/                  HUD, barra rápida, inventario, mapa y minimapa (MapPanel), controles táctiles, debug y avisos
 ```
 

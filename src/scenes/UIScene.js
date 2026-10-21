@@ -11,6 +11,9 @@ import { HouseReport } from '../ui/HouseReport.js';
 import { SkillsPanel } from '../ui/SkillsPanel.js';
 import { NpcDialog } from '../ui/NpcDialog.js';
 import { Minimap, FullMap, HomeArrows } from '../ui/MapPanel.js';
+import { BossBar } from '../ui/BossBar.js';
+import { RELICS } from '../systems/Skills.js';
+import { ITEMS } from '../systems/items.js';
 import { textStyle } from '../ui/styles.js';
 
 /**
@@ -42,6 +45,7 @@ export class UIScene extends Phaser.Scene {
     this.homeArrows = new HomeArrows(this, gs);
     this.minimap = new Minimap(this, gs);
     this.fullMap = new FullMap(this, gs);
+    this.bossBar = new BossBar(this);
 
     this.deathText = this.add
       .text(0, 0, '', textStyle({ fontSize: '30px', strokeThickness: 5, color: '#ff6b6b', align: 'center' }))
@@ -108,6 +112,16 @@ export class UIScene extends Phaser.Scene {
           `+1 punto de habilidad · Tienes ${gs.progress.points}`,
           this.gs.isTouch ? 'Toca tu nivel (arriba a la izquierda) para elegir una habilidad' : 'Aprieta K para elegir una habilidad',
         ),
+      bossStart: (boss) => {
+        this.bossBar.show(boss);
+        this.zoneBanner.showCustom('¡Despertó un guardián!', boss.def.name, 'Protege una reliquia antigua', 'Véncelo para llevártela');
+      },
+      bossEnd: (boss, won) => {
+        this.bossBar.hide();
+        if (won) this.zoneBanner.showCustom('¡Jefe derrotado!', boss.def.name, `Soltó: ${ITEMS[boss.def.relic].name}`, 'Úsala para hacerte más fuerte o véndela al Comerciante');
+      },
+      relicUsed: (id) =>
+        this.zoneBanner.showCustom('¡Reliquia usada!', ITEMS[id].name, `${RELICS[id].text} · +${RELICS[id].points} punto${RELICS[id].points > 1 ? 's' : ''} de habilidad`, `+${RELICS[id].xp} XP`),
       zoneDiscovered: (biome) => this.zoneBanner.show(biome, gs.zones.discovered.size, gs.zones.total),
       playerDied: () => {
         this.toggleInventory(false);
@@ -217,6 +231,7 @@ export class UIScene extends Phaser.Scene {
     this.toastY = hotbarBottom + 26;
     this.zoneBanner.layout(W / 2, Math.max(hotbarBottom + 60, H * 0.2));
     this.houseReport.layout(W / 2, hotbarBottom + 12, W);
+    this.bossBar.layout(W / 2, hotbarBottom + 4, W);
     this.layoutToast();
     this.inventoryPanel.layout(W, H);
     this.skillsPanel.layout(W, H);
@@ -250,6 +265,7 @@ export class UIScene extends Phaser.Scene {
     this.minimap.update(delta / 1000);
     this.fullMap.update();
     this.homeArrows.update();
+    this.bossBar.update();
     this.inventoryPanel.update(delta);
     this.debug.update(delta);
     if (this.gs.player.dead) {

@@ -85,6 +85,14 @@ export class Lighting {
     const p = this.player;
     const ptx = Math.floor(p.centerX / T);
     const pty = Math.floor(p.centerY / T);
+    // Luces que se mueven (jefes): si cambiaron de bloque, recalcular ya
+    const extra = this.extraLights ? this.extraLights() : null;
+    const key = extra && extra.length ? extra.map((l) => `${l.tx},${l.ty}`).join(';') : '';
+    if (key !== this.lastExtra) {
+      this.lastExtra = key;
+      this.dirty = true;
+    }
+    this._extra = extra;
     // Agarró o soltó una antorcha: recalcular ya
     if (p.heldLight !== this.lastHeld) {
       this.lastHeld = p.heldLight;
@@ -132,6 +140,7 @@ export class Lighting {
       this._addSource(ptx - tx0, pty - ty0, light);
       this._addSource(ptx - tx0, pty - 1 - ty0, light);
     }
+    for (const l of this._extra || []) this._addSource(l.tx - tx0, l.ty - ty0, l.light);
 
     // 3) Propagación de los dos canales
     this._propagate(S);

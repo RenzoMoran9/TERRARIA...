@@ -23,6 +23,7 @@ const SAMPLE_URLS = import.meta.glob('../sounds/*.mp3', { eager: true, query: '?
 // Volumen de cada sonido real (1 = normal): los que suenan muy seguido van más bajos
 const SAMPLE_VOL = {
   step: 0.3, dig_soft: 0.55, dig_stone: 0.5, dig_wood: 0.55, swing: 0.5, pickup: 0.45, coin: 0.5, xp: 0.35, click: 0.45,
+  roar: 0.9, bossDie: 1, relic: 0.8,
   chirp: 0.35, crow: 0.4, gull: 0.4, croak: 0.4, flap: 0.35,
   place: 0.8, jump: 0.45, zombie: 0.5, slimeHop: 0.4, flyer: 0.45, drink: 0.8, teleport: 0.8, land: 0.55, hit: 0.75, hurt: 0.8, open: 0.5, lava: 0.7, levelUp: 0.8, zone: 0.75, house: 0.8,
 };
@@ -65,6 +66,7 @@ const MOODS = {
   crystal: { scale: 'lydian', root: 67, bpm: 80, prog: [0, 4, 1, 5], lead: 'bell', pad: true, bass: false, perc: null, density: 0.55 },
   hell: { scale: 'phrygian', root: 45, bpm: 126, prog: [0, 1, 0, 4], lead: 'reed', pad: true, bass: true, perc: 'drum', density: 0.55 },
   mushroom: { scale: 'lydian', root: 62, bpm: 68, prog: [0, 1, 5, 4], lead: 'bell', pad: true, bass: false, perc: null, density: 0.4 },
+  boss: { scale: 'phrygian', root: 45, bpm: 150, prog: [0, 1, 5, 4], lead: 'reed', pad: true, bass: true, perc: 'drum', density: 0.8 },
   sky: { scale: 'penta', root: 69, bpm: 88, prog: [0, 3, 4, 3], lead: 'bell', pad: true, bass: false, perc: 'soft', density: 0.5 },
   volcano: { scale: 'phrygian', root: 48, bpm: 112, prog: [0, 1, 0, 5], lead: 'reed', pad: true, bass: true, perc: 'drum', density: 0.45 },
 };
@@ -321,7 +323,7 @@ class AudioEngine {
   setMood(mood) {
     this.wantedMood = MOODS[mood] ? mood : 'day';
     // El ambiente acompaña a la música: pájaros de día, grillos de noche, viento en la nieve…
-    this.setAmbience(mood === 'menu' ? 'amb_day' : `amb_${this.wantedMood}`);
+    this.setAmbience(mood === 'menu' ? 'amb_day' : mood === 'boss' ? null : `amb_${this.wantedMood}`); // en la pelea, solo la música
   }
 
   _schedule() {
@@ -599,6 +601,9 @@ const SFX = {
   gull: { gap: 1, fn: (a, o) => a.tone(o, { type: 'triangle', f0: 1400, f1: 900, dur: 0.3, vol: 0.08 }) },
   croak: { gap: 0.6, fn: (a, o) => a.tone(o, { type: 'square', f0: 120, f1: 90, dur: 0.15, vol: 0.08 }) },
   flap: { gap: 0.3, fn: (a, o) => a.noise(o, { f0: 800, f1: 300, dur: 0.15, vol: 0.15 }) },
+  roar: { gap: 1, fn: (a, o) => { a.noise(o, { f0: 400, f1: 120, dur: 0.9, vol: 0.5, attack: 0.08 }); a.tone(o, { type: 'sawtooth', f0: 90, f1: 55, dur: 0.9, vol: 0.3, attack: 0.08 }); } },
+  bossDie: { gap: 1, fn: (a, o) => { a.noise(o, { f0: 1500, f1: 80, dur: 1.4, vol: 0.7 }); a.tone(o, { type: 'sine', f0: 120, f1: 30, dur: 1.2, vol: 0.5 }); } },
+  relic: { gap: 0.5, fn: (a, o) => [0, 0.12, 0.24, 0.36].forEach((d, i) => a.tone(o, { type: 'triangle', f0: midiHz(72 + [0, 4, 7, 12][i]), dur: 0.5, vol: 0.2, delay: d })) },
   land: {
     gap: 0.1,
     fn: (a, o, { fall = 1 }) => {

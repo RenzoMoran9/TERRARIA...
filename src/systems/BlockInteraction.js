@@ -316,7 +316,7 @@ export class BlockInteraction {
     const y = p.y + 22 + Math.sin(aim) * 18;
     const n = move.shots || 1;
     const speed = weapon.projSpeed * (move.speed || 1);
-    const dmg = move.dmg || 1;
+    const dmg = (move.dmg || 1) * (this.scene.progress?.damageMultiplier ?? 1);
     for (let i = 0; i < n; i++) {
       const a = aim + (i - (n - 1) / 2) * (move.spread || 0);
       if (kind === 'bow') {
@@ -328,7 +328,7 @@ export class BlockInteraction {
         proj.fire('arrow', 'item_wood_arrow', x, y, a, speed, Math.round((weapon.damage + ITEMS.wood_arrow.ammo.damage) * dmg), weapon.knockback);
       } else if (kind === 'boomerang') {
         if (proj.count('boomerang') > 0) return; // uno a la vez: hay que esperar que vuelva
-        proj.fire('boomerang', weapon.icon, x, y, a, speed, weapon.damage, weapon.knockback);
+        proj.fire('boomerang', weapon.icon, x, y, a, speed, Math.round(weapon.damage * dmg), weapon.knockback);
       } else {
         const slot = this.inventory.slots[this.inventory.selected];
         if (!slot || slot.id !== weapon.id) return; // se acabaron los cuchillos

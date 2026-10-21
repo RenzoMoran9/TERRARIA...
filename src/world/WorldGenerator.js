@@ -45,6 +45,19 @@ export const UNDERWORLD_TOP = WORLD_HEIGHT - 50;
 /** Zonas especiales (además de las 7 de la superficie): se detectan por profundidad o altura */
 export const ZONE = Object.freeze({ UNDERWORLD: 7, MUSHROOM: 8, SKY: 9 });
 
+// Guaridas de los jefes (ver Bosses): una sala bajo la zona, con un pozo con plataformas para bajar
+// y el altar de la reliquia al centro. depth = bloques del techo bajo la superficie.
+const LAIR_SPECS = [
+  { boss: 'slime_king', biome: BIOME.FOREST, depth: 12, brick: 'STONE_BRICK', wall: WALL.STONE },
+  { boss: 'scorpion_king', biome: BIOME.DESERT, depth: 22, brick: 'SANDSTONE', wall: WALL.SANDSTONE },
+  { boss: 'queen_wasp', biome: BIOME.JUNGLE, depth: 30, brick: 'MUD', wall: WALL.MUD },
+  { boss: 'shadow_eye', biome: BIOME.SHADOW, depth: 28, brick: 'SHADOW_STONE', wall: WALL.SHADOW },
+  { boss: 'crystal_golem', biome: BIOME.CRYSTAL, depth: 34, brick: 'CRYSTAL', wall: WALL.STONE },
+  { boss: 'flame_lord', underworld: true, brick: 'BASALT', wall: WALL.ASH },
+];
+const LAIR_HALF = 25; // medio ancho del interior de la sala
+const LAIR_H = 14; // alto del interior
+
 /**
  * Generador procedural del mundo.
  * Todo es una función pura de (semilla, x, y): cualquier chunk se puede
@@ -80,6 +93,97 @@ export class WorldGenerator {
     this._generateFeatures();
     this._generateTrees();
     this._generateIslands();
+    this._generateLairs();
+  }
+
+  // ------------------------------------------------------------------ guaridas de los jefes
+
+  _generateLairs() {
+    this.lairs = [];
+    for (const spec of LAIR_SPECS) {
+      let cx;
+      if (spec.underworld) cx = this.volcanoX >= 0 ? this.volcanoX : this.spawnX + 300;
+      else if (spec.biome === BIOME.FOREST) {
+        cx = this.spawnX + 80;
+        if (this.biome[cx] !== BIOME.FOREST) cx = this.spawnX - 80;
+      } else if (spec.biome === BIOME.DESERT) cx = this.pyramidX;
+      else cx = this._biomeCenter(spec.biome);
+      if (cx < 0) continue;
+      cx = Math.max(LAIR_HALF + 6, Math.min(WORLD_WIDTH - LAIR_HALF - 7, cx));
+      const top = spec.underworld ? UNDERWORLD_TOP + 4 : this.surface[cx] + spec.depth;
+      // El pozo de entrada: en la pirámide, dentro de la cámara; si no, a un costado del altar
+      const sx = spec.biome === BIOME.DESERT ? cx + 3 : cx + 9;
+      const lair = {
+        boss: spec.boss,
+        cx,
+        x0: cx - LAIR_HALF,
+        x1: cx + LAIR_HALF,
+        top, // fila del techo (el interior empieza abajo)
+        bottom: top + LAIR_H + 1, // fila del piso
+        brick: BLOCK[spec.brick],
+        wall: spec.wall,
+        altar: { x: cx, y: top + LAIR_H },
+        shaft: spec.underworld ? null : { x0: sx, x1: sx + 2 },
+      };
+      this.lairs.push(lair);
+      if (lair.shaft) for (let x = sx - 3; x <= sx + 5; x++) this.treeHeight[x] = 0;
+    }
+  }
+
+  _biomeCenter(b) {
+    let a = -1;
+    let z = -1;
+    for (let x = 0; x < WORLD_WIDTH; x++) {
+      if (this.biome[x] !== b) continue;
+      if (a < 0) a = x;
+      z = x;
+    }
+    return a < 0 ? -1 : (a + z) >> 1;
+  }
+
+  /** ¿La columna x es parte de algún pozo de entrada (o su borde)? */
+  inLairShaft(x) {
+    for (const L of this.lairs) if (L.shaft && x >= L.shaft.x0 - 1 && x <= L.shaft.x1 + 1) return true;
+    return false;
+  }
+
+  /** Bloque de una guarida en (x, y), o -1 si ahí no hay guarida. */
+  lairTile(x, y) {
+    for (const L of this.lairs) {
+      const sh = L.shaft;
+      if (sh && x >= sh.x0 - 1 && x <= sh.x1 + 1 && y >= this.surface[x] && y <= L.top) {
+        if (x < sh.x0 || x > sh.x1) return y > this.surface[x] + 1 ? L.brick : -1; // borde del pozo
+        const d = y - this.surface[sh.x0];
+        if (d > 2 && d % 6 === 0 && y < L.top - 1) return BLOCK.WOOD_PLATFORM; // escalones para bajar y subir
+        return BLOCK.AIR;
+      }
+      if (x < L.x0 - 2 || x > L.x1 + 2 || y < L.top - 1 || y > L.bottom + 1) continue;
+      if (x < L.x0 || x > L.x1 || y <= L.top || y >= L.bottom) return L.brick; // paredes, techo y piso
+      if (x === L.altar.x && y === L.altar.y) return BLOCK.RELIC_ALTAR;
+      const nearShaft = sh && x >= sh.x0 - 1 && x <= sh.x1 + 1;
+      // Antorchas en las paredes de fondo: una fila arriba y otra más baja
+      const torchRow = (y === L.top + 3 && (x - L.x0) % 6 === 2) || (y === L.bottom - 3 && (x - L.x0) % 12 === 8);
+      if (torchRow && !nearShaft && x !== L.altar.x) return BLOCK.TORCH;
+      if (y === L.top + 8 && (x - L.x0 < 7 || L.x1 - x < 7)) return BLOCK.WOOD_PLATFORM; // balcones a los costados
+      return BLOCK.AIR;
+    }
+    return -1;
+  }
+
+  /** Pared de fondo de una guarida en (x, y), o -1. */
+  lairWall(x, y) {
+    for (const L of this.lairs) {
+      const sh = L.shaft;
+      if (sh && x >= sh.x0 && x <= sh.x1 && y > this.surface[x] + 1 && y <= L.top) return L.wall;
+      if (x >= L.x0 && x <= L.x1 && y > L.top && y < L.bottom) return L.wall;
+    }
+    return -1;
+  }
+
+  /** Guarida cuyo interior (o pozo) incluye (x, y), o null. */
+  lairAt(x, y) {
+    for (const L of this.lairs) if (x >= L.x0 - 2 && x <= L.x1 + 2 && y >= L.top - 1 && y <= L.bottom + 1) return L;
+    return null;
   }
 
   // ------------------------------------------------------------------ islas flotantes
@@ -392,6 +496,10 @@ export class WorldGenerator {
 
   /** Bloque natural incluyendo la pirámide y las espiras de cristal (sin árboles ni plantas). */
   tileAt(x, y) {
+    if (this.lairs) {
+      const lt = this.lairTile(x, y);
+      if (lt >= 0) return lt;
+    }
     if (y < this.surface[x]) return this._aboveSurface(x, y);
     return this.baseTile(x, y);
   }
@@ -416,6 +524,10 @@ export class WorldGenerator {
   /** Pared de fondo en (x, y) (solo decorativa). */
   wallAt(x, y) {
     if (x < 0 || x >= WORLD_WIDTH || y < 0 || y >= WORLD_HEIGHT) return WALL.NONE;
+    if (this.lairs) {
+      const lw = this.lairWall(x, y);
+      if (lw >= 0) return lw;
+    }
     const depth = y - this.surface[x];
     // Dentro de la pirámide: pared de arenisca
     if (depth < 0) {
@@ -546,7 +658,7 @@ export class WorldGenerator {
   /** Planta decorativa sobre esta columna (o 0). */
   plantAt(x) {
     const info = BIOME_INFO[this.biome[x]];
-    if (this.lavaDepth[x] || this.spire[x] || this.chasm[x]) return 0;
+    if (this.lavaDepth[x] || this.spire[x] || this.chasm[x] || this.inLairShaft(x)) return 0;
     if (this.pyramidX >= 0 && Math.abs(x - this.pyramidX) <= PYRAMID_HALF) return 0;
     if (hash2(x, 31, this.seed) >= info.plantChance) return 0;
     return this.baseTile(x, this.surface[x]) === info.top ? info.plant : 0;

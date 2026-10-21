@@ -3,6 +3,7 @@ import { createButton } from './Button.js';
 import { ITEMS, formatCoins, itemValue } from '../systems/items.js';
 import { NPC_TYPES, GUIDE_TIPS } from '../systems/Npcs.js';
 import { audio } from '../systems/Audio.js';
+import { BOSSES } from '../systems/Bosses.js';
 
 const W = 560;
 const H = 360;
@@ -137,6 +138,7 @@ export class NpcDialog {
       this._setButtons([
         ['Otro consejo', () => this.say(`Consejo: ${this.nextTip()}`)],
         ['¿Quién vendrá?', () => this.say(this._whoComes())],
+        ['¿Hay jefes?', () => this.say(this._bosses())],
       ]);
     } else if (type === 'merchant') {
       this._setButtons([
@@ -236,6 +238,21 @@ export class NpcDialog {
     audio.play('learn');
     this.say('¡Listo! Como nuevo. Trata de no volver tan seguido.');
     this.refresh();
+  }
+
+  /** Dónde están los guardianes (y cuáles ya venciste), con la dirección desde donde estás. */
+  _bosses() {
+    const gs = this.gs;
+    const p = gs.player;
+    const lines = gs.bosses.lairs.map((L) => {
+      const def = BOSSES[L.boss];
+      const dx = Math.round(L.altar.x - p.centerX / 32);
+      const dy = Math.round(L.altar.y - p.centerY / 32);
+      const dir = `${Math.abs(dx)} al ${dx >= 0 ? 'Este' : 'Oeste'}${Math.abs(dy) > 3 ? ` y ${Math.abs(dy)} hacia ${dy > 0 ? 'abajo' : 'arriba'}` : ''}`;
+      const done = gs.bosses.defeated(L.boss) ? ' (vencido)' : '';
+      return `• ${def.name}${done}: ${def.zone}, ${dir}.`;
+    });
+    return `Hay guardianes que protegen reliquias antiguas. Bajan por un pozo con plataformas:\n${lines.join('\n')}`;
   }
 
   _whoComes() {

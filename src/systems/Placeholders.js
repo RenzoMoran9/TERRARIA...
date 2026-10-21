@@ -1671,6 +1671,267 @@ const PIXEL = {
     pc.outline('#1a0806');
   },
 
+  // ---------- jefes, reliquias y su altar ----------
+  relic_altar(pc) {
+    // Pedestal de piedra con borde dorado
+    pc.rect(2, 3, 12, 3, '#c8c0b0');
+    pc.rect(2, 3, 12, 1, '#e8c860');
+    pc.rect(4, 6, 8, 7, '#a8a090');
+    pc.rect(5, 7, 1, 5, '#c8c0b0');
+    pc.rect(1, 13, 14, 3, '#c8c0b0');
+    pc.rect(1, 13, 14, 1, '#e8c860');
+    pc.rect(7, 8, 2, 3, '#e8c860');
+    pc.outline('#2a2420');
+  },
+  // Rey Slime: 3 cuadros de 48×36 (quieto, aplastado, estirado), con corona
+  boss_slime_king(pc) {
+    const shapes = [[23, 15, 22, 15], [23, 18, 24, 12], [23, 13, 18, 18]]; // cx, cy, rx, ry
+    shapes.forEach(([cx, cy, rx, ry], f) => {
+      const ox = f * 48;
+      for (let y = 0; y < 36; y++) {
+        for (let x = 0; x < 48; x++) {
+          const dx = (x - cx) / rx;
+          const dy = (y - cy) / ry;
+          if (y > cy + ry * 0.55 || dx * dx + dy * dy > 1) continue;
+          const d = dx * dx + dy * dy;
+          pc.set(ox + x, y, d > 0.8 ? '#2a68c8' : y < cy - ry * 0.4 && x < cx ? '#9ad0ff' : '#4a90f0');
+        }
+      }
+      const base = Math.round(cy + ry * 0.55);
+      pc.rect(ox + cx - rx + 2, base, rx * 2 - 4, 1, '#2a58b0');
+      // Ojos y boca
+      const ey = cy - 2;
+      pc.rect(ox + cx - 8, ey, 3, 4, '#1a1a3a');
+      pc.rect(ox + cx + 5, ey, 3, 4, '#1a1a3a');
+      pc.set(ox + cx - 7, ey, '#ffffff');
+      pc.set(ox + cx + 6, ey, '#ffffff');
+      pc.rect(ox + cx - 3, ey + 6, 6, 1, '#1a1a3a');
+      // Corona dorada con un rubí
+      const ct = cy - ry - 5;
+      pc.rect(ox + cx - 7, ct + 3, 14, 4, '#f0c030');
+      for (const k of [-7, -2, 3]) pc.rect(ox + cx + k, ct, 2, 3, '#f0c030');
+      pc.rect(ox + cx + 6, ct, 1, 3, '#f0c030');
+      pc.rect(ox + cx - 7, ct + 6, 14, 1, '#b08010');
+      pc.disc(ox + cx, ct + 4.5, 1.4, '#e02040');
+    });
+    pc.outline('#101830');
+  },
+  // Escorpión Rey: 2 cuadros de 60×28 (cola arriba, cola atacando)
+  boss_scorpion_king(pc) {
+    for (let f = 0; f < 2; f++) {
+      const ox = f * 60;
+      const G = ['#f0c040', '#c89020', '#8a5a10'];
+      // Cuerpo segmentado
+      for (let k = 0; k < 5; k++) pc.disc(ox + 22 + k * 5, 20, 5.2 - k * 0.3, k % 2 ? G[1] : G[0]);
+      pc.disc(ox + 46, 19, 5, G[0]); // cabeza
+      pc.rect(ox + 48, 16, 2, 2, '#e02020');
+      // Pinzas
+      pc.rect(ox + 50, 21, 6, 2, G[1]);
+      pc.rect(ox + 54, 17 + f, 4, 3, G[0]);
+      pc.rect(ox + 54, 23 - f, 4, 3, G[0]);
+      // Patas
+      for (let k = 0; k < 4; k++) {
+        pc.line(ox + 24 + k * 6, 24, ox + 21 + k * 6, 27, G[2]);
+      }
+      // Cola curva con aguijón
+      const tail = f ? [[18, 18], [13, 14], [11, 8], [14, 3], [20, 2], [26, 4]] : [[18, 18], [12, 15], [8, 10], [8, 4], [12, 1], [17, 1]];
+      tail.forEach(([x, y], i) => pc.disc(ox + x, y + 2, 3 - i * 0.25, i % 2 ? G[1] : G[0]));
+      const [tx, ty] = tail[tail.length - 1];
+      pc.rect(ox + tx + 2, ty + 3, 3, 2, '#7a2a8a');
+      pc.set(ox + tx + 5, ty + 4, '#c050e0');
+    }
+    pc.outline('#2a1a04');
+  },
+  // Reina Avispa: 2 cuadros de 48×40 (alas arriba y abajo)
+  boss_queen_wasp(pc) {
+    for (let f = 0; f < 2; f++) {
+      const ox = f * 48;
+      // Alas
+      if (f === 0) {
+        pc.disc(ox + 22, 9, 8, '#d8f0ff');
+        pc.disc(ox + 30, 8, 6, '#bfe0f8');
+      } else {
+        pc.disc(ox + 20, 20, 8, '#d8f0ff');
+        pc.disc(ox + 28, 21, 6, '#bfe0f8');
+      }
+      // Abdomen a rayas
+      for (let x = 4; x < 26; x++) {
+        for (let y = 18; y < 34; y++) {
+          const dx = (x - 15) / 11;
+          const dy = (y - 26) / 8;
+          if (dx * dx + dy * dy > 1) continue;
+          pc.set(ox + x, y, Math.floor(x / 4) % 2 ? '#2a2216' : '#f2c432');
+        }
+      }
+      pc.rect(ox + 1, 25, 4, 2, '#2a2216'); // aguijón
+      pc.set(ox, 26, '#c02020');
+      // Tórax y cabeza con corona
+      pc.disc(ox + 30, 22, 6, '#e8a828');
+      pc.disc(ox + 39, 18, 5, '#f2c432');
+      pc.rect(ox + 40, 16, 3, 3, '#1a1a1a');
+      pc.set(ox + 41, 16, '#ffffff');
+      pc.rect(ox + 36, 10, 7, 2, '#ffd84a');
+      for (const k of [36, 39, 42]) pc.set(ox + k, 9, '#ffd84a');
+      // Patas
+      for (let k = 0; k < 3; k++) pc.line(ox + 27 + k * 3, 27, ox + 25 + k * 3, 32, '#2a2216');
+    }
+    pc.outline('#1a140a');
+  },
+  // Ojo Sombrío: 2 cuadros de 48×48 (ojo / boca con dientes en la segunda fase)
+  boss_shadow_eye(pc) {
+    for (let f = 0; f < 2; f++) {
+      const ox = f * 48;
+      // Tentáculos atrás
+      for (let k = 0; k < 6; k++) {
+        const y = 14 + k * 4;
+        pc.line(ox + 10, y, ox + 2, y + ((k % 2) * 2 - 1) * 3, '#5a2a6a');
+        pc.line(ox + 10, y + 1, ox + 3, y + 1 + ((k % 2) * 2 - 1) * 3, '#3a1a4a');
+      }
+      pc.disc(ox + 26, 24, 16, (x, y, d) => (d > 0.85 ? '#7a6a8a' : '#e8e0f0'));
+      // Venas
+      for (const [x0, y0, x1, y1] of [[14, 18, 20, 20], [14, 30, 20, 27], [24, 9, 25, 15], [24, 39, 26, 33]]) pc.line(ox + x0, y0, ox + x1, y1, '#c03050');
+      if (f === 0) {
+        pc.disc(ox + 31, 24, 8, '#6a2ab0');
+        pc.disc(ox + 32, 24, 4, '#100818');
+        pc.rect(ox + 28, 20, 2, 2, '#ffffff');
+      } else {
+        // Boca abierta con dientes
+        pc.disc(ox + 32, 24, 9, '#3a0a18');
+        for (let k = 0; k < 5; k++) {
+          pc.rect(ox + 26 + k * 3, 16 + Math.abs(k - 2), 2, 3, '#f4f0e0');
+          pc.rect(ox + 26 + k * 3, 29 - Math.abs(k - 2), 2, 3, '#f4f0e0');
+        }
+      }
+    }
+    pc.outline('#1a0820');
+  },
+  // Golem de Cristal: 2 cuadros de 56×64 (de pie, brazos arriba para golpear)
+  boss_crystal_golem(pc) {
+    const C = ['#f4c8ff', '#d890f0', '#9a5ac0', '#6a3a90'];
+    for (let f = 0; f < 2; f++) {
+      const ox = f * 56;
+      // Piernas
+      pc.rect(ox + 16, 46, 9, 16, C[2]);
+      pc.rect(ox + 31, 46, 9, 16, C[2]);
+      pc.rect(ox + 16, 46, 3, 16, C[1]);
+      // Torso facetado
+      for (let y = 18; y < 48; y++) {
+        const w = 14 - Math.abs(y - 32) * 0.25;
+        for (let x = Math.round(28 - w); x <= Math.round(28 + w); x++) pc.set(ox + x, y, x < 28 ? (y < 30 ? C[0] : C[1]) : y < 30 ? C[1] : C[2]);
+      }
+      pc.disc(ox + 28, 32, 4, '#ffffff'); // núcleo
+      pc.disc(ox + 28, 32, 2.5, '#8ef0ff');
+      // Cabeza
+      pc.rect(ox + 22, 6, 12, 11, C[1]);
+      pc.rect(ox + 22, 6, 6, 5, C[0]);
+      pc.rect(ox + 24, 10, 3, 2, '#8ef0ff');
+      pc.rect(ox + 30, 10, 3, 2, '#8ef0ff');
+      // Brazos (abajo o levantados)
+      if (f === 0) {
+        pc.rect(ox + 6, 20, 9, 26, C[2]);
+        pc.rect(ox + 41, 20, 9, 26, C[2]);
+        pc.rect(ox + 5, 42, 11, 8, C[1]);
+        pc.rect(ox + 40, 42, 11, 8, C[1]);
+      } else {
+        pc.rect(ox + 6, 2, 9, 22, C[2]);
+        pc.rect(ox + 41, 2, 9, 22, C[2]);
+        pc.rect(ox + 5, 0, 11, 6, C[1]);
+        pc.rect(ox + 40, 0, 11, 6, C[1]);
+      }
+      // Puntas de cristal en los hombros
+      for (const sx of [12, 44]) for (let k = 0; k < 6; k++) pc.rect(ox + sx - (k >> 1), 18 - k, 1 + k, 1, C[0]);
+    }
+    pc.outline('#2a1040');
+  },
+  // Señor de las Llamas: 2 cuadros de 60×60 (llamas en dos posiciones)
+  boss_flame_lord(pc) {
+    for (let f = 0; f < 2; f++) {
+      const ox = f * 60;
+      // Llamas alrededor
+      for (let k = 0; k < 9; k++) {
+        const a = (k / 9) * Math.PI * 2 + f * 0.35;
+        pc.disc(ox + 30 + Math.cos(a) * 22, 32 + Math.sin(a) * 22, 5, k % 2 ? '#ff7020' : '#ffb030');
+      }
+      // Cuerpo de roca con grietas de lava
+      pc.disc(ox + 30, 32, 17, (x, y, d) => (d > 0.85 ? '#2a1a14' : '#4a2a20'));
+      for (const [x0, y0, x1, y1] of [[18, 28, 26, 34], [34, 40, 42, 36], [24, 44, 30, 40], [36, 22, 42, 26]]) pc.line(ox + x0, y0, ox + x1, y1, '#ff9a30');
+      // Cuernos
+      for (let k = 0; k < 7; k++) {
+        pc.rect(ox + 16 - k, 14 - k, 3, 2, '#d8c8b0');
+        pc.rect(ox + 42 + k, 14 - k, 3, 2, '#d8c8b0');
+      }
+      // Ojos y boca encendidos
+      pc.rect(ox + 22, 26, 5, 3, '#ffe060');
+      pc.rect(ox + 33, 26, 5, 3, '#ffe060');
+      pc.rect(ox + 24, 36, 12, 3 + f, '#ff5020');
+      for (let k = 0; k < 4; k++) pc.rect(ox + 25 + k * 3, 36, 1, 1, '#f4e8d0');
+    }
+    pc.outline('#140806');
+  },
+  // Proyectiles de los jefes: 4 cuadros de 8×8 (aguijón, orbe sombrío, astilla de cristal, bola de fuego)
+  proj_boss(pc) {
+    pc.rect(0, 3, 6, 2, '#2a2216');
+    pc.rect(6, 3, 2, 2, '#c050e0');
+    pc.disc(12, 4, 3.4, (x, y, d) => (d < 0.5 ? '#e8c8ff' : '#7a3ab8'));
+    for (let k = 0; k < 4; k++) pc.rect(17 + k, 6 - k, 2, 2, k < 2 ? '#d890f0' : '#f4c8ff');
+    pc.disc(28, 4, 3.4, (x, y, d) => (d < 0.4 ? '#fff0a0' : d < 0.75 ? '#ffb030' : '#ff5020'));
+  },
+  // Reliquias (16×16)
+  relic_crown(pc) {
+    pc.rect(2, 7, 12, 6, '#f0c030');
+    for (const x of [2, 7, 12]) pc.rect(x, 3, 2, 4, '#f0c030');
+    pc.rect(2, 12, 12, 1, '#b08010');
+    pc.disc(8, 9.5, 1.6, '#4a90f0');
+    pc.disc(4, 10, 1, '#e02040');
+    pc.disc(12, 10, 1, '#e02040');
+    pc.set(3, 8, '#fff0a0');
+    pc.outline('#3a2804');
+  },
+  relic_stinger(pc) {
+    for (let k = 0; k < 11; k++) pc.rect(2 + k, 13 - k, 2, 2, k < 7 ? '#f0c040' : '#c89020');
+    pc.rect(12, 2, 2, 2, '#c050e0');
+    pc.set(14, 1, '#e8a0ff');
+    pc.set(4, 12, '#fff0a0');
+    pc.outline('#2a1a04');
+  },
+  relic_hive(pc) {
+    pc.disc(8, 8, 6.5, (x, y) => ((x + y) % 4 < 2 ? '#f2c432' : '#d89a1a'));
+    pc.disc(8, 8, 3, '#ff8a3a');
+    pc.disc(7, 7, 1.2, '#ffe0a0');
+    pc.outline('#3a2404');
+  },
+  relic_eye(pc) {
+    pc.disc(8, 8, 6.5, (x, y, d) => (d > 0.8 ? '#7a6a8a' : '#e8e0f0'));
+    pc.disc(9, 8, 3.2, '#6a2ab0');
+    pc.disc(9.4, 8, 1.6, '#100818');
+    pc.set(7, 6, '#ffffff');
+    pc.outline('#1a0820');
+  },
+  relic_core(pc) {
+    for (let y = 1; y < 15; y++) {
+      const w = 6 - Math.abs(y - 8) * 0.8;
+      for (let x = Math.round(8 - w); x <= Math.round(8 + w); x++) pc.set(x, y, x < 8 ? '#f4c8ff' : '#b870e0');
+    }
+    pc.disc(8, 8, 2, '#8ef0ff');
+    pc.outline('#2a1040');
+  },
+  relic_flame(pc) {
+    pc.disc(8, 10, 5, '#ff5020');
+    for (let k = 0; k < 6; k++) pc.rect(3 + k, Math.round(9 - k * 1.4), (5 - k) * 2, 2, k % 2 ? '#ff7020' : '#ffb030');
+    pc.disc(8, 11, 2.5, '#fff0a0');
+    pc.outline('#3a0804');
+  },
+  map_boss(pc) {
+    // Calavera (guarida de un jefe en el mapa)
+    pc.disc(8, 7, 5.5, '#f0ead8');
+    pc.rect(5, 11, 7, 3, '#f0ead8');
+    pc.disc(6, 7, 1.6, '#1a120c');
+    pc.disc(10.5, 7, 1.6, '#1a120c');
+    pc.set(8, 10, '#1a120c');
+    for (const x of [6, 8, 10]) pc.set(x, 13, '#8a7a6a');
+    pc.outline('#1a120c');
+  },
+
   // ---------- fauna (bichos inofensivos de cada zona) ----------
   // Pájaros: 4 cuadros de 12×10 (posado, picoteando, alas arriba, alas abajo)
   critter_bird(pc, v, asset) {
@@ -1919,7 +2180,7 @@ const PIXEL = {
   map_pin(pc) {
     pc.disc(8, 6, 4.5, '#ff4a4a');
     pc.disc(7, 5, 1.5, '#ffd0d0');
-    for (let y = 10; y < 15; y++) pc.rect(8 - Math.max(0, 14 - y) / 3, y, 1 + Math.max(0, (14 - y) / 2), 1, '#c02020');
+    for (let y = 10; y < 15; y++) pc.rect(8 - Math.round((14 - y) / 3), y, 1 + Math.round((14 - y) / 2), 1, '#c02020');
     pc.outline('#1a120c');
   },
   map_player(pc) {

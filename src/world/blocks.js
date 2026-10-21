@@ -185,6 +185,8 @@ const BUILD_BLOCKS = [
   ['CLOUD', { name: 'Nube', texture: 'tile_cloud', framed: true, solid: true, hardness: 0.3, tier: 0, drop: 'cloud', color: 0xf0f6ff }],
   ['MUSHROOM_GRASS', { name: 'Pasto de hongos', texture: 'tile_mushroom_grass', covered: 'tile_mud', grassy: true, framed: true, solid: true, hardness: 0.55, tier: 0, drop: 'mud', light: 0.4, color: 0x4a8aff }],
   ['MUSHROOM_PLANT', { name: 'Hongo brillante', textures: ['tile_mushroom_plant', 'tile_mushroom_plant2'], plant: true, solid: false, hardness: 0.05, tier: 0, drop: 'glowing_mushroom', light: 0.85, color: 0x6ab0ff }],
+  // Altar de las guaridas de los jefes: sobre él flota la reliquia (no se puede romper)
+  ['RELIC_ALTAR', { name: 'Altar de la reliquia', texture: 'tile_relic_altar', solid: true, hardness: Infinity, tier: 99, drop: null, light: 0.5, color: 0xe8c860 }],
 ];
 for (const [key, def] of BUILD_BLOCKS) {
   BLOCK[key] = BLOCK_DEFS.length;

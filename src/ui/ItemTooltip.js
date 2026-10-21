@@ -2,6 +2,8 @@ import { ITEMS, ARMOR_SETS, getMaxStack } from '../systems/items.js';
 import { BLOCK, BLOCK_DEFS, IS_SOLID, LIGHT_EMIT } from '../world/blocks.js';
 import { TILE_SIZE } from '../config.js';
 import { textStyle, COLORS } from './styles.js';
+import { RELICS } from '../systems/Skills.js';
+import { BOSSES } from '../systems/Bosses.js';
 
 const HOLD_MS = 380; // mantener apretado este tiempo (celular) muestra la info
 const HOVER_MS = 300; // con el ratón, basta con pasar por encima
@@ -86,6 +88,11 @@ export function describeItem(id) {
     } else if (d.use.maxHealth) {
       lines.push(`+${d.use.maxHealth} de vida máxima, para siempre (hasta 15)`);
       lines.push('Se encuentran en el piso de las cuevas, bien abajo');
+    } else if (d.use.relic) {
+      const r = RELICS[id];
+      lines.push(`Reliquia que protegía: ${BOSSES[r.boss].name}`);
+      lines.push(`Úsala (una sola vez): ${r.text}, +${r.points} punto${r.points > 1 ? 's' : ''} de habilidad y +${r.xp} XP`);
+      lines.push('Las repetidas se venden caras al Comerciante');
     } else if (d.use.recall) {
       lines.push('Te lleva de vuelta a tu cama (o al inicio del mundo)');
       lines.push(d.use.keep ? 'No se gasta: úsalo cuantas veces quieras' : 'Se gasta al usarla');
