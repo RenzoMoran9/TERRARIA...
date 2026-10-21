@@ -99,6 +99,28 @@ function bow(pc, wood, dark) {
   pc.outline('#1a120c');
 }
 
+// Pasto de colores sobre la primera fila (pasto de selva, sombrío, de cristal)
+function grassTop(pc, v, c) {
+  for (let x = 0; x < 16; x++) {
+    const len = 2 + (hash(x, 1, 50 + v) < 0.55 ? 1 : 0) + (hash(x, 2, 50 + v) < 0.2 ? 1 : 0);
+    for (let y = 0; y < len; y++) pc.set(x, y, y === 0 ? c.light : y === len - 1 ? c.dark : hash(x, y, v) < 0.35 ? c.alt : c.mid);
+  }
+}
+
+// Brote de cristal (plantas de las tierras de cristal)
+function crystalShard(pc, color, light) {
+  pc.line(8, 15, 8, 2, color);
+  pc.line(7, 15, 7, 5, color);
+  pc.line(9, 15, 9, 5, color);
+  pc.line(5, 15, 4, 9, color);
+  pc.line(11, 15, 12, 8, color);
+  pc.line(8, 4, 8, 12, light);
+  pc.outline('#3a1a4a');
+}
+
+const JUNGLE_LEAF = { dark: '#0f4a1a', mid: '#1f6e24', light: '#33963a', hi: '#7fe05a', line: '#08300f' };
+const SHADOW_LEAF = { dark: '#3a1f5a', mid: '#5a2f88', light: '#7a48b0', hi: '#c090ff', line: '#1f0f33' };
+
 // Espada: hoja en diagonal hacia arriba a la derecha, mango y guarda abajo a la izquierda
 function sword(pc, blade, mid, dark) {
   for (let i = 0; i < 9; i++) {
@@ -307,28 +329,29 @@ function drawPose(pc, ox, oy, P, C = PLAYER_COLORS) {
   if (!raised) arm(12, front, C.shirt);
 }
 
-function drawCanopy(pc, ox, v) {
+function drawCanopy(pc, ox, v, L = LEAF, scale = 1) {
   const layouts = [
     [[36, 30, 20], [22, 36, 13], [50, 36, 13], [30, 20, 12], [44, 20, 12], [36, 44, 12]],
     [[36, 26, 16], [36, 40, 15], [25, 33, 12], [47, 33, 12], [36, 13, 11]],
     [[36, 32, 18], [18, 38, 12], [54, 38, 12], [26, 23, 12], [46, 23, 12]],
   ];
-  const discs = layouts[v % layouts.length];
-  for (const [x, y, r] of discs) pc.disc(ox + x, y, r, LEAF.dark);
-  for (const [x, y, r] of discs) pc.disc(ox + x - 2, y - 2, r - 2.5, LEAF.mid);
-  for (const [x, y, r] of discs) pc.disc(ox + x - 4, y - 5, r - 6.5, LEAF.light);
+  // scale agranda o achica la copa alrededor de su centro (selva más tupida, árbol sombrío ralo)
+  const discs = layouts[v % layouts.length].map(([x, y, r]) => [36 + (x - 36) * scale, 34 + (y - 34) * scale, r * scale]);
+  for (const [x, y, r] of discs) pc.disc(ox + x, y, r, L.dark);
+  for (const [x, y, r] of discs) pc.disc(ox + x - 2, y - 2, r - 2.5, L.mid);
+  for (const [x, y, r] of discs) pc.disc(ox + x - 4, y - 5, r - 6.5, L.light);
   // Textura de hojas: algunos píxeles un tono más oscuro y brillos
-  const darker = { [LEAF.mid]: LEAF.dark, [LEAF.light]: LEAF.mid, [LEAF.dark]: LEAF.line };
+  const darker = { [L.mid]: L.dark, [L.light]: L.mid, [L.dark]: L.line };
   for (let y = 0; y < pc.h; y++) {
     for (let x = ox; x < ox + 72; x++) {
       const c = pc.get(x, y);
       if (!c) continue;
       const t = hash(x, y, 900 + v);
       if (t < 0.13) pc.set(x, y, darker[c] || c);
-      else if (t > 0.985 && c === LEAF.light) pc.set(x, y, LEAF.hi);
+      else if (t > 0.985 && c === L.light) pc.set(x, y, L.hi);
     }
   }
-  pc.outline(LEAF.line);
+  pc.outline(L.line);
 }
 
 function circleBtn(ctx, w, h) {
@@ -362,14 +385,329 @@ function ridge(ctx, w, h, hFn, colorFn, scale = 2) {
     const u = x / cols;
     const top = Math.round(rows - hFn(u) * rows);
     const slope = hFn(((x + 1) % cols) / cols) - hFn(u);
-    for (let y = Math.max(0, top); y < rows; y++) {
-      ctx.fillStyle = colorFn(y - top, slope, x, y);
-      ctx.fillRect(x * scale, y * scale, scale, scale);
+    // Se pintan tramos verticales del mismo color de una vez (mucho más rápido que píxel a píxel)
+    let runStart = Math.max(0, top);
+    let runColor = null;
+    for (let y = runStart; y <= rows; y++) {
+      const c = y < rows ? colorFn(y - top, slope, x, y) : null;
+      if (c === runColor) continue;
+      if (runColor) {
+        ctx.fillStyle = runColor;
+        ctx.fillRect(x * scale, runStart * scale, scale, (y - runStart) * scale);
+      }
+      runColor = c;
+      runStart = y;
     }
   }
 }
 
 const TAU = Math.PI * 2;
+
+// ---------------------------------------------------------------- fondos por zona
+const MOUNTAIN_SHAPE = (u) =>
+  0.25 + 0.42 * (0.5 + 0.5 * Math.sin(TAU * 2 * u + 0.3)) * (1 - Math.abs(Math.sin(Math.PI * 5 * u + 1))) + 0.12 * (0.5 + 0.5 * Math.sin(TAU * 9 * u));
+const HILL_SHAPE = (u) => 0.42 + 0.16 * Math.sin(TAU * 3 * u + 1) + 0.09 * Math.sin(TAU * 7 * u + 2);
+
+/**
+ * Colores y formas del fondo de cada zona. mountain = [iluminado, sombra, plano];
+ * hill = [borde, iluminado, sombra, plano]; ground = suelo de la capa cercana.
+ * fills = color de relleno debajo de cada capa (montañas, colinas, cercana).
+ * sky = color por el que se multiplica el cielo; skyMix = cuánto.
+ */
+export const BG_THEMES = {
+  forest: {
+    mountain: ['#93add2', '#7590b8', '#8399c0'], cap: '#e6eef8', capFrom: 0.55,
+    hill: ['#86c47a', '#5ea657', '#4f9149', '#57a050'], hillProp: 'tree', hillProps: 26, propColors: ['#4a3522', '#3f7d3c'],
+    front: 'trees', ground: '#2b5a2c', trunk: '#3b2a1a', leaf: ['#3c7340', '#2f6332'],
+    fills: [0x7590b8, 0x4f9149, 0x2b5a2c], sky: 0xffffff, skyMix: 0,
+  },
+  desert: {
+    mountain: ['#e0b27a', '#b98452', '#cc9a64'], cap: null,
+    mountainShape: (u) => {
+      // Mesetas: cerros de cima plana
+      const m = MOUNTAIN_SHAPE(u);
+      return Math.min(m, 0.42 + 0.1 * Math.sin(TAU * 3 * u));
+    },
+    hill: ['#f6dfa2', '#e6c47e', '#cfa660', '#dcb46e'], hillProp: 'cactus', hillProps: 14, propColors: ['#5f8a3e', '#4a7030'],
+    hillShape: (u) => 0.36 + 0.14 * Math.abs(Math.sin(TAU * 2.5 * u + 1)) + 0.05 * Math.sin(TAU * 7 * u),
+    front: 'dunes', ground: '#c08f52', dune: ['#d8a862', '#c69552'], leaf: ['#4f7a34', '#3e6428'],
+    fills: [0xb98452, 0xcfa660, 0xc08f52], sky: 0xffe2b0, skyMix: 0.55,
+  },
+  snow: {
+    mountain: ['#eef4fb', '#b7c9de', '#cfdcec'], cap: '#ffffff', capFrom: 0.35,
+    hill: ['#ffffff', '#e4edf7', '#c9d8e8', '#d7e3f0'], hillProp: 'pine', hillProps: 30, propColors: ['#4a3522', '#2c5a4a'],
+    front: 'pines', ground: '#dbe6f2', trunk: '#3b2a1a', leaf: ['#2a5848', '#1f4a3c'],
+    fills: [0xb7c9de, 0xc9d8e8, 0xdbe6f2], sky: 0xdfe8ff, skyMix: 0.45,
+  },
+  jungle: {
+    mountain: ['#6aa898', '#4a8070', '#5a9282'], cap: null,
+    hill: ['#6fd055', '#33933c', '#25722f', '#2c8236'], hillProp: 'tree', hillProps: 40, propColors: ['#3a2a18', '#24702c'],
+    front: 'jungle', ground: '#1b4520', trunk: '#4a3420', leaf: ['#2e8a34', '#1f6a28'], vine: '#3fa040',
+    fills: [0x4a8070, 0x25722f, 0x1b4520], sky: 0xc4f0d2, skyMix: 0.5,
+  },
+  shadow: {
+    mountain: ['#6a5888', '#433660', '#554670'], cap: '#9b86c8', capFrom: 0.6,
+    hill: ['#a874e0', '#523e74', '#3c2c58', '#463468'], hillProp: 'deadtree', hillProps: 18, propColors: ['#2a1e3c', '#7a48b8'],
+    front: 'twisted', ground: '#22163a', trunk: '#1a1028', leaf: ['#6a3fa0', '#55308a'], glow: '#c890ff',
+    fills: [0x433660, 0x3c2c58, 0x22163a], sky: 0xb898d8, skyMix: 0.8,
+  },
+  crystal: {
+    mountain: ['#efc6f2', '#bb8fd0', '#d4a8e0'], cap: '#ffffff', capFrom: 0.5,
+    mountainShape: (u) => 0.2 + 0.55 * Math.pow(Math.abs(Math.sin(TAU * 3 * u + 0.4)), 4) + 0.12 * Math.abs(Math.sin(TAU * 11 * u)),
+    hill: ['#b4fff6', '#86d0dc', '#68aec4', '#76bed0'], hillProp: 'shard', hillProps: 22, propColors: ['#f0a8ff', '#a8f0ff'],
+    front: 'spires', ground: '#34486a', crystals: ['#ff9ee8', '#8ef0ff', '#ffe68a', '#c49aff'],
+    fills: [0xbb8fd0, 0x68aec4, 0x34486a], sky: 0xf2c8f4, skyMix: 0.6,
+  },
+  volcano: {
+    mountain: ['#5c4c4a', '#3a2e2e', '#4a3c3a'], cap: '#ff7a3a', capFrom: 0.5,
+    mountainShape: (u) => {
+      // Volcanes: conos con el cráter hundido
+      const c = Math.max(0, 1 - Math.abs(((u * 3) % 1) - 0.5) * 2.4);
+      return 0.18 + 0.55 * c - (c > 0.88 ? (c - 0.88) * 1.6 : 0) + 0.04 * Math.sin(TAU * 13 * u);
+    },
+    hill: ['#7a6660', '#3c3030', '#2c2222', '#342a2a'], hillProp: 'deadtree', hillProps: 12, propColors: ['#1e1616', '#1e1616'],
+    front: 'ashland', ground: '#1a1212', trunk: '#140e0e', lava: ['#ff9a30', '#e04a10'],
+    fills: [0x3a2e2e, 0x2c2222, 0x1a1212], sky: 0xd88068, skyMix: 0.85,
+  },
+};
+
+// Adornos sobre las colinas (en celdas de 2 px)
+const HILL_PROPS = {
+  tree(ctx, x, top, r, th) {
+    ctx.fillStyle = th.propColors[0];
+    ctx.fillRect(x * 2, (top - 3) * 2, 2, 8);
+    ctx.fillStyle = th.propColors[1];
+    for (let dy = -r; dy <= r; dy++) {
+      const half = Math.floor(Math.sqrt(r * r - dy * dy));
+      ctx.fillRect((x - half) * 2, (top - r - 2 + dy) * 2, (half * 2 + 1) * 2, 2);
+    }
+  },
+  pine(ctx, x, top, r, th) {
+    ctx.fillStyle = th.propColors[0];
+    ctx.fillRect(x * 2, (top - 2) * 2, 2, 6);
+    ctx.fillStyle = th.propColors[1];
+    const hgt = r * 3;
+    for (let dy = 0; dy < hgt; dy++) {
+      const half = Math.floor((dy / hgt) * r);
+      ctx.fillRect((x - half) * 2, (top - 2 - hgt + dy) * 2, (half * 2 + 1) * 2, 2);
+    }
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(x * 2, (top - 2 - hgt) * 2, 2, 2);
+  },
+  cactus(ctx, x, top, r, th) {
+    ctx.fillStyle = th.propColors[0];
+    ctx.fillRect(x * 2, (top - r - 3) * 2, 4, (r + 4) * 2);
+    ctx.fillRect((x - 2) * 2, (top - r) * 2, 2, 6);
+    ctx.fillRect((x - 2) * 2, (top - r + 2) * 2, 4, 2);
+    ctx.fillRect((x + 3) * 2, (top - r - 2) * 2, 2, 6);
+  },
+  deadtree(ctx, x, top, r, th) {
+    ctx.fillStyle = th.propColors[0];
+    ctx.fillRect(x * 2, (top - r * 2) * 2, 2, r * 4 + 2);
+    for (let k = 0; k < r; k++) {
+      ctx.fillRect((x - k) * 2, (top - r * 2 + 2 - k) * 2, 2, 2);
+      ctx.fillRect((x + 1 + k) * 2, (top - r * 2 + 4 - k) * 2, 2, 2);
+    }
+    if (th.propColors[1] !== th.propColors[0]) {
+      ctx.fillStyle = th.propColors[1];
+      ctx.fillRect((x - r) * 2, (top - r * 3 + 1) * 2, 4, 4);
+      ctx.fillRect((x + r) * 2, (top - r * 3 + 3) * 2, 4, 4);
+    }
+  },
+  shard(ctx, x, top, r, th, i) {
+    ctx.fillStyle = th.propColors[i % 2];
+    const hgt = r * 3;
+    for (let dy = 0; dy < hgt; dy++) {
+      const half = Math.max(0, Math.floor(((dy + 1) / hgt) * (r / 2 + 1)));
+      ctx.fillRect((x - half) * 2, (top - hgt + dy) * 2, (half * 2 + 1) * 2, 2);
+    }
+  },
+};
+
+// Siluetas de la capa cercana. cols/rows en celdas de 2 px; ground = fila del suelo.
+const disc2 = (ctx, cx, cy, r) => {
+  for (let dy = -r; dy <= r; dy++) {
+    const half = Math.floor(Math.sqrt(r * r - dy * dy));
+    ctx.fillRect((cx - half) * 2, (cy + dy) * 2, (half * 2 + 1) * 2, 2);
+  }
+};
+const wrap = (cols, fn) => {
+  for (const ox of [0, -cols, cols]) fn(ox);
+};
+const FRONT = {
+  trees(ctx, cols, rows, ground, th) {
+    for (let i = 0; i < 60; i++) {
+      const x = Math.floor((i / 60) * cols + hash(i, 1, 400) * 6);
+      const tH = 14 + Math.floor(hash(i, 2, 400) * 22);
+      const r = 5 + Math.floor(hash(i, 3, 400) * 4);
+      const cy = ground - tH;
+      wrap(cols, (ox) => {
+        ctx.fillStyle = th.trunk;
+        ctx.fillRect((x + ox) * 2, cy * 2, 4, (tH + 2) * 2);
+        for (let dy = -r; dy <= r; dy++) {
+          const half = Math.floor(Math.sqrt(r * r - dy * dy));
+          ctx.fillStyle = dy < -r / 3 ? th.leaf[0] : th.leaf[1];
+          ctx.fillRect((x - half + ox) * 2, (cy + dy) * 2, (half * 2 + 1) * 2, 2);
+        }
+      });
+    }
+  },
+  dunes(ctx, cols, rows, ground, th) {
+    // Dunas, una pirámide lejana y cactus
+    const dh = (u) => 7 + 5 * Math.sin(TAU * 2 * u + 0.5) + 3 * Math.sin(TAU * 5 * u);
+    for (let x = 0; x < cols; x++) {
+      const top = Math.round(ground - dh(x / cols));
+      const slope = dh((x + 1) / cols) - dh(x / cols);
+      ctx.fillStyle = slope > 0 ? th.dune[0] : th.dune[1];
+      ctx.fillRect(x * 2, top * 2, 2, (ground - top) * 2);
+    }
+    const px = Math.floor(cols * 0.62);
+    wrap(cols, (ox) => {
+      for (let k = 0; k < 26; k++) {
+        ctx.fillStyle = k % 4 === 0 ? '#b38450' : '#c99a5e';
+        ctx.fillRect((px - 26 + k + ox) * 2, (ground - 12 - k) * 2, (52 - k * 2) * 2, 2);
+      }
+    });
+    for (let i = 0; i < 16; i++) {
+      const x = Math.floor((i / 16) * cols + hash(i, 1, 410) * 10);
+      const tH = 8 + Math.floor(hash(i, 2, 410) * 10);
+      const top = Math.round(ground - dh(x / cols)) - tH;
+      wrap(cols, (ox) => {
+        ctx.fillStyle = th.leaf[1];
+        ctx.fillRect((x + ox) * 2, top * 2, 6, (tH + 2) * 2);
+        ctx.fillRect((x - 3 + ox) * 2, (top + 4) * 2, 2, 8);
+        ctx.fillRect((x - 3 + ox) * 2, (top + 7) * 2, 8, 2);
+        ctx.fillRect((x + 4 + ox) * 2, (top + 2) * 2, 2, 8);
+        ctx.fillRect((x + 2 + ox) * 2, (top + 5) * 2, 6, 2);
+        ctx.fillStyle = th.leaf[0];
+        ctx.fillRect((x + ox) * 2, top * 2, 2, (tH + 2) * 2);
+      });
+    }
+  },
+  pines(ctx, cols, rows, ground, th) {
+    for (let i = 0; i < 46; i++) {
+      const x = Math.floor((i / 46) * cols + hash(i, 1, 420) * 6);
+      const tH = 26 + Math.floor(hash(i, 2, 420) * 26);
+      const r = 6 + Math.floor(hash(i, 3, 420) * 4);
+      wrap(cols, (ox) => {
+        ctx.fillStyle = th.trunk;
+        ctx.fillRect((x + ox) * 2, (ground - 6) * 2, 4, 14);
+        for (let dy = 0; dy < tH; dy++) {
+          const tier = dy % 8;
+          const half = Math.floor(((dy + 2) / tH) * r) + (tier > 5 ? 1 : 0);
+          ctx.fillStyle = tier === 0 ? '#f4f8ff' : dy / tH < 0.5 ? th.leaf[0] : th.leaf[1];
+          ctx.fillRect((x + 1 - half + ox) * 2, (ground - 4 - tH + dy) * 2, (half * 2) * 2, 2);
+        }
+      });
+    }
+    // Nieve en el suelo
+    ctx.fillStyle = '#f4f8ff';
+    ctx.fillRect(0, (ground - 1) * 2, cols * 2, 4);
+  },
+  jungle(ctx, cols, rows, ground, th) {
+    for (let i = 0; i < 34; i++) {
+      const x = Math.floor((i / 34) * cols + hash(i, 1, 430) * 8);
+      const tH = 34 + Math.floor(hash(i, 2, 430) * 30);
+      const r = 8 + Math.floor(hash(i, 3, 430) * 5);
+      const cy = ground - tH;
+      wrap(cols, (ox) => {
+        ctx.fillStyle = th.trunk;
+        ctx.fillRect((x + ox) * 2, cy * 2, 6, (tH + 2) * 2);
+        ctx.fillStyle = th.leaf[1];
+        disc2(ctx, x + 1 + ox, cy + 1, r);
+        ctx.fillStyle = th.leaf[0];
+        disc2(ctx, x - 2 + ox, cy - 2, Math.floor(r * 0.6));
+        disc2(ctx, x + 5 + ox, cy, Math.floor(r * 0.5));
+        // Lianas colgando
+        ctx.fillStyle = th.vine;
+        for (let k = 0; k < 3; k++) {
+          const vx = x - r + 3 + Math.floor(hash(i, 10 + k, 430) * (r * 2 - 4));
+          ctx.fillRect((vx + ox) * 2, (cy + 2) * 2, 2, (6 + Math.floor(hash(i, 20 + k, 430) * 16)) * 2);
+        }
+      });
+    }
+    // Helechos
+    ctx.fillStyle = th.leaf[1];
+    for (let x = 0; x < cols; x += 2) {
+      const hh = 2 + Math.floor(hash(x, 5, 431) * 5);
+      ctx.fillRect(x * 2, (ground - hh) * 2, 2, hh * 2);
+    }
+  },
+  twisted(ctx, cols, rows, ground, th) {
+    for (let i = 0; i < 26; i++) {
+      const x = Math.floor((i / 26) * cols + hash(i, 1, 440) * 10);
+      const tH = 20 + Math.floor(hash(i, 2, 440) * 24);
+      wrap(cols, (ox) => {
+        ctx.fillStyle = th.trunk;
+        let tx = x;
+        for (let dy = 0; dy < tH; dy++) {
+          if (dy % 6 === 5) tx += hash(i, dy, 441) < 0.5 ? -1 : 1;
+          ctx.fillRect((tx + ox) * 2, (ground - dy) * 2, 6 - Math.floor((dy / tH) * 3) * 2, 2);
+        }
+        // Ramas torcidas con una copa violeta
+        for (let k = 0; k < 4; k++) {
+          ctx.fillRect((tx - k + ox) * 2, (ground - tH + 4 - k) * 2, 2, 2);
+          ctx.fillRect((tx + 2 + k + ox) * 2, (ground - tH + 6 - k) * 2, 2, 2);
+        }
+        ctx.fillStyle = th.leaf[i % 2];
+        disc2(ctx, tx - 4 + ox, ground - tH - 1, 3 + (i % 3));
+        disc2(ctx, tx + 6 + ox, ground - tH + 1, 2 + (i % 2));
+      });
+    }
+    // Hongos que brillan
+    for (let i = 0; i < 30; i++) {
+      const x = Math.floor(hash(i, 1, 442) * cols);
+      ctx.fillStyle = '#3a2a50';
+      ctx.fillRect(x * 2, (ground - 3) * 2, 2, 6);
+      ctx.fillStyle = th.glow;
+      ctx.fillRect((x - 1) * 2, (ground - 4) * 2, 6, 2);
+    }
+  },
+  spires(ctx, cols, rows, ground, th) {
+    for (let i = 0; i < 30; i++) {
+      const x = Math.floor((i / 30) * cols + hash(i, 1, 450) * 8);
+      const tH = 14 + Math.floor(hash(i, 2, 450) * 40);
+      const half = 2 + Math.floor(hash(i, 3, 450) * 3);
+      const color = th.crystals[i % th.crystals.length];
+      wrap(cols, (ox) => {
+        for (let dy = 0; dy < tH; dy++) {
+          const hw = dy > tH - half * 2 ? Math.max(0, Math.floor((tH - dy) / 2)) : half;
+          ctx.fillStyle = color;
+          ctx.fillRect((x - hw + ox) * 2, (ground - dy) * 2, (hw * 2 + 1) * 2, 2);
+          ctx.fillStyle = 'rgba(255,255,255,0.45)';
+          if (hw > 0) ctx.fillRect((x - hw + ox) * 2, (ground - dy) * 2, 2, 2);
+        }
+      });
+    }
+  },
+  ashland(ctx, cols, rows, ground, th) {
+    // Ríos de lava que bajan y árboles muertos
+    for (let i = 0; i < 6; i++) {
+      const x = Math.floor((i / 6) * cols + hash(i, 1, 460) * 30);
+      wrap(cols, (ox) => {
+        ctx.fillStyle = th.lava[1];
+        ctx.fillRect((x + ox) * 2, (ground - 3) * 2, 40, 6);
+        ctx.fillStyle = th.lava[0];
+        ctx.fillRect((x + 3 + ox) * 2, (ground - 2) * 2, 26, 2);
+      });
+    }
+    for (let i = 0; i < 24; i++) {
+      const x = Math.floor((i / 24) * cols + hash(i, 1, 461) * 10);
+      const tH = 10 + Math.floor(hash(i, 2, 461) * 22);
+      wrap(cols, (ox) => {
+        ctx.fillStyle = th.trunk;
+        ctx.fillRect((x + ox) * 2, (ground - tH) * 2, 4, (tH + 1) * 2);
+        for (let k = 0; k < 5; k++) {
+          ctx.fillRect((x - k + ox) * 2, (ground - tH + 5 - k) * 2, 2, 2);
+          ctx.fillRect((x + 2 + k + ox) * 2, (ground - tH + 9 - k) * 2, 2, 2);
+        }
+      });
+    }
+    // Rocas
+    ctx.fillStyle = '#2a2020';
+    for (let i = 0; i < 20; i++) disc2(ctx, Math.floor(hash(i, 3, 462) * cols), ground, 2 + (i % 3));
+  },
+};
 
 // ---------------------------------------------------------------- pintores en pixel art
 const PIXEL = {
@@ -395,6 +733,194 @@ const PIXEL = {
       pc.line(x, y, x + 2, y + 2, '#2f333a');
       pc.set(x + 1, y, STONE[4]);
     }
+  },
+  // ---------- bloques de las zonas ----------
+  sand(pc, v) {
+    fillNoise(pc, ['#c9a85f', '#d6b770', '#e0c482', '#e9d094', '#f1dca8'], v, 140);
+    pebbles(pc, v, 141, '#f7e8c0', '#a8884a');
+  },
+  sandstone(pc, v) {
+    // Capas horizontales
+    const bands = ['#b8894f', '#c99a5c', '#d6a96a', '#a87a44'];
+    for (let y = 0; y < 16; y++) {
+      const base = bands[Math.floor(y / 4 + hash(0, y >> 2, 142 + v) * 2) % 4];
+      for (let x = 0; x < 16; x++) pc.set(x, y, hash(x, y, 143 + v) < 0.12 ? '#9a6e3c' : (y & 3) === 0 ? '#e0b87a' : base);
+    }
+  },
+  snow(pc, v) {
+    fillNoise(pc, ['#c3d2e2', '#d3dfec', '#e2ebf4', '#eef4fa', '#ffffff'], v, 150, [0.08, 0.3, 0.6, 0.85]);
+    for (let x = 0; x < 16; x++) pc.set(x, 0, '#ffffff');
+  },
+  ice(pc, v) {
+    fillNoise(pc, ['#5fa6d0', '#74b8de', '#8ac8e8', '#a2d7f0', '#c3e9f8'], v, 160);
+    for (let i = 0; i < 2; i++) {
+      const x = 2 + Math.floor(hash(i, 1, 161 + v) * 9);
+      pc.line(x, 3 + i * 5, x + 4, 7 + i * 5, '#e8f8ff');
+    }
+  },
+  jungle_grass(pc, v) {
+    PIXEL.mud(pc, v);
+    grassTop(pc, v, { light: '#9ef06a', mid: '#3fb03a', alt: '#52c447', dark: '#1f7a28' });
+  },
+  mud(pc, v) {
+    fillNoise(pc, ['#3a281c', '#463022', '#523a2a', '#5e4332', '#6a4c3a'], v, 170);
+    pebbles(pc, v, 171, '#7a5a44', '#2a1c12');
+  },
+  shadow_grass(pc, v) {
+    PIXEL.dirt(pc, v);
+    grassTop(pc, v, { light: '#d0a0ff', mid: '#8e5cc8', alt: '#a070d8', dark: '#5a3a8a' });
+  },
+  shadow_stone(pc, v) {
+    fillNoise(pc, ['#241d32', '#2f2640', '#3a2f4e', '#46395e', '#554670'], v, 180);
+    const x = 3 + Math.floor(hash(1, 1, 181 + v) * 8);
+    pc.line(x, 2, x + 3, 9, '#7a4fb0');
+    pc.line(x + 3, 9, x + 1, 13, '#7a4fb0');
+  },
+  crystal_grass(pc, v) {
+    PIXEL.dirt(pc, v);
+    grassTop(pc, v, { light: '#ffffff', mid: '#7fe0e8', alt: '#f0a8f0', dark: '#4fa0c0' });
+  },
+  crystal(pc, v) {
+    // Facetas de cristal rosado con brillos
+    fillNoise(pc, ['#7a3aa0', '#9a4ec0', '#b868d8', '#d690ee', '#f0c0ff'], v, 190, [0.15, 0.4, 0.7, 0.9]);
+    pc.line(2, 13, 9, 2, '#f8e0ff');
+    pc.line(8, 15, 14, 5, '#f8e0ff');
+    pc.set(4 + Math.floor(hash(1, 2, 191 + v) * 8), 4, '#ffffff');
+  },
+  ash(pc, v) {
+    fillNoise(pc, ['#363232', '#423d3c', '#4e4846', '#5a5452', '#68625f'], v, 200);
+  },
+  basalt(pc, v) {
+    fillNoise(pc, ['#1c181a', '#262022', '#30282c', '#3a3034', '#463a40'], v, 210);
+    // Grietas con brasas
+    const x = 2 + Math.floor(hash(2, 1, 211 + v) * 10);
+    pc.line(x, 4, x + 2, 9, '#ff7a1a');
+    pc.set(x + 1, 6, '#ffd770');
+  },
+  lava(pc, v) {
+    fillNoise(pc, ['#b8300a', '#d8460e', '#ee6416', '#ff8a24', '#ffb347'], v, 220, [0.12, 0.35, 0.65, 0.88]);
+    for (let i = 0; i < 3; i++) {
+      const x = Math.floor(hash(i, 1, 221 + v) * 13);
+      const y = Math.floor(hash(i, 2, 221 + v) * 14);
+      pc.rect(x, y, 3, 1, '#ffe08a');
+    }
+  },
+  cactus(pc) {
+    pc.rect(4, 0, 8, 16, '#4f9a3c');
+    for (const x of [5, 8, 10]) pc.rect(x, 0, 1, 16, '#3a7a2c');
+    pc.rect(6, 0, 1, 16, '#6fbf52');
+    for (let y = 1; y < 16; y += 4) {
+      pc.set(3, y, '#f0f0d8');
+      pc.set(12, y + 2, '#f0f0d8');
+    }
+  },
+  plant_desert(pc) {
+    // Arbusto seco
+    for (const [x0, x1, y1] of [[8, 3, 7], [8, 12, 6], [8, 6, 4], [8, 11, 9], [8, 4, 10]]) pc.line(x0, 15, x1, y1, '#8a6a3a');
+    pc.set(3, 7, '#a88a50');
+    pc.set(12, 6, '#a88a50');
+  },
+  plant_desert2(pc) {
+    // Cactus chiquito
+    pc.rect(6, 7, 4, 9, '#4f9a3c');
+    pc.rect(7, 7, 1, 9, '#6fbf52');
+    pc.rect(3, 9, 3, 2, '#4f9a3c');
+    pc.rect(3, 6, 2, 4, '#4f9a3c');
+    pc.set(7, 6, '#ff7aa0');
+    pc.outline('#244a1c');
+  },
+  plant_snow(pc, v) {
+    for (let k = 0; k < 5; k++) {
+      const x = 1 + k * 3;
+      const h = 3 + Math.floor(hash(k, 1, 230 + v) * 5);
+      pc.line(x, 15, x, 16 - h, k % 2 ? '#cfe8f0' : '#a8d0e0');
+      pc.set(x, 16 - h, '#ffffff');
+    }
+  },
+  plant_snow2(pc) {
+    pc.disc(8, 12, 4, '#2f6a4a');
+    pc.disc(8, 10, 3, '#ffffff');
+    pc.rect(5, 12, 7, 1, '#e8f4fa');
+  },
+  plant_jungle(pc) {
+    // Flor gigante rosada que brilla
+    pc.line(8, 15, 8, 7, '#2f8a2c');
+    pc.line(8, 12, 11, 10, '#3fb03a');
+    for (const [x, y] of [[6, 5], [10, 5], [8, 3], [8, 7], [6, 7], [10, 7]]) pc.disc(x, y, 1.6, '#ff5fa0');
+    pc.disc(8, 5, 1.2, '#ffe060');
+  },
+  plant_jungle2(pc) {
+    // Bulbos azules luminosos
+    pc.line(5, 15, 6, 8, '#2f8a2c');
+    pc.line(11, 15, 10, 6, '#2f8a2c');
+    pc.disc(6, 7, 2, '#5fd0ff');
+    pc.disc(10, 5, 2, '#5fd0ff');
+    pc.set(6, 6, '#ffffff');
+    pc.set(10, 4, '#ffffff');
+  },
+  plant_shadow(pc) {
+    // Hongo morado
+    pc.rect(7, 9, 2, 7, '#c8b8d8');
+    pc.disc(8, 8, 4.5, '#7a3ab8');
+    pc.rect(3, 8, 11, 2, '#5a2a8a');
+    pc.set(6, 6, '#e0b0ff');
+    pc.set(10, 7, '#e0b0ff');
+  },
+  plant_shadow2(pc) {
+    // Planta espinosa
+    pc.line(8, 15, 5, 5, '#3a2a4a');
+    pc.line(8, 15, 11, 6, '#3a2a4a');
+    pc.line(8, 15, 8, 3, '#4a3a5a');
+    for (const [x, y] of [[5, 5], [11, 6], [8, 3]]) pc.set(x, y, '#c070ff');
+  },
+  plant_crystal(pc) {
+    crystalShard(pc, '#f090f0', '#ffd0ff');
+  },
+  plant_crystal2(pc) {
+    crystalShard(pc, '#60e0f0', '#d0ffff');
+  },
+  plant_crystal3(pc) {
+    crystalShard(pc, '#f0e060', '#fff8c0');
+  },
+  plant_volcano(pc) {
+    // Flor de fuego
+    pc.line(8, 15, 8, 8, '#4a3020');
+    for (const [x, y] of [[6, 6], [10, 6], [8, 4]]) pc.disc(x, y, 1.7, '#ff7a1a');
+    pc.disc(8, 6, 1.3, '#ffe060');
+  },
+  plant_volcano2(pc) {
+    // Fumarola: roca con brasas
+    pc.disc(8, 13, 4, '#2a2224');
+    pc.rect(7, 9, 2, 2, '#ff8a24');
+    pc.set(8, 8, '#ffd770');
+    pc.set(5, 12, '#ff7a1a');
+  },
+  wall_sandstone(pc, v) {
+    fillNoise(pc, ['#5a4228', '#664c2e', '#715534', '#7c5e3a', '#876840'], v, 240);
+  },
+  wall_ice(pc, v) {
+    fillNoise(pc, ['#2e4f66', '#365b74', '#3f6782', '#487390', '#527f9c'], v, 250);
+  },
+  wall_mud(pc, v) {
+    fillNoise(pc, ['#22170f', '#2a1d13', '#322317', '#3a291b', '#42301f'], v, 260);
+  },
+  wall_shadow(pc, v) {
+    fillNoise(pc, ['#17121f', '#1d1727', '#231c2f', '#2a2238', '#312842'], v, 270);
+  },
+  wall_ash(pc, v) {
+    fillNoise(pc, ['#1c1a1a', '#221f1f', '#282525', '#2e2a2a', '#353030'], v, 280);
+  },
+  cactus_item(pc) {
+    pc.rect(5, 3, 6, 11, '#4f9a3c');
+    pc.rect(6, 3, 1, 11, '#6fbf52');
+    pc.rect(9, 3, 1, 11, '#3a7a2c');
+    pc.outline('#244a1c');
+  },
+  cactus_sword(pc) {
+    sword(pc, '#8fdc5e', '#4f9a3c', '#2e6a24');
+  },
+  crystal_sword(pc) {
+    sword(pc, '#ffd0ff', '#e080f0', '#9a4ec0');
   },
   coal_ore(pc, v) {
     PIXEL.stone(pc, v);
@@ -898,6 +1424,108 @@ const PIXEL = {
     pc.outline('#141a10');
   },
 
+  scorpion(pc) {
+    // 3 cuadros de 20×12 caminando: pinzas adelante y la cola con el aguijón curvada sobre la espalda
+    const B = ['#7a4318', '#a8642a', '#cf8a3e', '#eab070'];
+    for (let f = 0; f < 3; f++) {
+      const ox = f * 20;
+      for (let k = 0; k < 4; k++) {
+        const lx = ox + 6 + k * 2 + (f === 1 ? 0 : (k + f) % 2 ? 1 : -1);
+        pc.set(lx, 10, B[0]);
+        pc.set(lx + (k % 2 ? 1 : -1), 11, B[0]);
+      }
+      for (let x = 4; x < 15; x++) {
+        const h = x < 6 || x > 13 ? 2 : 3;
+        for (let y = 10 - h; y < 10; y++) pc.set(ox + x, y, y === 10 - h ? B[3] : x % 3 === 0 ? B[1] : B[2]);
+      }
+      const tail = [[3, 8], [2, 7], [1, 6], [1, 5], [1, 4], [2, 3], [3, 2], [4, 1], [5, 1], [6, 2]];
+      tail.forEach(([x, y], i) => {
+        pc.set(ox + x, y, i % 2 ? B[1] : B[2]);
+        pc.set(ox + x + 1, y, B[1]);
+      });
+      pc.set(ox + 7, 3, '#f4e0b0');
+      pc.set(ox + 7, 4, '#3a1a08');
+      const claw = f === 1 ? 1 : 0;
+      pc.rect(ox + 15, 7, 2, 2, B[2]);
+      pc.rect(ox + 17, 6 - claw, 2, 2, B[3]);
+      pc.set(ox + 17, 8, B[1]);
+      pc.set(ox + 18, 8 + claw, B[2]);
+      pc.set(ox + 13, 7, '#1a0a00');
+    }
+    pc.outline('#2a1608');
+  },
+  wasp(pc) {
+    // 2 cuadros de 16×14: alas arriba / abajo, abdomen a rayas y aguijón atrás
+    for (let f = 0; f < 2; f++) {
+      const ox = f * 16;
+      if (f === 0) {
+        pc.rect(ox + 5, 1, 3, 5, '#e4f6ff');
+        pc.rect(ox + 8, 2, 2, 4, '#c4e4f8');
+      } else {
+        pc.rect(ox + 3, 4, 7, 2, '#e4f6ff');
+        pc.rect(ox + 4, 3, 4, 1, '#c4e4f8');
+      }
+      for (let x = 2; x < 10; x++) {
+        for (let y = 6; y < 11; y++) {
+          if ((x === 2 || x === 9) && (y === 6 || y === 10)) continue;
+          pc.set(ox + x, y, (x >> 1) % 2 ? '#2a2216' : '#f2c432');
+        }
+      }
+      pc.set(ox + 1, 9, '#2a2216');
+      pc.set(ox, 10, '#2a2216');
+      pc.rect(ox + 10, 6, 3, 4, '#f2c432');
+      pc.set(ox + 12, 7, '#c02020');
+      pc.set(ox + 11, 9, '#2a2216');
+      pc.set(ox + 6, 11, '#2a2216');
+      pc.set(ox + 8, 11, '#2a2216');
+    }
+    pc.outline('#1a140a');
+  },
+  eye(pc) {
+    // 2 cuadros de 16×12: ojo con venas, pupila hacia adelante y tentáculos que se mueven atrás
+    for (let f = 0; f < 2; f++) {
+      const ox = f * 16;
+      for (let k = 0; k < 5; k++) {
+        const y = 4 + k;
+        pc.set(ox + 5 - (k % 2), y + (f ? k % 2 : 0), '#b03050');
+        pc.set(ox + 3 - (k % 3), y + (f ? 0 : 1), '#902040');
+      }
+      pc.disc(ox + 10, 6, 4.4, (x, y, d) => (d > 0.8 ? '#d8c4c4' : '#f6f0f0'));
+      pc.set(ox + 7, 4, '#d04040');
+      pc.set(ox + 8, 3, '#d04040');
+      pc.set(ox + 7, 8, '#d04040');
+      pc.set(ox + 8, 9, '#d04040');
+      pc.disc(ox + 12, 6, 2.2, '#7a3ab8');
+      pc.disc(ox + 12.4, 6, 1.1, '#140818');
+      pc.set(ox + 11, 5, '#ffffff');
+    }
+    pc.outline('#2a0a14');
+  },
+  firebat(pc) {
+    // 3 cuadros de 18×12: alas arriba, al medio y abajo, con puntas encendidas
+    const lift = [-3, 0, 3];
+    for (let f = 0; f < 3; f++) {
+      const ox = f * 18;
+      for (const side of [-1, 1]) {
+        for (let k = 1; k <= 6; k++) {
+          const x = ox + 9 + side * (k + 1);
+          const y = 5 + Math.round((lift[f] * k) / 6);
+          pc.set(x, y, '#5a1a10');
+          pc.set(x, y + 1, k % 2 ? '#8a2a14' : '#5a1a10');
+          if (k < 5) pc.set(x, y + 2, '#3a0e08');
+          if (k === 6) pc.set(x, y - 1, '#ffb030');
+        }
+      }
+      pc.rect(ox + 8, 4, 3, 5, '#b8401a');
+      pc.rect(ox + 8, 4, 3, 1, '#ff8a30');
+      pc.set(ox + 8, 3, '#b8401a');
+      pc.set(ox + 10, 3, '#b8401a');
+      pc.set(ox + 8, 5, '#ffe060');
+      pc.set(ox + 10, 5, '#ffe060');
+    }
+    pc.outline('#1a0806');
+  },
+
   // ---------- jugador (hoja de 8 cuadros) ----------
   player(pc) {
     // Todas las poses de player/animations.js, 8 por fila
@@ -908,6 +1536,34 @@ const PIXEL = {
   // ---------- árboles ----------
   tree_top(pc) {
     for (let v = 0; v < 3; v++) drawCanopy(pc, v * 72, v);
+  },
+  tree_top_pine(pc) {
+    // Pinos nevados: capas en forma de triángulo con nieve en los bordes
+    for (let v = 0; v < 3; v++) {
+      const cx = v * 72 + 36;
+      const layers = 4 + v;
+      for (let k = 0; k < layers; k++) {
+        const top = 6 + k * (52 / layers);
+        const half = 8 + k * (22 / layers) + 4;
+        for (let y = 0; y < 52 / layers + 4; y++) {
+          const w = Math.round((half * (y + 2)) / (52 / layers + 6));
+          for (let x = -w; x <= w; x++) pc.set(cx + x, Math.round(top + y), y < 2 ? '#ffffff' : x < -w / 3 ? '#1f4a34' : '#2b6346');
+        }
+      }
+    }
+    pc.outline('#102a1c');
+  },
+  tree_top_jungle(pc) {
+    for (let v = 0; v < 3; v++) drawCanopy(pc, v * 72, v, JUNGLE_LEAF, 1.08);
+    // Lianas colgando
+    for (let i = 0; i < 9; i++) {
+      const x = (i % 3) * 72 + 14 + Math.floor(hash(i, 1, 300) * 44);
+      const len = 6 + Math.floor(hash(i, 2, 300) * 10);
+      pc.line(x, 50, x, 50 + len, '#2f7a28');
+    }
+  },
+  tree_top_shadow(pc) {
+    for (let v = 0; v < 3; v++) drawCanopy(pc, v * 72, v, SHADOW_LEAF, 0.85);
   },
   tree_branch(pc) {
     pc.line(0, 9, 5, 8, '#6b4423');
@@ -1075,56 +1731,41 @@ const CTX = {
       ctx.fillRect(x, y, big ? 4 : 2, big ? 4 : 2);
     }
   },
-  mountains(ctx, w, h) {
-    // Cordillera lejana repetible, con nieve en los picos más altos
-    const hf = (u) =>
-      0.25 + 0.42 * (0.5 + 0.5 * Math.sin(TAU * 2 * u + 0.3)) * (1 - Math.abs(Math.sin(Math.PI * 5 * u + 1))) + 0.12 * (0.5 + 0.5 * Math.sin(TAU * 9 * u));
+  mountains(ctx, w, h, v, asset) {
+    // Cordillera lejana repetible, con nieve (o lava, o cristal) en los picos más altos
+    const th = BG_THEMES[asset?.theme || 'forest'];
+    const [lit, shade, flat] = th.mountain;
+    const hf = th.mountainShape || MOUNTAIN_SHAPE;
     const cols = w / 2;
     ridge(ctx, w, h, hf, (d, slope, x) => {
       const peak = hf(x / cols);
-      if (peak > 0.55 && d < 2 + Math.round((peak - 0.55) * 30)) return '#e6eef8';
-      return slope > 0.004 ? '#93add2' : slope < -0.004 ? '#7590b8' : '#8399c0';
+      if (th.cap && peak > th.capFrom && d < 2 + Math.round((peak - th.capFrom) * 30)) return th.cap;
+      return slope > 0.004 ? lit : slope < -0.004 ? shade : flat;
     });
   },
-  hills(ctx, w, h) {
-    const hf = (u) => 0.42 + 0.16 * Math.sin(TAU * 3 * u + 1) + 0.09 * Math.sin(TAU * 7 * u + 2);
-    ridge(ctx, w, h, hf, (d, slope) => (d < 2 ? '#86c47a' : slope > 0.004 ? '#5ea657' : slope < -0.004 ? '#4f9149' : '#57a050'));
-    // Arbolitos sobre las colinas
+  hills(ctx, w, h, v, asset) {
+    const th = BG_THEMES[asset?.theme || 'forest'];
+    const [top, lit, shade, flat] = th.hill;
+    const hf = th.hillShape || HILL_SHAPE;
+    ridge(ctx, w, h, hf, (d, slope) => (d < 2 ? top : slope > 0.004 ? lit : slope < -0.004 ? shade : flat));
+    // Cosas sobre las colinas (arbolitos, cactus, pinos, cristales…)
     const cols = w / 2;
-    for (let i = 0; i < 26; i++) {
+    for (let i = 0; i < th.hillProps; i++) {
       const x = Math.floor(hash(i, 1, 300) * cols);
-      const top = Math.round(h / 2 - hf(x / cols) * (h / 2));
+      const base = Math.round(h / 2 - hf(x / cols) * (h / 2));
       const r = 3 + Math.floor(hash(i, 2, 300) * 3);
-      ctx.fillStyle = '#4a3522';
-      for (const ox of [0, -cols, cols]) ctx.fillRect((x + ox) * 2, (top - 3) * 2, 2, 8);
-      ctx.fillStyle = '#3f7d3c';
-      for (let dy = -r; dy <= r; dy++) {
-        const half = Math.floor(Math.sqrt(r * r - dy * dy));
-        for (const ox of [0, -cols, cols]) ctx.fillRect((x - half + ox) * 2, (top - r - 2 + dy) * 2, (half * 2 + 1) * 2, 2);
-      }
+      for (const ox of [0, -cols, cols]) HILL_PROPS[th.hillProp](ctx, x + ox, base, r, th, i);
     }
   },
-  forest(ctx, w, h) {
+  forest(ctx, w, h, v, asset) {
+    // Capa más cercana del paisaje: suelo + siluetas típicas de cada zona
+    const th = BG_THEMES[asset?.theme || 'forest'];
     const cols = w / 2;
     const rows = h / 2;
     const ground = Math.round(rows * 0.8);
-    ctx.fillStyle = '#2b5a2c';
+    FRONT[th.front](ctx, cols, rows, ground, th);
+    ctx.fillStyle = th.ground;
     ctx.fillRect(0, ground * 2, w, h - ground * 2);
-    for (let i = 0; i < 60; i++) {
-      const x = Math.floor((i / 60) * cols + hash(i, 1, 400) * 6);
-      const th = 14 + Math.floor(hash(i, 2, 400) * 22);
-      const r = 5 + Math.floor(hash(i, 3, 400) * 4);
-      const cy = ground - th;
-      for (const ox of [0, -cols, cols]) {
-        ctx.fillStyle = '#3b2a1a';
-        ctx.fillRect((x + ox) * 2, cy * 2, 4, (th + 2) * 2);
-        for (let dy = -r; dy <= r; dy++) {
-          const half = Math.floor(Math.sqrt(r * r - dy * dy));
-          ctx.fillStyle = dy < -r / 3 ? '#3c7340' : '#2f6332';
-          ctx.fillRect((x - half + ox) * 2, (cy + dy) * 2, (half * 2 + 1) * 2, 2);
-        }
-      }
-    }
   },
   missing(ctx, w, h) {
     ctx.fillStyle = '#ff00ff';
@@ -1148,7 +1789,7 @@ export function paintPlaceholder(asset, variant = 0) {
     PIXEL[name](pc, variant, asset);
     pc.draw(ctx, 0, 0, 2);
   } else {
-    (CTX[name] || CTX.missing)(ctx, asset.width, asset.height, variant);
+    (CTX[name] || CTX.missing)(ctx, asset.width, asset.height, variant, asset);
   }
   return canvas;
 }

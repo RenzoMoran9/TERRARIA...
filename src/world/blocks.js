@@ -133,25 +133,72 @@ addObjectParts(STORAGE);
 Object.assign(OBJECTS, STORAGE);
 
 // ---------------------------------------------------------------------------
+// Bloques de los biomas (agregados al final: los ids anteriores no cambian)
+// plant = planta decorativa (se rompe al instante, se puede construir encima, necesita suelo)
+// trunk = se tala entero como un árbol (tronco, cactus). hurts = daño al tocarlo.
+// grassy = tiene pasto arriba (se ve la tierra de "covered" cuando se tapa)
+// ---------------------------------------------------------------------------
+const BIOME_BLOCKS = [
+  ['SAND', { name: 'Arena', texture: 'tile_sand', framed: true, solid: true, hardness: 0.45, tier: 0, drop: 'sand', color: 0xdcc58a }],
+  ['SANDSTONE', { name: 'Arenisca', texture: 'tile_sandstone', framed: true, solid: true, hardness: 1.6, tier: 1, drop: 'sandstone', color: 0xc9a46a }],
+  ['SNOW', { name: 'Nieve', texture: 'tile_snow', framed: true, solid: true, hardness: 0.4, tier: 0, drop: 'snow', color: 0xeef4fb }],
+  ['ICE', { name: 'Hielo', texture: 'tile_ice', framed: true, solid: true, hardness: 1.2, tier: 1, drop: 'ice', color: 0x9fd6f2 }],
+  ['JUNGLE_GRASS', { name: 'Pasto de selva', texture: 'tile_jungle_grass', covered: 'tile_mud', grassy: true, framed: true, solid: true, hardness: 0.55, tier: 0, drop: 'mud', color: 0x3fb03a }],
+  ['MUD', { name: 'Lodo', texture: 'tile_mud', framed: true, solid: true, hardness: 0.5, tier: 0, drop: 'mud', color: 0x5b4030 }],
+  ['SHADOW_GRASS', { name: 'Pasto sombrío', texture: 'tile_shadow_grass', covered: 'tile_dirt', grassy: true, framed: true, solid: true, hardness: 0.6, tier: 0, drop: 'dirt', color: 0x7b4fb0 }],
+  ['SHADOW_STONE', { name: 'Piedra sombría', texture: 'tile_shadow_stone', framed: true, solid: true, hardness: 2.4, tier: 2, drop: 'shadow_stone', color: 0x4a3a66 }],
+  ['CRYSTAL_GRASS', { name: 'Pasto de cristal', texture: 'tile_crystal_grass', covered: 'tile_dirt', grassy: true, framed: true, solid: true, hardness: 0.6, tier: 0, drop: 'dirt', color: 0x7fe0e8 }],
+  ['CRYSTAL', { name: 'Cristal', texture: 'tile_crystal', framed: true, solid: true, hardness: 2.6, tier: 2, drop: 'crystal', light: 0.55, color: 0xe08cf0 }],
+  ['ASH', { name: 'Ceniza', texture: 'tile_ash', framed: true, solid: true, hardness: 0.5, tier: 0, drop: 'ash', color: 0x55504f }],
+  ['BASALT', { name: 'Basalto', texture: 'tile_basalt', framed: true, solid: true, hardness: 2.2, tier: 1, drop: 'basalt', color: 0x3a3236 }],
+  ['LAVA', { name: 'Lava', texture: 'tile_lava', solid: false, hardness: Infinity, tier: 99, drop: null, light: 1, hurts: 18, color: 0xff7a1a }],
+  ['CACTUS', { name: 'Cactus', texture: 'tile_cactus', solid: false, trunk: true, hardness: 0.6, tier: 0, drop: 'cactus', hurts: 4, color: 0x4f9a3c }],
+  ['PLANT_DESERT', { name: 'Arbusto seco', textures: ['tile_plant_desert', 'tile_plant_desert2'], plant: true, solid: false, hardness: 0.05, tier: 0, drop: null, color: 0xa08a50 }],
+  ['PLANT_SNOW', { name: 'Pasto helado', textures: ['tile_plant_snow', 'tile_plant_snow2'], plant: true, solid: false, hardness: 0.05, tier: 0, drop: null, color: 0xcfe8f0 }],
+  ['PLANT_JUNGLE', { name: 'Flor de selva', textures: ['tile_plant_jungle', 'tile_plant_jungle2'], plant: true, solid: false, hardness: 0.05, tier: 0, drop: null, light: 0.35, color: 0xff5fa0 }],
+  ['PLANT_SHADOW', { name: 'Hongo sombrío', textures: ['tile_plant_shadow', 'tile_plant_shadow2'], plant: true, solid: false, hardness: 0.05, tier: 0, drop: null, light: 0.3, color: 0xa070e0 }],
+  ['PLANT_CRYSTAL', { name: 'Brote de cristal', textures: ['tile_plant_crystal', 'tile_plant_crystal2', 'tile_plant_crystal3'], plant: true, solid: false, hardness: 0.1, tier: 0, drop: null, light: 0.5, color: 0xe08cf0 }],
+  ['PLANT_VOLCANO', { name: 'Flor de fuego', textures: ['tile_plant_volcano', 'tile_plant_volcano2'], plant: true, solid: false, hardness: 0.05, tier: 0, drop: null, light: 0.45, color: 0xff9a30 }],
+];
+for (const [key, def] of BIOME_BLOCKS) {
+  BLOCK[key] = BLOCK_DEFS.length;
+  BLOCK_DEFS.push({ id: BLOCK[key], light: 0, ...def });
+}
+BLOCK_DEFS[BLOCK.PLANT].plant = true;
+BLOCK_DEFS[BLOCK.LOG].trunk = true;
+
+// ---------------------------------------------------------------------------
 // Paredes de fondo. Las naturales las calcula el generador; las que pone o quita el
 // jugador se guardan aparte (ver World). Ids fijos: se guardan en las partidas.
 // ---------------------------------------------------------------------------
-export const WALL = Object.freeze({ NONE: 0, DIRT: 1, STONE: 2, WOOD: 3 });
+export const WALL = Object.freeze({ NONE: 0, DIRT: 1, STONE: 2, WOOD: 3, SANDSTONE: 4, ICE: 5, MUD: 6, SHADOW: 7, ASH: 8 });
+// item = lo que suelta con el martillo (las paredes naturales de los biomas no sueltan nada)
 export const WALL_DEFS = [
   null,
   { name: 'Pared de tierra', texture: 'wall_dirt', item: 'dirt_wall', color: 0x4c301a },
   { name: 'Pared de piedra', texture: 'wall_stone', item: 'stone_wall', color: 0x3f454e },
   { name: 'Pared de madera', texture: 'wall_wood', item: 'wood_wall', color: 0x6b4a26 },
+  { name: 'Pared de arenisca', texture: 'wall_sandstone', item: null, color: 0x8a6a3e },
+  { name: 'Pared de hielo', texture: 'wall_ice', item: null, color: 0x5f8eaa },
+  { name: 'Pared de lodo', texture: 'wall_mud', item: null, color: 0x3a281c },
+  { name: 'Pared sombría', texture: 'wall_shadow', item: null, color: 0x2e2440 },
+  { name: 'Pared de ceniza', texture: 'wall_ash', item: null, color: 0x2e2a2a },
 ];
 
 // Tablas de consulta rápida (se usan miles de veces por frame)
 export const IS_SOLID = new Uint8Array(256);
+export const IS_PLANT = new Uint8Array(256); // plantas decorativas (se reemplazan al construir)
+export const IS_TRUNK = new Uint8Array(256); // troncos y cactus (se talan enteros)
+export const HURTS = new Uint8Array(256); // daño al tocarlo (lava, cactus)
 export const LIGHT_EMIT = new Float32Array(256);
 export const IS_FRAMED = new Uint8Array(256);
 for (const def of BLOCK_DEFS) {
   IS_SOLID[def.id] = def.solid ? 1 : 0;
   LIGHT_EMIT[def.id] = def.light;
   IS_FRAMED[def.id] = def.framed ? 1 : 0;
+  IS_PLANT[def.id] = def.plant ? 1 : 0;
+  IS_TRUNK[def.id] = def.trunk ? 1 : 0;
+  HURTS[def.id] = def.hurts || 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -168,7 +215,7 @@ export const MATERIALS = [
     textures: def.textures || [def.texture],
     covered: def.covered || null,
     framed: !!def.framed,
-    grassy: def.id === BLOCK.GRASS,
+    grassy: def.id === BLOCK.GRASS || !!def.grassy,
     crop: def.crop || null,
   })),
   ...WALL_DEFS.slice(1).map((w) => ({ textures: [w.texture], covered: null, framed: false, grassy: false, crop: null })),

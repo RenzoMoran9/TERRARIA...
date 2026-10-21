@@ -6,6 +6,7 @@ import { InventoryPanel } from '../ui/InventoryPanel.js';
 import { TouchControls } from '../ui/TouchControls.js';
 import { DebugOverlay } from '../ui/DebugOverlay.js';
 import { Toast } from '../ui/Toast.js';
+import { ZoneBanner } from '../ui/ZoneBanner.js';
 import { textStyle } from '../ui/styles.js';
 
 /**
@@ -29,6 +30,7 @@ export class UIScene extends Phaser.Scene {
     this.inventoryPanel = new InventoryPanel(this, gs);
     this.touchControls = new TouchControls(this, gs);
     this.toast = new Toast(this);
+    this.zoneBanner = new ZoneBanner(this);
 
     this.deathText = this.add
       .text(0, 0, '', textStyle({ fontSize: '30px', strokeThickness: 5, color: '#ff6b6b', align: 'center' }))
@@ -62,6 +64,7 @@ export class UIScene extends Phaser.Scene {
     // --- Eventos del juego ---
     this._handlers = {
       toast: (msg) => this.toast.show(msg),
+      zoneDiscovered: (biome) => this.zoneBanner.show(biome, gs.zones.discovered.size, gs.zones.total),
       playerDied: () => {
         this.toggleInventory(false);
         this.deathText.setVisible(true);
@@ -122,8 +125,11 @@ export class UIScene extends Phaser.Scene {
     this.hotbar.layout(Math.round((W - HOTBAR_WIDTH * scale) / 2), y, scale);
     const hotbarBottom = y + HOTBAR_HEIGHT * scale;
 
+    // En pantallas angostas la barra va en una segunda fila: la zona actual baja debajo de ella
+    this.hud.zoneText.setPosition(W - 12, y === 42 ? hotbarBottom + 4 : 34);
     this.debug.layout(10, Math.max(54, y === 42 ? hotbarBottom + 8 : 54));
     this.toastY = hotbarBottom + 26;
+    this.zoneBanner.layout(W / 2, Math.max(hotbarBottom + 60, H * 0.2));
     this.layoutToast();
     this.inventoryPanel.layout(W, H);
     this.touchControls.layout(W, H, y === 42 ? hotbarBottom + 28 : 62);

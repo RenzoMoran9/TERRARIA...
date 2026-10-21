@@ -1,5 +1,6 @@
 import { TILE_SIZE, PLAYER as P } from '../config.js';
 import { PlayerAnimator } from './PlayerAnimator.js';
+import { HURTS, BLOCK } from '../world/blocks.js';
 
 const EPS = 0.001;
 const MAX_STEP = 8; // el movimiento se divide en pasos de ≤8 px para no atravesar bloques
@@ -143,10 +144,35 @@ export class Player {
     }
 
     this.regen(dt);
+    this._checkHazards();
 
     // --- Animación ---
     this.stepOffset = Math.max(0, this.stepOffset - dt * 320);
     this.anim.update(dt);
+  }
+
+  /** Tocar lava o un cactus hace daño (la lava además quema y hace saltar para salir). */
+  _checkHazards() {
+    const T = TILE_SIZE;
+    let worst = 0;
+    let lava = false;
+    for (let ty = Math.floor(this.y / T); ty <= Math.floor((this.y + this.h - EPS) / T); ty++) {
+      for (let tx = Math.floor((this.x - 1) / T); tx <= Math.floor((this.x + this.w + 1) / T); tx++) {
+        const id = this.world.getTile(tx, ty);
+        if (HURTS[id] > worst) worst = HURTS[id];
+        if (id === BLOCK.LAVA) lava = true;
+      }
+    }
+    if (!worst || !this.hit(worst, this.centerX + (lava ? 0 : this.facing * 10))) return;
+    if (lava) {
+      this.vx *= 0.3;
+      this.vy = -520; // salta de la lava
+      this.scene.spawnSparkles(this.centerX, this.y + this.h, 10, 0xff8a30);
+      if (!this._lavaWarned) {
+        this._lavaWarned = true;
+        this.scene.events.emit('toast', '¡La lava quema! Sal rápido');
+      }
+    }
   }
 
   /** Regeneración lenta de vida (después de un rato sin recibir daño). */

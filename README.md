@@ -92,6 +92,19 @@ Las puertas se abren solas al caminar contra ellas y se cierran al alejarse. Par
   martillo), puertas de 3 bloques de alto, sillas para sentarse, mesas y camas. La silla y la cama miran hacia donde
   está el jugador al colocarlas. Los muebles se quitan enteros minando cualquier parte y se caen si se les quita el suelo.
   **Cama**: dormir en ella la vuelve el punto de reaparición; de noche, la noche pasa rápido hasta la mañana.
+- **Mundo con zonas** (cada vez más peligrosas cuanto más lejos del inicio): el **Bosque** en el centro; hacia un
+  lado **Desierto** (dunas, cactus que pinchan y una **pirámide con un cofre del tesoro**), **Tierras Sombrías**
+  (pasto violeta, abismos, piedra sombría) y **Tierras de Cristal** (torres de cristal que brillan); hacia el otro,
+  **Tundra nevada** (pinos, hielo), **Selva** (árboles gigantes con lianas, barro, flores que brillan) y el **Volcán**
+  (ceniza, basalto, cráter con **lava que quema**). Cada zona tiene su propio paisaje de fondo con paralaje, su color
+  de cielo y sus partículas (nieve, polvo de arena, luciérnagas, esporas, destellos, brasas y ceniza); el fondo se
+  funde suavemente al pasar de una zona a otra. Al entrar por primera vez aparece el cartel **¡Zona descubierta!**
+  con su nivel de peligro (★) y cuántas llevas (se guarda con la partida); arriba a la derecha se ve la zona actual.
+  **Enemigos de cada zona**: escorpiones (Desierto), avispas que se lanzan en picada (Selva), ojos voladores
+  (Tierras Sombrías y de Cristal), murciélagos de fuego (Volcán), slimes de arena, hielo, selva, sombra, cristal y
+  lava, y zombis de cada zona. En las zonas lejanas tienen más vida, pegan más fuerte y aparecen más seguido.
+  Sueltan materiales de su zona (arena, hielo, barro, piedra sombría, cristal, carbón, cactus).
+  Las zonas nuevas aparecen completas en un **mundo nuevo**; en una partida vieja, lo que ya habías modificado se mantiene.
 - **Enemigos y combate**: **slimes** (saltan hacia ti; verdes de día, azules de noche y en cuevas) y **zombis**
   (solo de noche; caminan hacia ti, suben escalones y saltan obstáculos de 2 bloques, pero **no abren puertas**).
   Aparecen fuera de la pantalla y nunca donde hay paredes de fondo puestas por ti. Hacen daño al tocarte, te
@@ -111,6 +124,8 @@ Las puertas se abren solas al caminar contra ellas y se cierran al alejarse. Par
   | Flechas de madera ×10 | Munición del arco | 1 madera + 1 piedra (Mesa) |
   | Bumerán de madera | Va, golpea y vuelve a la mano | 8 tablones (Mesa) |
   | Cuchillos arrojadizos ×15 | Se lanzan y se gastan | 1 lingote (Yunque) |
+  | Espada de cactus | Golpe en arco (mejor que la de piedra) | 10 cactus (Mesa) |
+  | Espada de cristal | La más fuerte por ahora | 20 cristal + 5 lingotes (Yunque) |
 - **Progresión**: con el **Horno** (20 piedra + 4 madera + 3 antorchas, en la mesa) se funde el mineral de hierro
   (3 → 1 lingote) y se hacen **ladrillos de piedra** (2 piedra → 1, un bloque sólido para construir). Con 5 lingotes
   se hace el **Yunque de hierro**, donde se fabrican el pico (12 lingotes + 3 madera, el más rápido), la espada
@@ -157,7 +172,7 @@ Con `npm run dev` la página se recarga sola al agregar o cambiar una imagen. Pa
 Se recomienda **PNG con transparencia**. Si una imagen tiene otro tamaño se escala al tamaño de dibujo
 (los bloques siempre se dibujan a 32×32), así que también se pueden usar imágenes al doble de resolución.
 
-### Lista completa de imágenes (82)
+### Lista completa de imágenes (142)
 
 **Bloques.** Basta con dibujar un bloque "entero" de 32×32: el juego genera solo el contorno oscuro y las esquinas
 redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pasto tapado por otro bloque usa la imagen de la tierra.
@@ -179,9 +194,41 @@ redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pas
 | `tiles/plant_flower_red.png`         | 32 × 32     | Flor roja decorativa (transparente)                                         |
 | `tiles/plant_flower_yellow.png`      | 32 × 32     | Flor amarilla decorativa (transparente)                                     |
 | `tiles/stone_brick.png`              | 32 × 32     | Ladrillo de piedra (también ícono del ítem)                                 |
+| `tiles/sand.png`                     | 32 × 32     | Arena (Desierto; también ícono) |
+| `tiles/sandstone.png`                | 32 × 32     | Arenisca (piedra del Desierto y de la pirámide) |
+| `tiles/snow.png`                     | 32 × 32     | Nieve (Tundra) |
+| `tiles/ice.png`                      | 32 × 32     | Hielo (piedra de la Tundra) |
+| `tiles/jungle_grass.png`             | 32 × 32     | Pasto de la Selva (sobre barro) |
+| `tiles/mud.png`                      | 32 × 32     | Barro (Selva) |
+| `tiles/shadow_grass.png`             | 32 × 32     | Pasto violeta (Tierras Sombrías) |
+| `tiles/shadow_stone.png`             | 32 × 32     | Piedra sombría (necesita pico de hierro) |
+| `tiles/crystal_grass.png`            | 32 × 32     | Pasto de cristal (Tierras de Cristal) |
+| `tiles/crystal.png`                  | 32 × 32     | Cristal: torres que brillan (necesita pico de hierro) |
+| `tiles/ash.png`                      | 32 × 32     | Ceniza (Volcán) |
+| `tiles/basalt.png`                   | 32 × 32     | Basalto (roca del Volcán) |
+| `tiles/lava.png`                     | 32 × 32     | Lava (no sólida, ilumina y quema) |
+| `tiles/cactus.png`                   | 32 × 32     | Tronco de cactus (pincha; también ícono del ítem) |
+| `tiles/plant_desert.png`             | 32 × 32     | Planta decorativa de la zona (transparente) |
+| `tiles/plant_desert2.png`            | 32 × 32     | Planta decorativa de la zona (transparente) |
+| `tiles/plant_snow.png`               | 32 × 32     | Planta decorativa de la zona (transparente) |
+| `tiles/plant_snow2.png`              | 32 × 32     | Planta decorativa de la zona (transparente) |
+| `tiles/plant_jungle.png`             | 32 × 32     | Planta decorativa de la zona (transparente) |
+| `tiles/plant_jungle2.png`            | 32 × 32     | Planta decorativa de la zona (transparente) |
+| `tiles/plant_shadow.png`             | 32 × 32     | Planta decorativa de la zona (transparente) |
+| `tiles/plant_shadow2.png`            | 32 × 32     | Planta decorativa de la zona (transparente) |
+| `tiles/plant_crystal.png`            | 32 × 32     | Planta decorativa de la zona (transparente) |
+| `tiles/plant_crystal2.png`           | 32 × 32     | Planta decorativa de la zona (transparente) |
+| `tiles/plant_crystal3.png`           | 32 × 32     | Planta decorativa de la zona (transparente) |
+| `tiles/plant_volcano.png`            | 32 × 32     | Planta decorativa de la zona (transparente) |
+| `tiles/plant_volcano2.png`           | 32 × 32     | Planta decorativa de la zona (transparente) |
 | `walls/dirt_wall.png`                | 32 × 32     | Pared de fondo de tierra (más oscura que el bloque)                         |
 | `walls/stone_wall.png`               | 32 × 32     | Pared de fondo de piedra (más oscura que el bloque)                         |
 | `walls/wood_wall.png`                | 32 × 32     | Pared de fondo de madera (más oscura que los tablones)                      |
+| `walls/sandstone_wall.png`           | 32 × 32     | Pared de arenisca (dentro de la pirámide y cuevas del Desierto) |
+| `walls/ice_wall.png`                 | 32 × 32     | Pared de hielo (cuevas de la Tundra) |
+| `walls/mud_wall.png`                 | 32 × 32     | Pared de barro (cuevas de la Selva) |
+| `walls/shadow_wall.png`              | 32 × 32     | Pared sombría (Tierras Sombrías) |
+| `walls/ash_wall.png`                 | 32 × 32     | Pared de ceniza (Volcán) |
 | `furniture/door_closed.png`          | 32 × 96     | Puerta cerrada (1×3 bloques, fondo transparente)                            |
 | `furniture/door_open.png`            | 32 × 96     | Puerta abierta (1×3 bloques; la hoja de canto del lado de las bisagras, a la izquierda) |
 | `furniture/chair.png`                | 32 × 64     | Silla (1×2) **mirando a la derecha**: respaldo a la izquierda, asiento a unos 20 px del piso (se refleja para la izquierda) |
@@ -192,6 +239,9 @@ redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pas
 | `furniture/bed.png`                  | 128 × 64    | Cama (4×2) con la cabecera y la almohada **a la izquierda**; el colchón a unos 32 px del piso (se refleja para el otro lado) |
 | `trees/tree_top.png`                 | 432 × 128   | Copas de árbol: **3 variantes de 144×128** una al lado de la otra; la base de la copa va abajo al centro |
 | `trees/tree_branch.png`              | 32 × 32     | Ramita con hojas que sale del tronco **hacia la derecha** (se refleja para la izquierda) |
+| `trees/tree_top_pine.png`            | 432 × 128   | Copas de pino nevado (3 variantes de 144×128, como `tree_top.png`) |
+| `trees/tree_top_jungle.png`          | 432 × 128   | Copas de árbol de la Selva (3 variantes) |
+| `trees/tree_top_shadow.png`          | 432 × 128   | Copas de árbol sombrío (3 variantes) |
 | `items/wood.png`                     | 32 × 32     | Ícono de *Madera*                                                           |
 | `items/coal.png`                     | 32 × 32     | Ícono de *Carbón*                                                           |
 | `items/wood_pickaxe.png`             | 32 × 32     | Ícono de *Pico de madera* (mango abajo a la izquierda, cabeza arriba a la derecha) |
@@ -222,12 +272,37 @@ redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pas
 | `items/gel.png`                      | 32 × 32     | Ícono de *Gel*                                                              |
 | `items/wood_sword.png`               | 32 × 32     | Ícono de *Espada de madera* (mango abajo a la izquierda, punta arriba a la derecha: así se ve en la mano) |
 | `items/stone_sword.png`              | 32 × 32     | Ícono de *Espada de piedra* (misma orientación)                             |
+| `items/cactus.png`                   | 32 × 32     | Ícono de *Cactus* |
+| `items/cactus_sword.png`             | 32 × 32     | Ícono de *Espada de cactus* |
+| `items/crystal_sword.png`            | 32 × 32     | Ícono de *Espada de cristal* |
 | `enemies/slime.png`                  | 96 × 24     | Slime: **3 cuadros de 32×24** (quieto, aplastado, estirado) en **gris claro**: el juego lo tiñe de verde o azul |
 | `enemies/zombie.png`                 | 240 × 64    | Zombi: **5 cuadros de 48×64** mirando a la derecha (caminar ×4 y golpeado), pies abajo al centro |
+| `enemies/scorpion.png`               | 120 × 24    | Escorpión: **3 cuadros de 40×24** caminando, mirando a la derecha |
+| `enemies/wasp.png`                   | 64 × 28     | Avispa: **2 cuadros de 32×28** (alas arriba y abajo) |
+| `enemies/eye.png`                    | 64 × 24     | Ojo volador: **2 cuadros de 32×24**, mirando a la derecha |
+| `enemies/firebat.png`                | 108 × 24    | Murciélago de fuego: **3 cuadros de 36×24** (aleteo) |
 | `player/player.png`                  | 384 × 256   | Jugador: **31 poses de 48×64**, 8 por fila, mirando a la derecha (los pies tocan el borde de abajo). Orden: quieto, respirar, parpadear, caminar ×8, saltar, caer, agitar brazos, aterrizar, golpe ×3 (levantar, bajar, impacto), usar, daño, festejo, empujar, mirar atrás, bostezo, cansado ×2, sentado/dormido ×2, saludo ×2, sentado en una silla (ver `src/player/animations.js`) |
 | `backgrounds/mountains.png`          | 960 × 320   | Montañas lejanas (se repite en horizontal: los bordes izquierdo y derecho deben empalmar) |
 | `backgrounds/hills.png`              | 960 × 240   | Colinas intermedias (repetible en horizontal)                               |
 | `backgrounds/forest.png`             | 960 × 240   | Bosque cercano (repetible en horizontal)                                    |
+| `backgrounds/mountains_desert.png`   | 960 × 320   | Montañas lejanas de: Desierto (repetible) |
+| `backgrounds/hills_desert.png`       | 960 × 240   | Colinas de: Desierto (repetible) |
+| `backgrounds/forest_desert.png`      | 960 × 240   | Capa cercana de: Desierto (repetible) |
+| `backgrounds/mountains_snow.png`     | 960 × 320   | Montañas lejanas de: Tundra (repetible) |
+| `backgrounds/hills_snow.png`         | 960 × 240   | Colinas de: Tundra (repetible) |
+| `backgrounds/forest_snow.png`        | 960 × 240   | Capa cercana de: Tundra (repetible) |
+| `backgrounds/mountains_jungle.png`   | 960 × 320   | Montañas lejanas de: Selva (repetible) |
+| `backgrounds/hills_jungle.png`       | 960 × 240   | Colinas de: Selva (repetible) |
+| `backgrounds/forest_jungle.png`      | 960 × 240   | Capa cercana de: Selva (repetible) |
+| `backgrounds/mountains_shadow.png`   | 960 × 320   | Montañas lejanas de: Tierras Sombrías (repetible) |
+| `backgrounds/hills_shadow.png`       | 960 × 240   | Colinas de: Tierras Sombrías (repetible) |
+| `backgrounds/forest_shadow.png`      | 960 × 240   | Capa cercana de: Tierras Sombrías (repetible) |
+| `backgrounds/mountains_crystal.png`  | 960 × 320   | Montañas lejanas de: Tierras de Cristal (repetible) |
+| `backgrounds/hills_crystal.png`      | 960 × 240   | Colinas de: Tierras de Cristal (repetible) |
+| `backgrounds/forest_crystal.png`     | 960 × 240   | Capa cercana de: Tierras de Cristal (repetible) |
+| `backgrounds/mountains_volcano.png`  | 960 × 320   | Montañas lejanas de: Volcán (repetible) |
+| `backgrounds/hills_volcano.png`      | 960 × 240   | Colinas de: Volcán (repetible) |
+| `backgrounds/forest_volcano.png`     | 960 × 240   | Capa cercana de: Volcán (repetible) |
 | `backgrounds/cloud.png`              | 128 × 48    | Nube                                                                        |
 | `backgrounds/sun.png`                | 64 × 64     | Sol                                                                         |
 | `backgrounds/moon.png`               | 48 × 48     | Luna                                                                        |
@@ -265,7 +340,7 @@ src/
   scenes/              BootScene (carga), BackgroundScene (cielo y paisaje), MenuScene, GameScene (mundo) y UIScene (interfaz)
   world/               Ruido con semilla, bloques, generador, datos por chunks, renderizado de chunks y tileset
   player/              Jugador: física, colisiones, vida y daño por caída (Player), poses (animations) y animaciones y efectos (PlayerAnimator)
-  systems/             Inventario, ítems, crafteo, minar/colocar, muebles (Furniture), día/noche, iluminación, guardado y placeholders (pixel art por código)
+  systems/             Inventario, ítems, crafteo, minar/colocar, muebles (Furniture), enemigos, zonas (Zones) y sus partículas (Ambience), día/noche, iluminación, guardado y placeholders (pixel art por código)
   ui/                  HUD, barra rápida, inventario, controles táctiles, debug y avisos
 ```
 

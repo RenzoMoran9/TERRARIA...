@@ -14,6 +14,9 @@ import { BLOCK, IS_SOLID, IS_FRAMED, WALL, WALL_MATERIAL, PART, tileIndex, varia
 import { getViewRect } from '../systems/view.js';
 import { frameCount } from '../systems/Placeholders.js';
 import { hash2 } from './noise.js';
+import { TREE_TYPES } from './WorldGenerator.js';
+
+const CANOPY = { forest: 'tree_top', pine: 'tree_top_pine', jungle: 'tree_top_jungle', shadow: 'tree_top_shadow' };
 
 const T = TILE_SIZE;
 // Parte de abajo a la izquierda del horno: ahí se agrega el brillo del fuego
@@ -211,14 +214,17 @@ export class ChunkManager {
     if (!h) return; // tronco sin árbol generado (no debería pasar)
     const surface = gen.surface[tx];
     const top = surface - h;
+    // Copa según la zona: bosque, pino nevado, árbol de selva o árbol sombrío
+    const type = TREE_TYPES[gen.treeType[tx]];
+    const key = CANOPY[type] || 'tree_top';
     if (ty === top) {
       const frame = Math.floor(hash2(tx, 3, gen.seed) * this.canopyFrames);
       const canopy = this.scene.add
-        .image((tx + 0.5) * T, (top + 1) * T + 6, 'tree_top', frame)
+        .image((tx + 0.5) * T, (top + 1) * T + 6, key, frame)
         .setOrigin(0.5, 1)
         .setDepth(DEPTH.BLOCKS + 0.5);
       this._addDecor(entry, tx, ty, canopy);
-    } else if (ty > top + 1 && ty < surface - 2 && hash2(tx, ty, gen.seed + 7) < 0.22) {
+    } else if ((type === 'forest' || type === 'jungle') && ty > top + 1 && ty < surface - 2 && hash2(tx, ty, gen.seed + 7) < 0.22) {
       const left = hash2(tx, ty, gen.seed + 8) < 0.5;
       const branch = this.scene.add
         .image(left ? tx * T + 4 : (tx + 1) * T - 4, (ty + 0.5) * T, 'tree_branch')

@@ -1,8 +1,10 @@
 import { TILE_SIZE, DEPTH } from '../config.js';
-import { BLOCK } from '../world/blocks.js';
+import { BLOCK, IS_PLANT } from '../world/blocks.js';
+import { BIOME, BIOME_INFO } from '../world/WorldGenerator.js';
 import { frameCount } from './Placeholders.js';
 
 const T = TILE_SIZE;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const EPS = 0.001;
 const MAX_STEP = 8;
 const GRAVITY = 1700;
@@ -28,6 +30,7 @@ export const ENEMY_TYPES = {
     hp: 14,
     damage: 7,
     resist: 0,
+    blood: 0x6ad16a,
     drops: [['gel', 1, 2, 1]],
   },
   zombie: {
@@ -41,15 +44,133 @@ export const ENEMY_TYPES = {
     damage: 14,
     resist: 0.55,
     speed: 72,
+    nightOnly: true,
+    blood: 0x7fae6a,
     drops: [['gel', 0, 1, 0.3]],
   },
+  // Desierto: camina rápido hacia el jugador, de día y de noche
+  scorpion: {
+    name: 'Escorpión',
+    texture: 'enemy_scorpion',
+    w: 34,
+    h: 20,
+    spriteW: 40,
+    spriteH: 24,
+    hp: 30,
+    damage: 12,
+    resist: 0.3,
+    speed: 105,
+    walkFrames: 3,
+    blood: 0xcf8a3e,
+    drops: [
+      ['cactus', 0, 2, 0.6],
+      ['gel', 0, 1, 0.4],
+    ],
+  },
+  // Selva: revolotea cerca y cada tanto se lanza en picada
+  wasp: {
+    name: 'Avispa',
+    texture: 'enemy_wasp',
+    flyer: 'wasp',
+    w: 22,
+    h: 18,
+    spriteW: 32,
+    spriteH: 28,
+    hp: 24,
+    damage: 12,
+    resist: 0.2,
+    speed: 150,
+    animFps: 22,
+    blood: 0xf2c432,
+    drops: [
+      ['gel', 0, 1, 0.5],
+      ['mud', 1, 2, 0.4],
+    ],
+  },
+  // Tierras Sombrías / Cristal: se acelera hacia el jugador, se pasa de largo y vuelve
+  eye: {
+    name: 'Ojo volador',
+    texture: 'enemy_eye',
+    flyer: 'eye',
+    w: 24,
+    h: 20,
+    spriteW: 32,
+    spriteH: 24,
+    hp: 40,
+    damage: 16,
+    resist: 0.25,
+    speed: 210,
+    animFps: 6,
+    blood: 0xd04060,
+    drops: [
+      ['shadow_stone', 1, 2, 0.6],
+      ['gel', 0, 1, 0.4],
+    ],
+  },
+  // Volcán: vuelo rápido y nervioso
+  firebat: {
+    name: 'Murciélago de fuego',
+    texture: 'enemy_firebat',
+    flyer: 'bat',
+    w: 24,
+    h: 16,
+    spriteW: 36,
+    spriteH: 24,
+    hp: 32,
+    damage: 18,
+    resist: 0.2,
+    speed: 220,
+    animFps: 12,
+    blood: 0xff8a30,
+    drops: [['coal', 1, 2, 0.7]],
+  },
 };
-const SLIME_COLORS = [0x6ad16a, 0x5fa8ff]; // verde (superficie de día) y azul (noche y cuevas)
+
+/** Variantes de slime (el gris del dibujo se tiñe con 'tint'); drops extra según la zona. */
+export const SLIME_KINDS = {
+  green: { name: 'Slime verde', tint: 0x6ad16a },
+  blue: { name: 'Slime azul', tint: 0x5fa8ff },
+  sand: { name: 'Slime de arena', tint: 0xe8c070, drops: [['sand', 1, 3, 0.6]] },
+  ice: { name: 'Slime de hielo', tint: 0xa8e4ff, drops: [['ice', 1, 2, 0.5]] },
+  jungle: { name: 'Slime de la selva', tint: 0x3f9a3a, drops: [['mud', 1, 2, 0.5]] },
+  shadow: { name: 'Slime sombrío', tint: 0x9a5ad0, drops: [['shadow_stone', 1, 2, 0.4]] },
+  crystal: { name: 'Slime de cristal', tint: 0xff9ef0, drops: [['crystal', 1, 2, 0.6]] },
+  lava: { name: 'Slime de lava', tint: 0xff7a30, drops: [['coal', 1, 2, 0.6]] },
+};
+// Zombis de cada zona (tinte sobre el dibujo)
+const ZOMBIE_TINTS = { [BIOME.DESERT]: 0xf0dca8, [BIOME.SNOW]: 0xa8d0ff, [BIOME.SHADOW]: 0xc8a8ff, [BIOME.CRYSTAL]: 0xffc8f4, [BIOME.VOLCANO]: 0xb89088 };
+
+/**
+ * Qué aparece en cada zona: [tipo, peso, variante de slime]. 'day' = de día, 'night' = de noche.
+ * Las zonas más lejanas tienen enemigos más fuertes (ver levelOf).
+ */
+const SPAWN_TABLE = {
+  [BIOME.FOREST]: { day: [['slime', 1, 'green']], night: [['zombie', 0.7], ['slime', 0.3, 'blue']] },
+  [BIOME.DESERT]: { day: [['scorpion', 0.55], ['slime', 0.45, 'sand']], night: [['scorpion', 0.4], ['zombie', 0.4], ['slime', 0.2, 'sand']] },
+  [BIOME.SNOW]: { day: [['slime', 1, 'ice']], night: [['zombie', 0.6], ['slime', 0.4, 'ice']] },
+  [BIOME.JUNGLE]: { day: [['wasp', 0.5], ['slime', 0.5, 'jungle']], night: [['wasp', 0.4], ['zombie', 0.35], ['slime', 0.25, 'jungle']] },
+  [BIOME.SHADOW]: { day: [['eye', 0.5], ['slime', 0.5, 'shadow']], night: [['eye', 0.55], ['zombie', 0.3], ['slime', 0.15, 'shadow']] },
+  [BIOME.CRYSTAL]: { day: [['slime', 0.6, 'crystal'], ['eye', 0.4]], night: [['eye', 0.4], ['slime', 0.35, 'crystal'], ['zombie', 0.25]] },
+  [BIOME.VOLCANO]: { day: [['firebat', 0.55], ['slime', 0.45, 'lava']], night: [['firebat', 0.55], ['zombie', 0.25], ['slime', 0.2, 'lava']] },
+};
+const CAVE_SLIME = { [BIOME.FOREST]: 'blue', [BIOME.DESERT]: 'sand', [BIOME.SNOW]: 'ice', [BIOME.JUNGLE]: 'jungle', [BIOME.SHADOW]: 'shadow', [BIOME.CRYSTAL]: 'crystal', [BIOME.VOLCANO]: 'lava' };
+const LEGACY_SLIME = ['green', 'blue']; // spawn(type, x, y, 0|1) de versiones anteriores
+
+function pickWeighted(list) {
+  let r = Math.random() * list.reduce((a, e) => a + e[1], 0);
+  for (const e of list) {
+    r -= e[1];
+    if (r <= 0) return e;
+  }
+  return list[list.length - 1];
+}
 
 /** Un enemigo: física propia contra los bloques (como el jugador) y una IA simple. */
 class Enemy {
-  constructor(manager, type, x, y, variant = 0) {
+  /** opts: { kind (variante de slime), tint, level (1 = normal; más alto = más vida y daño) } */
+  constructor(manager, type, x, y, opts = {}) {
     const def = ENEMY_TYPES[type];
+    if (typeof opts === 'number') opts = { kind: LEGACY_SLIME[opts] };
     this.manager = manager;
     this.scene = manager.scene;
     this.world = manager.world;
@@ -63,17 +184,26 @@ class Enemy {
     this.vy = 0;
     this.onGround = false;
     this.facing = 1;
-    this.hp = def.hp;
+    const kind = type === 'slime' ? SLIME_KINDS[opts.kind] || SLIME_KINDS.green : null;
+    this.kind = kind;
+    this.level = Math.max(1, opts.level || 1);
+    // Más lejos del inicio = más fuertes
+    this.maxHp = Math.round(def.hp * (1 + 0.45 * (this.level - 1)));
+    this.damage = Math.round(def.damage * (1 + 0.3 * (this.level - 1)));
+    this.hp = this.maxHp;
     this.dead = false;
     this.aiTimer = 0.5 + Math.random();
     this.blockedTime = 0;
     this.hurtTimer = 0;
     this.landTimer = 0;
     this.time = Math.random() * 10;
-    this.tint = type === 'slime' ? SLIME_COLORS[variant] : 0xffffff;
+    this.tint = kind ? kind.tint : opts.tint ?? 0xffffff;
+    this.blood = kind ? kind.tint : def.blood;
+    this.dashTimer = 1.5 + Math.random() * 2; // avispa: tiempo hasta la próxima picada
+    this.dashing = 0;
 
-    this.sprite = this.scene.add.image(0, 0, def.texture, 0).setOrigin(0.5, 1).setDepth(DEPTH.ENEMY);
-    if (type === 'slime') this.sprite.setTint(this.tint).setAlpha(0.9);
+    this.sprite = this.scene.add.image(0, 0, def.texture, 0).setOrigin(0.5, def.flyer ? 0.5 : 1).setDepth(DEPTH.ENEMY);
+    if (type === 'slime') this.sprite.setAlpha(0.9);
     this.barBg = this.scene.add.rectangle(0, 0, 30, 5, 0x000000, 0.6).setDepth(DEPTH.ENEMY + 0.1).setVisible(false);
     this.bar = this.scene.add.rectangle(0, 0, 28, 3, 0x6ee06e).setOrigin(0, 0.5).setDepth(DEPTH.ENEMY + 0.2).setVisible(false);
     this.sync();
@@ -145,10 +275,15 @@ class Enemy {
     const dx = player.centerX - this.centerX;
     const near = !player.dead && Math.abs(dx) < 40 * T && Math.abs(player.centerY - this.centerY) < 20 * T;
     const wasOnGround = this.onGround;
+    if (this.def.flyer) {
+      this._fly(dt, player, near);
+      this.sync();
+      return;
+    }
     if (this.type === 'slime') this._slime(dt, dx, near);
     else this._zombie(dt, dx, near, night);
     this.vy = Math.min(this.vy + GRAVITY * dt, MAX_FALL);
-    const blocked = this.moveX(this.vx * dt, this.type === 'zombie');
+    const blocked = this.moveX(this.vx * dt, this.type !== 'slime');
     this.moveY(this.vy * dt);
     this.blockedTime = blocked && this.onGround ? this.blockedTime + dt : 0;
     if (this.type === 'slime' && this.onGround && !wasOnGround) {
@@ -177,7 +312,7 @@ class Enemy {
    */
   _zombie(dt, dx, near, night) {
     let dir = near ? Math.sign(dx) || this.facing : this.facing;
-    if (!night) dir = -Math.sign(dx) || this.facing; // de día se va
+    if (!night && this.def.nightOnly) dir = -Math.sign(dx) || this.facing; // de día se va
     if (Math.abs(dx) < 4 && near) dir = 0;
     if (dir !== 0) this.facing = dir;
     const target = dir * this.def.speed;
@@ -190,6 +325,72 @@ class Enemy {
     }
   }
 
+  /**
+   * Voladores: no les afecta la gravedad y rebotan contra los bloques.
+   * Ojo: acelera hacia el jugador y se pasa de largo. Avispa: revolotea y se lanza en picada.
+   * Murciélago: vuelo nervioso que cambia de rumbo a cada rato.
+   */
+  _fly(dt, player, near) {
+    const def = this.def;
+    const tx = player.centerX;
+    const ty = player.y + player.h * 0.4;
+    let ax = 0;
+    let ay = 0;
+    let max = def.speed;
+    if (!near) {
+      // Sin jugador cerca: deambula
+      ax = Math.sin(this.time * 0.7) * 120;
+      ay = Math.cos(this.time * 1.1) * 80;
+    } else if (def.flyer === 'eye') {
+      ax = Math.sign(tx - this.centerX) * 260;
+      ay = Math.sign(ty - this.centerY) * 160;
+    } else if (def.flyer === 'wasp') {
+      this.dashTimer -= dt;
+      if (this.dashing > 0) {
+        this.dashing -= dt;
+        max = def.speed * 2.3;
+      } else if (this.dashTimer <= 0) {
+        // Picada directa hacia el jugador
+        const d = Math.hypot(tx - this.centerX, ty - this.centerY) || 1;
+        this.vx = ((tx - this.centerX) / d) * def.speed * 2.3;
+        this.vy = ((ty - this.centerY) / d) * def.speed * 2.3;
+        this.dashing = 0.55;
+        this.dashTimer = 2 + Math.random() * 1.5;
+      } else {
+        // Revolotea a un costado y por encima del jugador
+        const hx = tx + (this.centerX < tx ? -1 : 1) * 3.5 * T + Math.sin(this.time * 2.3) * 20;
+        const hy = ty - 3 * T + Math.sin(this.time * 3.1) * 16;
+        ax = clamp((hx - this.centerX) * 4, -420, 420);
+        ay = clamp((hy - this.centerY) * 4, -420, 420);
+      }
+    } else {
+      // Murciélago
+      this.aiTimer -= dt;
+      if (this.aiTimer <= 0) {
+        this.aiTimer = 0.25 + Math.random() * 0.35;
+        this.batJitter = (Math.random() - 0.5) * 2;
+      }
+      ax = Math.sign(tx - this.centerX) * 300 + (this.batJitter || 0) * 260;
+      ay = Math.sign(ty - this.centerY) * 220 - (this.batJitter || 0) * 300;
+    }
+    if (this.dashing <= 0) {
+      this.vx += ax * dt;
+      this.vy += ay * dt;
+    }
+    const sp = Math.hypot(this.vx, this.vy);
+    if (sp > max) {
+      this.vx *= max / sp;
+      this.vy *= max / sp;
+    }
+    if (Math.abs(this.vx) > 8) this.facing = Math.sign(this.vx);
+    const bx = this.vx;
+    const by = this.vy;
+    if (this.moveX(this.vx * dt, false)) this.vx = -bx * 0.6;
+    this.moveY(this.vy * dt);
+    if (this.vy === 0 && by !== 0) this.vy = -by * 0.6;
+    this.onGround = false;
+  }
+
   /** Recibe un golpe del jugador. */
   hit(damage, knockback, fromX) {
     if (this.dead) return;
@@ -199,8 +400,9 @@ class Enemy {
     this.vx = dir * knockback * (1 - this.def.resist);
     this.vy = Math.min(this.vy, -220 * (1 - this.def.resist * 0.6));
     this.onGround = false;
+    this.dashing = 0;
     this.scene.showFloatingText(this.centerX, this.y - 6, `${damage}`, '#ffb347', 15);
-    this.scene.spawnDebris(this.centerX, this.centerY, this.type === 'slime' ? this.tint : 0x7fae6a, 4);
+    this.scene.spawnDebris(this.centerX, this.centerY, this.blood, 4);
     if (this.hp <= 0) this.die(true);
   }
 
@@ -208,7 +410,7 @@ class Enemy {
     this.dead = true;
     if (byPlayer) {
       this.scene.spawnDust(this.centerX, this.y + this.h, 10);
-      this.scene.spawnDebris(this.centerX, this.centerY, this.type === 'slime' ? this.tint : 0x7fae6a, 10);
+      this.scene.spawnDebris(this.centerX, this.centerY, this.blood, 10);
       this.manager.giveDrops(this);
     }
     this.destroy();
@@ -220,31 +422,39 @@ class Enemy {
     let frame = 0;
     let sx = 1;
     let sy = 1;
+    let rot = 0;
     if (this.type === 'slime') {
       // 0 quieto (respira), 1 aplastado (antes de saltar / al caer), 2 estirado (en el aire)
       if (!this.onGround) frame = 2;
       else if (this.aiTimer < 0.15 || this.landTimer > 0) frame = 1;
       else sy = 1 + Math.sin(this.time * 5) * 0.05;
+    } else if (def.flyer) {
+      frame = Math.floor(this.time * def.animFps) % this.manager.frames[this.type];
+      // El ojo mira hacia donde va
+      if (def.flyer === 'eye') rot = Math.atan2(this.vy, Math.abs(this.vx) + 1) * (this.facing < 0 ? -1 : 1) * 0.8;
+    } else if (def.walkFrames) {
+      frame = this.onGround && Math.abs(this.vx) > 10 ? Math.floor(this.time * 10) % def.walkFrames : 0;
     } else {
       // 0-3 caminar, 4 golpeado
       frame = this.hurtTimer > 0 ? 4 : this.onGround && Math.abs(this.vx) > 10 ? Math.floor(this.time * 7) % 4 : 0;
     }
     if (this.manager.frames[this.type] > frame) s.setFrame(frame, false, false);
     s.setScale((def.spriteW / s.frame.width) * sx, (def.spriteH / s.frame.height) * sy)
-      .setPosition(this.centerX, this.y + this.h)
+      .setPosition(this.centerX, def.flyer ? this.centerY : this.y + this.h)
+      .setRotation(rot)
       .setFlipX(this.facing < 0);
     if (this.hurtTimer > 0) s.setTintFill(0xffffff);
-    else if (this.type === 'slime') s.setTint(this.tint);
+    else if (this.tint !== 0xffffff) s.setTint(this.tint);
     else s.clearTint();
     // Barra de vida (solo si está herido)
-    const hurt = this.hp < def.hp;
+    const hurt = this.hp < this.maxHp;
     this.barBg.setVisible(hurt);
     this.bar.setVisible(hurt);
     if (hurt) {
-      const top = this.y + this.h - def.spriteH - 8;
+      const top = def.flyer ? this.centerY - def.spriteH / 2 - 8 : this.y + this.h - def.spriteH - 8;
       this.barBg.setPosition(this.centerX, top);
-      this.bar.setPosition(this.centerX - 14, top).setSize(28 * Math.max(0, this.hp / def.hp), 3);
-      this.bar.setFillStyle(this.hp / def.hp > 0.4 ? 0x6ee06e : 0xe05050);
+      this.bar.setPosition(this.centerX - 14, top).setSize(28 * Math.max(0, this.hp / this.maxHp), 3);
+      this.bar.setFillStyle(this.hp / this.maxHp > 0.4 ? 0x6ee06e : 0xe05050);
     }
   }
 
@@ -281,8 +491,8 @@ export class Enemies {
     return this.list.length;
   }
 
-  spawn(type, x, y, variant = 0) {
-    const e = new Enemy(this, type, x, y, variant);
+  spawn(type, x, y, opts = {}) {
+    const e = new Enemy(this, type, x, y, opts);
     this.list.push(e);
     return e;
   }
@@ -291,11 +501,12 @@ export class Enemies {
     const p = this.player;
     const night = this.dayNight.isNight();
 
-    // Aparecer
+    // Aparecer (en las zonas peligrosas aparecen más y más seguido)
     this.spawnTimer -= dt;
     if (this.spawnTimer <= 0 && !p.dead) {
-      this.spawnTimer = night ? 1.5 + Math.random() * 2.5 : 4 + Math.random() * 5;
-      const max = night ? 6 : 2;
+      const danger = this.levelOf(Math.floor(p.centerX / T));
+      this.spawnTimer = (night ? 1.5 + Math.random() * 2.5 : 4 + Math.random() * 5) / (1 + (danger - 1) * 0.25);
+      const max = (night ? 6 : 2) + danger - 1;
       if (this.list.length < max) this.trySpawn(night);
     }
 
@@ -303,31 +514,46 @@ export class Enemies {
       if (e.dead) continue; // murió en este mismo frame (golpe de espada)
       e.update(dt, p, night);
       // Daño por contacto (el jugador queda invulnerable un momento después de cada golpe)
-      if (!p.dead && e.overlaps(p)) p.hit(e.def.damage, e.centerX);
+      if (!p.dead && e.overlaps(p)) p.hit(e.damage, e.centerX);
       if (e.dead) continue;
       // Muy lejos (o zombi de día fuera de la pantalla): desaparece
       const dist = Math.abs(e.centerX - p.centerX) / T;
-      if (dist > DESPAWN_DIST || (e.type === 'zombie' && !night && dist > SPAWN_MIN) || e.y > this.world.height * T) {
+      if (dist > DESPAWN_DIST || (e.def.nightOnly && !night && dist > SPAWN_MIN) || e.y > this.world.height * T) {
         e.die(false);
       }
     }
     if (this.list.some((e) => e.dead)) this.list = this.list.filter((e) => !e.dead);
   }
 
-  /** Busca un lugar libre fuera de la pantalla para que aparezca un enemigo. */
+  /** Nivel de peligro de la zona de una columna (1 = Bosque … 4 = las zonas más lejanas). */
+  levelOf(tx) {
+    const gen = this.world.generator;
+    const b = gen.biome[Math.max(0, Math.min(gen.biome.length - 1, tx))];
+    return BIOME_INFO[b].danger;
+  }
+
+  /** Busca un lugar libre fuera de la pantalla y elige un enemigo típico de esa zona. */
   trySpawn(night) {
     const p = this.player;
     const gen = this.world.generator;
     const ptx = Math.floor(p.centerX / T);
     const pty = Math.floor(p.centerY / T);
     const underground = pty > gen.surface[Math.max(0, Math.min(gen.surface.length - 1, ptx))] + 12;
-    const type = !underground && night && Math.random() < 0.7 ? 'zombie' : 'slime';
-    const def = ENEMY_TYPES[type];
-    const hTiles = Math.ceil(def.h / T);
     for (let attempt = 0; attempt < 12; attempt++) {
       const side = Math.random() < 0.5 ? -1 : 1;
       const tx = ptx + side * (SPAWN_MIN + Math.floor(Math.random() * (SPAWN_MAX - SPAWN_MIN)));
       if (tx < 2 || tx >= this.world.width - 2) continue;
+      const biome = gen.biome[tx];
+      const level = BIOME_INFO[biome].danger;
+      let type = 'slime';
+      let kind = CAVE_SLIME[biome];
+      if (!underground) {
+        const pick = pickWeighted(SPAWN_TABLE[biome][night ? 'night' : 'day']);
+        type = pick[0];
+        kind = pick[2];
+      }
+      const def = ENEMY_TYPES[type];
+      const hTiles = Math.ceil(def.h / T);
       // Suelo: en la superficie, el primer bloque sólido desde el cielo; bajo tierra, el piso de una cueva
       let floor;
       if (!underground) floor = this.world.skyTop[tx];
@@ -341,11 +567,13 @@ export class Enemies {
         }
         if (floor < 0) continue;
       }
+      // Los voladores aparecen en el aire, unos bloques arriba del suelo
+      if (def.flyer) floor -= 3 + Math.floor(Math.random() * 5);
       if (!this._freeColumn(tx, floor, hTiles)) continue;
       const x = tx * T + (T - def.w) / 2;
       const y = floor * T - def.h;
-      const variant = type === 'slime' && (night || underground) ? 1 : 0;
-      return this.spawn(type, x, y, variant);
+      const tint = type === 'zombie' ? ZOMBIE_TINTS[biome] : type === 'eye' && biome === BIOME.CRYSTAL ? 0xffb8f8 : undefined;
+      return this.spawn(type, x, y, { kind, level, tint });
     }
     return null;
   }
@@ -355,7 +583,7 @@ export class Enemies {
     for (let k = 1; k <= hTiles; k++) {
       const ty = floor - k;
       const id = this.world.getTile(tx, ty);
-      if (id !== BLOCK.AIR && id !== BLOCK.PLANT) return false; // también descarta muebles
+      if (id !== BLOCK.AIR && !IS_PLANT[id]) return false; // también descarta muebles
       // Pared puesta por el jugador = dentro de una casa (las naturales de las cuevas no cuentan)
       if (this.world.hasPlayerWall(tx, ty)) return false;
     }

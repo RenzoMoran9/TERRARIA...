@@ -1,4 +1,6 @@
 import { textStyle } from './styles.js';
+import { BIOME_INFO } from '../world/WorldGenerator.js';
+import { dangerStars } from '../systems/Zones.js';
 
 const HEARTS = 5; // 20 de vida por corazón (como Terraria)
 const HEART_SIZE = 24;
@@ -29,6 +31,9 @@ export class HUD {
 
     this.clockText = scene.add.text(0, 0, '', textStyle({ fontSize: '16px' })).setOrigin(1, 0).setDepth(10);
     this.celestial = scene.add.image(0, 0, 'bg_sun').setDisplaySize(22, 22).setDepth(10);
+    // Zona actual (debajo del reloj)
+    this.zoneText = scene.add.text(0, 0, '', textStyle({ fontSize: '13px', color: '#d8e4ff' })).setOrigin(1, 0).setDepth(10);
+    this.lastZone = '';
     // Tocar el reloj activa/desactiva el modo debug (útil en celular, que no tiene F3)
     this.clockText.setInteractive({ useHandCursor: true }).on('pointerdown', () => scene.debug.toggle());
   }
@@ -41,6 +46,7 @@ export class HUD {
       h.full.setPosition(x, 32);
     });
     this.clockText.setPosition(width - 12, 12);
+    this.zoneText.setPosition(width - 12, 34);
     this.lastClock = '';
   }
 
@@ -67,6 +73,16 @@ export class HUD {
       for (const h of this.hearts) {
         h.full.setScale(h.scale * (1 + beat * 0.18));
         h.empty.setScale(h.scale * (1 + beat * 0.18));
+      }
+    }
+
+    const zones = this.gs.zones;
+    if (zones && zones.current >= 0) {
+      const info = BIOME_INFO[zones.current];
+      const zone = `${info.name} ${dangerStars(info.danger)} · ${zones.discovered.size}/${zones.total}`;
+      if (zone !== this.lastZone) {
+        this.lastZone = zone;
+        this.zoneText.setText(zone);
       }
     }
 

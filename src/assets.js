@@ -33,11 +33,44 @@ export const ASSETS = {
   tile_plant_flower_red: { file: 'tiles/plant_flower_red.png', width: 32, height: 32, placeholder: 'plant_flower_red' },
   tile_plant_flower_yellow: { file: 'tiles/plant_flower_yellow.png', width: 32, height: 32, placeholder: 'plant_flower_yellow' },
   tile_stone_brick: { file: 'tiles/stone_brick.png', width: 32, height: 32, placeholder: 'stone_brick' },
+  // Zonas (biomas)
+  tile_sand: { file: 'tiles/sand.png', width: 32, height: 32, placeholder: 'sand' },
+  tile_sandstone: { file: 'tiles/sandstone.png', width: 32, height: 32, placeholder: 'sandstone' },
+  tile_snow: { file: 'tiles/snow.png', width: 32, height: 32, placeholder: 'snow' },
+  tile_ice: { file: 'tiles/ice.png', width: 32, height: 32, placeholder: 'ice' },
+  tile_jungle_grass: { file: 'tiles/jungle_grass.png', width: 32, height: 32, placeholder: 'jungle_grass' },
+  tile_mud: { file: 'tiles/mud.png', width: 32, height: 32, placeholder: 'mud' },
+  tile_shadow_grass: { file: 'tiles/shadow_grass.png', width: 32, height: 32, placeholder: 'shadow_grass' },
+  tile_shadow_stone: { file: 'tiles/shadow_stone.png', width: 32, height: 32, placeholder: 'shadow_stone' },
+  tile_crystal_grass: { file: 'tiles/crystal_grass.png', width: 32, height: 32, placeholder: 'crystal_grass' },
+  tile_crystal: { file: 'tiles/crystal.png', width: 32, height: 32, placeholder: 'crystal' },
+  tile_ash: { file: 'tiles/ash.png', width: 32, height: 32, placeholder: 'ash' },
+  tile_basalt: { file: 'tiles/basalt.png', width: 32, height: 32, placeholder: 'basalt' },
+  tile_lava: { file: 'tiles/lava.png', width: 32, height: 32, placeholder: 'lava' },
+  tile_cactus: { file: 'tiles/cactus.png', width: 32, height: 32, placeholder: 'cactus' },
+  tile_plant_desert: { file: 'tiles/plant_desert.png', width: 32, height: 32, placeholder: 'plant_desert' },
+  tile_plant_desert2: { file: 'tiles/plant_desert2.png', width: 32, height: 32, placeholder: 'plant_desert2' },
+  tile_plant_snow: { file: 'tiles/plant_snow.png', width: 32, height: 32, placeholder: 'plant_snow' },
+  tile_plant_snow2: { file: 'tiles/plant_snow2.png', width: 32, height: 32, placeholder: 'plant_snow2' },
+  tile_plant_jungle: { file: 'tiles/plant_jungle.png', width: 32, height: 32, placeholder: 'plant_jungle' },
+  tile_plant_jungle2: { file: 'tiles/plant_jungle2.png', width: 32, height: 32, placeholder: 'plant_jungle2' },
+  tile_plant_shadow: { file: 'tiles/plant_shadow.png', width: 32, height: 32, placeholder: 'plant_shadow' },
+  tile_plant_shadow2: { file: 'tiles/plant_shadow2.png', width: 32, height: 32, placeholder: 'plant_shadow2' },
+  tile_plant_crystal: { file: 'tiles/plant_crystal.png', width: 32, height: 32, placeholder: 'plant_crystal' },
+  tile_plant_crystal2: { file: 'tiles/plant_crystal2.png', width: 32, height: 32, placeholder: 'plant_crystal2' },
+  tile_plant_crystal3: { file: 'tiles/plant_crystal3.png', width: 32, height: 32, placeholder: 'plant_crystal3' },
+  tile_plant_volcano: { file: 'tiles/plant_volcano.png', width: 32, height: 32, placeholder: 'plant_volcano' },
+  tile_plant_volcano2: { file: 'tiles/plant_volcano2.png', width: 32, height: 32, placeholder: 'plant_volcano2' },
 
   // ---------- Paredes de fondo (32×32) ----------
   wall_dirt: { file: 'walls/dirt_wall.png', width: 32, height: 32, placeholder: 'wall_dirt' },
   wall_stone: { file: 'walls/stone_wall.png', width: 32, height: 32, placeholder: 'wall_stone' },
   wall_wood: { file: 'walls/wood_wall.png', width: 32, height: 32, placeholder: 'wall_wood' },
+  wall_sandstone: { file: 'walls/sandstone_wall.png', width: 32, height: 32, placeholder: 'wall_sandstone' },
+  wall_ice: { file: 'walls/ice_wall.png', width: 32, height: 32, placeholder: 'wall_ice' },
+  wall_mud: { file: 'walls/mud_wall.png', width: 32, height: 32, placeholder: 'wall_mud' },
+  wall_shadow: { file: 'walls/shadow_wall.png', width: 32, height: 32, placeholder: 'wall_shadow' },
+  wall_ash: { file: 'walls/ash_wall.png', width: 32, height: 32, placeholder: 'wall_ash' },
 
   // ---------- Muebles (objeto entero; cada bloque = 32×32 de la imagen) ----------
   // La silla y la cama miran a la derecha (al ponerlas mirando a la izquierda se dibujan espejadas)
@@ -53,6 +86,9 @@ export const ASSETS = {
   // ---------- Árboles ----------
   // Copa: 3 variantes de 144×128 una al lado de la otra
   tree_top: { file: 'trees/tree_top.png', width: 432, height: 128, frameWidth: 144, frameHeight: 128, placeholder: 'tree_top' },
+  tree_top_pine: { file: 'trees/tree_top_pine.png', width: 432, height: 128, frameWidth: 144, frameHeight: 128, placeholder: 'tree_top_pine' },
+  tree_top_jungle: { file: 'trees/tree_top_jungle.png', width: 432, height: 128, frameWidth: 144, frameHeight: 128, placeholder: 'tree_top_jungle' },
+  tree_top_shadow: { file: 'trees/tree_top_shadow.png', width: 432, height: 128, frameWidth: 144, frameHeight: 128, placeholder: 'tree_top_shadow' },
   tree_branch: { file: 'trees/tree_branch.png', width: 32, height: 32, placeholder: 'tree_branch' },
 
   // ---------- Íconos de ítems (32×32) ----------
@@ -79,6 +115,9 @@ export const ASSETS = {
   item_iron_pickaxe: { file: 'items/iron_pickaxe.png', width: 32, height: 32, placeholder: 'iron_pickaxe' },
   item_iron_sword: { file: 'items/iron_sword.png', width: 32, height: 32, placeholder: 'iron_sword' },
   item_iron_hammer: { file: 'items/iron_hammer.png', width: 32, height: 32, placeholder: 'iron_hammer' },
+  item_cactus: { file: 'items/cactus.png', width: 32, height: 32, placeholder: 'cactus_item' },
+  item_cactus_sword: { file: 'items/cactus_sword.png', width: 32, height: 32, placeholder: 'cactus_sword' },
+  item_crystal_sword: { file: 'items/crystal_sword.png', width: 32, height: 32, placeholder: 'crystal_sword' },
   item_iron_dagger: { file: 'items/iron_dagger.png', width: 32, height: 32, placeholder: 'iron_dagger' },
   item_stone_mace: { file: 'items/stone_mace.png', width: 32, height: 32, placeholder: 'stone_mace' },
   item_iron_spear: { file: 'items/iron_spear.png', width: 32, height: 32, placeholder: 'iron_spear' },
@@ -94,6 +133,12 @@ export const ASSETS = {
   // Zombi: 5 cuadros de 48×64 (caminar ×4 y golpeado)
   enemy_zombie: { file: 'enemies/zombie.png', width: 240, height: 64, frameWidth: 48, frameHeight: 64, placeholder: 'zombie' },
 
+  // Escorpión: 3 cuadros de 40×24 (caminar). Avispa: 2 de 32×28 (aleteo). Ojo: 2 de 32×24. Murciélago de fuego: 3 de 36×24
+  enemy_scorpion: { file: 'enemies/scorpion.png', width: 120, height: 24, frameWidth: 40, frameHeight: 24, placeholder: 'scorpion' },
+  enemy_wasp: { file: 'enemies/wasp.png', width: 64, height: 28, frameWidth: 32, frameHeight: 28, placeholder: 'wasp' },
+  enemy_eye: { file: 'enemies/eye.png', width: 64, height: 24, frameWidth: 32, frameHeight: 24, placeholder: 'eye' },
+  enemy_firebat: { file: 'enemies/firebat.png', width: 108, height: 24, frameWidth: 36, frameHeight: 24, placeholder: 'firebat' },
+
   // ---------- Jugador: 31 poses de 48×64, 8 por fila (ver player/animations.js), mirando a la derecha ----------
   player: { file: 'player/player.png', width: 384, height: 256, frameWidth: 48, frameHeight: 64, placeholder: 'player' },
 
@@ -101,6 +146,24 @@ export const ASSETS = {
   bg_mountains: { file: 'backgrounds/mountains.png', width: 960, height: 320, placeholder: 'mountains' },
   bg_hills: { file: 'backgrounds/hills.png', width: 960, height: 240, placeholder: 'hills' },
   bg_forest: { file: 'backgrounds/forest.png', width: 960, height: 240, placeholder: 'forest' },
+  bg_mountains_desert: { file: 'backgrounds/mountains_desert.png', width: 960, height: 320, placeholder: 'mountains', theme: 'desert' },
+  bg_hills_desert: { file: 'backgrounds/hills_desert.png', width: 960, height: 240, placeholder: 'hills', theme: 'desert' },
+  bg_forest_desert: { file: 'backgrounds/forest_desert.png', width: 960, height: 240, placeholder: 'forest', theme: 'desert' },
+  bg_mountains_snow: { file: 'backgrounds/mountains_snow.png', width: 960, height: 320, placeholder: 'mountains', theme: 'snow' },
+  bg_hills_snow: { file: 'backgrounds/hills_snow.png', width: 960, height: 240, placeholder: 'hills', theme: 'snow' },
+  bg_forest_snow: { file: 'backgrounds/forest_snow.png', width: 960, height: 240, placeholder: 'forest', theme: 'snow' },
+  bg_mountains_jungle: { file: 'backgrounds/mountains_jungle.png', width: 960, height: 320, placeholder: 'mountains', theme: 'jungle' },
+  bg_hills_jungle: { file: 'backgrounds/hills_jungle.png', width: 960, height: 240, placeholder: 'hills', theme: 'jungle' },
+  bg_forest_jungle: { file: 'backgrounds/forest_jungle.png', width: 960, height: 240, placeholder: 'forest', theme: 'jungle' },
+  bg_mountains_shadow: { file: 'backgrounds/mountains_shadow.png', width: 960, height: 320, placeholder: 'mountains', theme: 'shadow' },
+  bg_hills_shadow: { file: 'backgrounds/hills_shadow.png', width: 960, height: 240, placeholder: 'hills', theme: 'shadow' },
+  bg_forest_shadow: { file: 'backgrounds/forest_shadow.png', width: 960, height: 240, placeholder: 'forest', theme: 'shadow' },
+  bg_mountains_crystal: { file: 'backgrounds/mountains_crystal.png', width: 960, height: 320, placeholder: 'mountains', theme: 'crystal' },
+  bg_hills_crystal: { file: 'backgrounds/hills_crystal.png', width: 960, height: 240, placeholder: 'hills', theme: 'crystal' },
+  bg_forest_crystal: { file: 'backgrounds/forest_crystal.png', width: 960, height: 240, placeholder: 'forest', theme: 'crystal' },
+  bg_mountains_volcano: { file: 'backgrounds/mountains_volcano.png', width: 960, height: 320, placeholder: 'mountains', theme: 'volcano' },
+  bg_hills_volcano: { file: 'backgrounds/hills_volcano.png', width: 960, height: 240, placeholder: 'hills', theme: 'volcano' },
+  bg_forest_volcano: { file: 'backgrounds/forest_volcano.png', width: 960, height: 240, placeholder: 'forest', theme: 'volcano' },
   bg_cloud: { file: 'backgrounds/cloud.png', width: 128, height: 48, placeholder: 'cloud' },
   bg_sun: { file: 'backgrounds/sun.png', width: 64, height: 64, placeholder: 'sun' },
   bg_moon: { file: 'backgrounds/moon.png', width: 48, height: 48, placeholder: 'moon' },

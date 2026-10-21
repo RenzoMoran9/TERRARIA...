@@ -46,20 +46,27 @@ export function buildTileset(scene) {
     return src;
   };
 
+  // Cada celda se dibuja en un lienzo chico (con su borde extruido) y se copia UNA vez al grande:
+  // copiar dentro del lienzo grande (de varios miles de px) es muy lento en algunos navegadores.
+  const cellCanvas = document.createElement('canvas');
+  cellCanvas.width = S;
+  cellCanvas.height = S;
+  const cctx = cellCanvas.getContext('2d');
+  cctx.imageSmoothingEnabled = false;
   let cell = 0;
-  const next = () => {
+  const put = (draw) => {
     const c = cell++;
-    return [(c % MASK_COUNT) * S + 1, Math.floor(c / MASK_COUNT) * S + 1];
+    cctx.clearRect(0, 0, S, S);
+    draw(cctx);
+    extrude(cctx, cellCanvas, 1, 1);
+    ctx.drawImage(cellCanvas, (c % MASK_COUNT) * S, Math.floor(c / MASK_COUNT) * S);
   };
   for (const mat of MATERIALS) {
     if (mat.crop) {
       // Parte de un mueble
-      const [dx, dy] = next();
       const src = source(mat.crop.key, 0);
-      if (src) {
-        drawCrop(ctx, dx, dy, src, mat.crop);
-        extrude(ctx, canvas, dx, dy);
-      }
+      if (src) put((g) => drawCrop(g, 1, 1, src, mat.crop));
+      else cell++;
       continue;
     }
     for (let v = 0; v < VARIANTS; v++) {
@@ -68,10 +75,11 @@ export function buildTileset(scene) {
       const grassColor = mat.grassy && src ? samplePixel(src, 16, 3) : null;
       const masks = mat.framed ? MASK_COUNT : 1;
       for (let mask = 0; mask < masks; mask++) {
-        const [dx, dy] = next();
-        if (!src) continue;
-        drawFramedTile(ctx, dx, dy, src, covered, mat.framed ? mask : 15, grassColor);
-        extrude(ctx, canvas, dx, dy);
+        if (!src) {
+          cell++;
+          continue;
+        }
+        put((g) => drawFramedTile(g, 1, 1, src, covered, mat.framed ? mask : 15, grassColor));
       }
     }
   }
@@ -147,9 +155,9 @@ function samplePixel(src, x, y) {
   const c = document.createElement('canvas');
   c.width = T;
   c.height = T;
-  const cctx = c.getContext('2d');
-  cctx.imageSmoothingEnabled = false;
-  cctx.drawImage(src, 0, 0, src.width, src.height, 0, 0, T, T);
-  const [r, g, b, a] = cctx.getImageData(x, y, 1, 1).data;
+  const pctx = c.getContext('2d', { willReadFrequently: true });
+  pctx.imageSmoothingEnabled = false;
+  pctx.drawImage(src, 0, 0, src.width, src.height, 0, 0, T, T);
+  const [r, g, b, a] = pctx.getImageData(x, y, 1, 1).data;
   return a > 0 ? `rgb(${r},${g},${b})` : null;
 }

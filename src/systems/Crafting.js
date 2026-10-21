@@ -21,6 +21,8 @@ export const RECIPES = [
   { result: 'iron_sword', count: 1, ingredients: [['iron_bar', 8]], station: 'anvil' },
   { result: 'iron_hammer', count: 1, ingredients: [['iron_bar', 10], ['wood', 3]], station: 'anvil' },
   // Armas de todo tipo
+  { result: 'cactus_sword', count: 1, ingredients: [['cactus', 10]], station: 'workbench' },
+  { result: 'crystal_sword', count: 1, ingredients: [['crystal', 20], ['iron_bar', 5]], station: 'anvil' },
   { result: 'wood_bow', count: 1, ingredients: [['wood', 10]], station: 'workbench' },
   { result: 'wood_arrow', count: 10, ingredients: [['wood', 1], ['stone', 1]], station: 'workbench' },
   { result: 'wood_boomerang', count: 1, ingredients: [['planks', 8]], station: 'workbench' },

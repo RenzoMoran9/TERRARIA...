@@ -2,14 +2,24 @@ import Phaser from 'phaser';
 import { TILE_SIZE, WORLD_WIDTH } from '../config.js';
 import { DayNight } from '../systems/DayNight.js';
 import { hash } from '../systems/PixelArt.js';
+import { BG_THEMES } from '../systems/Placeholders.js';
 
 // Capas con paralaje: más lejos = se mueven menos (fx horizontal, fy vertical)
 const LAYERS = [
-  { key: 'bg_mountains', fx: 0.06, fy: 0.12, drop: 60, fill: 0x7590b8 },
-  { key: 'bg_hills', fx: 0.15, fy: 0.25, drop: 40, fill: 0x4f9149 },
-  { key: 'bg_forest', fx: 0.3, fy: 0.4, drop: 30, fill: 0x2b5a2c },
+  { key: 'bg_mountains', fx: 0.06, fy: 0.12, drop: 60 },
+  { key: 'bg_hills', fx: 0.15, fy: 0.25, drop: 40 },
+  { key: 'bg_forest', fx: 0.3, fy: 0.4, drop: 30 },
 ];
+// Tema del fondo de cada zona (mismo orden que BIOME en WorldGenerator)
+const THEMES = ['forest', 'desert', 'snow', 'jungle', 'shadow', 'crystal', 'volcano'];
 const CLOUDS = 7;
+
+const layerKey = (base, theme) => (theme === 'forest' ? base : `${base}_${theme}`);
+// Multiplica dos colores 0xRRGGBB canal por canal
+const mulColor = (a, b) =>
+  (Math.round((((a >> 16) & 255) * ((b >> 16) & 255)) / 255) << 16) |
+  (Math.round((((a >> 8) & 255) * ((b >> 8) & 255)) / 255) << 8) |
+  Math.round(((a & 255) * (b & 255)) / 255);
 
 /**
  * Cielo y fondo, dibujados DEBAJO del mundo (en su propia escena, sin el zoom de la cámara).
@@ -31,15 +41,20 @@ export class BackgroundScene extends Phaser.Scene {
     this.sun = this.add.image(0, 0, 'bg_sun');
     this.moon = this.add.image(0, 0, 'bg_moon');
 
-    this.layers = LAYERS.map((cfg) => {
-      const tex = this.textures.get(cfg.key).getSourceImage();
-      return {
-        ...cfg,
-        texHeight: tex.height,
-        sprite: this.add.tileSprite(0, 0, 10, tex.height, cfg.key).setOrigin(0, 1),
-        filler: this.add.rectangle(0, 0, 10, 10, cfg.fill).setOrigin(0, 0),
-      };
-    });
+    // Cada capa tiene una versión por zona; al caminar de una zona a otra se funden
+    this.weights = THEMES.map((t, i) => (i === 0 ? 1 : 0));
+    this.layers = LAYERS.map((cfg, li) => ({
+      ...cfg,
+      themes: THEMES.map((theme) => {
+        const key = layerKey(cfg.key, theme);
+        const tex = this.textures.get(key).getSourceImage();
+        return {
+          texHeight: tex.height,
+          sprite: this.add.tileSprite(0, 0, 10, tex.height, key).setOrigin(0, 1),
+          filler: this.add.rectangle(0, 0, 10, 10, BG_THEMES[theme].fills[li]).setOrigin(0, 0),
+        };
+      }),
+    }));
     // Las nubes van entre las montañas y las colinas
     this.clouds = [];
     for (let i = 0; i < CLOUDS; i++) {
@@ -53,13 +68,15 @@ export class BackgroundScene extends Phaser.Scene {
     }
     // Orden de dibujo: cielo, estrellas, sol/luna, montañas, nubes, colinas, bosque
     const [mountains, hills, forest] = this.layers;
-    this.children.bringToTop(mountains.filler);
-    this.children.bringToTop(mountains.sprite);
+    const toTop = (l) =>
+      l.themes.forEach((t) => {
+        this.children.bringToTop(t.filler);
+        this.children.bringToTop(t.sprite);
+      });
+    toTop(mountains);
     this.clouds.forEach((c) => this.children.bringToTop(c));
-    for (const l of [hills, forest]) {
-      this.children.bringToTop(l.filler);
-      this.children.bringToTop(l.sprite);
-    }
+    toTop(hills);
+    toTop(forest);
 
     this.layout();
     this.scale.on('resize', this.layout, this);
@@ -70,8 +87,10 @@ export class BackgroundScene extends Phaser.Scene {
     const { width: W, height: H } = this.scale;
     this.stars.setSize(W, H);
     for (const l of this.layers) {
-      l.sprite.setSize(W, l.texHeight);
-      l.filler.setSize(W, H);
+      for (const t of l.themes) {
+        t.sprite.setSize(W, t.texHeight);
+        t.filler.setSize(W, H);
+      }
     }
     this.skyKey = '';
   }
@@ -100,6 +119,7 @@ export class BackgroundScene extends Phaser.Scene {
       this.smoothSurface = this.smoothSurface === null ? target : Phaser.Math.Linear(this.smoothSurface, target, Math.min(1, delta * 0.004));
       horizon = (this.smoothSurface - viewTop) * cam.zoom;
       dn = gs.dayNight;
+      if (gs.zones) this.weights = gs.zones.weights;
     } else {
       // Menú: el fondo avanza solo y el día pasa más rápido; el bosque llega hasta el suelo del menú
       this.demoX += delta * 0.04;
@@ -108,10 +128,31 @@ export class BackgroundScene extends Phaser.Scene {
       camX = this.demoX;
       horizon = H * 0.5 + (H * 0.5 - 70) / LAYERS[2].fy;
       dn = this.demoTime;
+      this.weights = THEMES.map((t, i) => (i === 0 ? 1 : 0));
     }
+    const weights = this.weights;
+    const wMax = Math.max(...weights);
+
+    // Color del cielo según la zona (desierto cálido, volcán rojizo, tierras sombrías violeta…)
+    let mr = 0;
+    let mg = 0;
+    let mb = 0;
+    let wSum = 0;
+    THEMES.forEach((theme, i) => {
+      const w = weights[i];
+      if (w <= 0) return;
+      const th = BG_THEMES[theme];
+      const k = th.skyMix;
+      mr += w * (255 + (((th.sky >> 16) & 255) - 255) * k);
+      mg += w * (255 + (((th.sky >> 8) & 255) - 255) * k);
+      mb += w * (255 + ((th.sky & 255) - 255) * k);
+      wSum += w;
+    });
+    const tint = wSum > 0 ? (Math.round(mr / wSum) << 16) | (Math.round(mg / wSum) << 8) | Math.round(mb / wSum) : 0xffffff;
 
     // --- Cielo (degradado) ---
-    const sky = dn.getSkyColors();
+    const base = dn.getSkyColors();
+    const sky = { top: mulColor(base.top, tint), bottom: mulColor(base.bottom, tint) };
     const skyKey = `${sky.top}-${sky.bottom}-${W}-${H}`;
     if (skyKey !== this.skyKey) {
       this.skyKey = skyKey;
@@ -140,12 +181,16 @@ export class BackgroundScene extends Phaser.Scene {
     for (const l of this.layers) {
       // La base de cada capa sigue al horizonte, pero menos cuanto más lejos está
       const bottom = H * 0.5 + (horizon - H * 0.5) * l.fy + l.drop;
-      l.sprite.tilePositionX = camX * l.fx;
-      l.sprite.y = bottom;
-      l.filler.y = bottom - 1;
-      const visible = bottom > 0 && bottom - l.texHeight < H;
-      l.sprite.setVisible(visible);
-      l.filler.setVisible(bottom < H);
+      l.themes.forEach((t, i) => {
+        // Transparencia relativa a la zona dominante: sin saltos al cruzar de una zona a otra
+        const a = wMax > 0 ? weights[i] / wMax : 0;
+        const on = a > 0.01;
+        t.sprite.tilePositionX = camX * l.fx;
+        t.sprite.y = bottom;
+        t.filler.y = bottom - 1;
+        t.sprite.setVisible(on && bottom > 0 && bottom - t.texHeight < H).setAlpha(a);
+        t.filler.setVisible(on && bottom < H).setAlpha(a);
+      });
     }
 
     // --- Nubes que avanzan con el viento ---
@@ -154,7 +199,7 @@ export class BackgroundScene extends Phaser.Scene {
     for (const c of this.clouds) {
       c.u += (c.speed * delta) / 1000 / span;
       const x = ((((c.u * span - camX * 0.04) % span) + span) % span) - 200;
-      c.setPosition(x, H * 0.06 + c.v * H + cloudShift);
+      c.setPosition(x, H * 0.06 + c.v * H + cloudShift).setTint(tint);
     }
   }
 }

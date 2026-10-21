@@ -1,5 +1,5 @@
 import { TILE_SIZE, WORLD_WIDTH, WORLD_HEIGHT, REACH_TILES, DEPTH } from '../config.js';
-import { BLOCK, BLOCK_DEFS, IS_SOLID, WALL, WALL_DEFS, PART } from '../world/blocks.js';
+import { BLOCK, BLOCK_DEFS, IS_SOLID, IS_PLANT, IS_TRUNK, WALL, WALL_DEFS, PART } from '../world/blocks.js';
 import { ITEMS, HAND } from './items.js';
 import { frameCount } from './Placeholders.js';
 import { PROJECTILE_GRAVITY } from './Projectiles.js';
@@ -179,7 +179,7 @@ export class BlockInteraction {
       return;
     }
     // No se puede minar el suelo que sostiene un árbol
-    if (id !== BLOCK.LOG && this.world.getTile(tx, ty - 1) === BLOCK.LOG) {
+    if (!IS_TRUNK[id] && this.world.getTile(tx, ty - 1) === BLOCK.LOG) {
       this._warnOnce('Primero tala el árbol');
       return;
     }
@@ -291,7 +291,7 @@ export class BlockInteraction {
     if (!this._advanceCrack(dt, tx, ty, WALL_HARDNESS / hammer.speed)) return;
     this._resetMining();
     this.world.setWall(tx, ty, WALL.NONE);
-    this.scene.drops.spawn(def.item, 1, (tx + 0.5) * T, (ty + 0.5) * T);
+    if (def.item) this.scene.drops.spawn(def.item, 1, (tx + 0.5) * T, (ty + 0.5) * T); // las naturales de los biomas no sueltan nada
     this.scene.spawnDebris((tx + 0.5) * T, (ty + 0.5) * T, def.color);
     // Una antorcha colgada de esa pared se cae
     const id = this.world.getTile(tx, ty);
@@ -307,7 +307,7 @@ export class BlockInteraction {
   /** Rompe el bloque y manda lo obtenido al inventario. */
   breakBlock(tx, ty) {
     const id = this.world.getTile(tx, ty);
-    if (id === BLOCK.LOG) return this._fellTree(tx, ty);
+    if (IS_TRUNK[id]) return this._fellTree(tx, ty, id);
     if (PART[id]) return this._breakFurniture(tx, ty, id);
 
     const drop = BLOCK_DEFS[id].drop;
@@ -320,13 +320,15 @@ export class BlockInteraction {
   }
 
   /** Talar: se cae todo el tronco hacia arriba y la copa; da 1 madera por tronco. */
-  _fellTree(tx, ty) {
+  _fellTree(tx, ty, id = BLOCK.LOG) {
     let top = ty;
-    while (this.world.getTile(tx, top - 1) === BLOCK.LOG) top--;
+    while (this.world.getTile(tx, top - 1) === id) top--;
+    const drop = BLOCK_DEFS[id].drop;
     for (let y = ty; y >= top; y--) {
       this.world.setTile(tx, y, BLOCK.AIR);
-      this.scene.spawnDebris((tx + 0.5) * T, (y + 0.5) * T, y < top + 3 ? BLOCK_DEFS[BLOCK.LEAVES].color : BLOCK_DEFS[BLOCK.LOG].color, 5);
-      this.scene.drops.spawn('wood', 1, (tx + 0.5) * T, (y + 0.5) * T); // la madera cae por todo el tronco
+      const leaf = id === BLOCK.LOG && y < top + 3;
+      this.scene.spawnDebris((tx + 0.5) * T, (y + 0.5) * T, leaf ? BLOCK_DEFS[BLOCK.LEAVES].color : BLOCK_DEFS[id].color, 5);
+      this.scene.drops.spawn(drop, 1, (tx + 0.5) * T, (y + 0.5) * T); // la madera (o el cactus) cae por todo el tronco
     }
     // Hojas alrededor de la punta (los árboles están separados ≥6 columnas)
     for (let dy = -4; dy <= 2; dy++) {
@@ -365,7 +367,7 @@ export class BlockInteraction {
     ];
     for (const [x, y] of around) {
       const id = this.world.getTile(x, y);
-      if ((id === BLOCK.TORCH || id === BLOCK.WORKBENCH || id === BLOCK.PLANT) && !this.hasSupport(x, y, id)) {
+      if ((id === BLOCK.TORCH || id === BLOCK.WORKBENCH || IS_PLANT[id]) && !this.hasSupport(x, y, id)) {
         this._dropBlock(x, y, id);
       }
     }
@@ -385,7 +387,7 @@ export class BlockInteraction {
     if (id === BLOCK.TORCH) {
       return w.isSolid(x, y + 1) || w.isSolid(x - 1, y) || w.isSolid(x + 1, y) || w.getWall(x, y) !== WALL.NONE;
     }
-    if (id === BLOCK.WORKBENCH || id === BLOCK.PLANT) return w.isSolid(x, y + 1);
+    if (id === BLOCK.WORKBENCH || IS_PLANT[id]) return w.isSolid(x, y + 1);
     // Bloques normales: necesitan algo al lado o una pared detrás
     return (
       w.getTile(x, y + 1) !== BLOCK.AIR ||
@@ -470,7 +472,7 @@ export class BlockInteraction {
   canPlaceAt(tx, ty, block) {
     const current = this.world.getTile(tx, ty);
     // Se puede construir encima del pasto alto y las flores (se reemplazan)
-    if (current !== BLOCK.AIR && current !== BLOCK.PLANT) return false;
+    if (current !== BLOCK.AIR && !IS_PLANT[current]) return false;
     if (IS_SOLID[block] && this.player.overlapsTile(tx, ty)) return false;
     return this.hasSupport(tx, ty, block);
   }
@@ -511,7 +513,7 @@ export class BlockInteraction {
     if (mode === 'mine') return this.selectedHammer() ? this.world.getWall(tx, ty) === WALL.NONE : id === BLOCK.AIR;
     const placer = this.selectedPlacer();
     if (placer && placer.kind === 'wall') return this.world.getWall(tx, ty) !== WALL.NONE;
-    return id !== BLOCK.AIR && id !== BLOCK.PLANT;
+    return id !== BLOCK.AIR && !IS_PLANT[id];
   }
 
   // ------------------------------------------------- objetivo automático (celular)
@@ -593,7 +595,7 @@ export class BlockInteraction {
           }
         } else if (mode === 'mine') {
           if (PART[id]) continue; // un mueble no se rompe sin querer: hay que marcarlo
-          if (id === BLOCK.PLANT) {
+          if (IS_PLANT[id]) {
             if (!plant) plant = { tx, ty };
           } else if (id !== BLOCK.AIR) {
             best = { tx, ty };
@@ -612,8 +614,9 @@ export class BlockInteraction {
       }
     }
     // Un tronco se tala desde la base para que caiga el árbol entero (sin dejar tocón)
-    if (best && this.world.getTile(best.tx, best.ty) === BLOCK.LOG) {
-      while (this.world.getTile(best.tx, best.ty + 1) === BLOCK.LOG && this.inReach(best.tx, best.ty + 1)) best.ty++;
+    const bestId = best && this.world.getTile(best.tx, best.ty);
+    if (best && IS_TRUNK[bestId]) {
+      while (this.world.getTile(best.tx, best.ty + 1) === bestId && this.inReach(best.tx, best.ty + 1)) best.ty++;
     }
     return best || plant;
   }

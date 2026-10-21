@@ -22,6 +22,8 @@ import { Furniture } from '../systems/Furniture.js';
 import { Enemies } from '../systems/Enemies.js';
 import { Projectiles } from '../systems/Projectiles.js';
 import { ItemDrops } from '../systems/ItemDrops.js';
+import { Zones } from '../systems/Zones.js';
+import { Ambience } from '../systems/Ambience.js';
 import { cloneSlots } from '../systems/Inventory.js';
 import { ITEMS, getMaxStack } from '../systems/items.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
@@ -87,6 +89,9 @@ export class GameScene extends Phaser.Scene {
     this.projectiles = new Projectiles(this, this.world, this.enemies, this.player);
     this.drops = new ItemDrops(this, this.world, this.player, this.inventory);
     if (save) this.drops.restore(save.drops);
+    // Zonas del mundo (cuáles ya se descubrieron) y partículas del clima de cada una
+    this.zones = new Zones(this, this.world.generator, Array.isArray(save?.zones) ? save.zones : []);
+    this.ambience = new Ambience(this, this.world, this.zones, this.dayNight);
     // Cofres: contenido de cada uno, por la posición de su esquina ("x,y" → casillas)
     this.chests = new Map();
     for (const [key, slots] of Object.entries(save?.chests || {})) {
@@ -284,6 +289,8 @@ export class GameScene extends Phaser.Scene {
     }
     this.interaction.update(dt, this.getPointerAction());
     this.lighting.update(dt, cam);
+    this.zones.update(dt, cam, this.player);
+    this.ambience.update(dt);
 
     this.autosaveTimer += dt;
     if (this.autosaveTimer >= AUTOSAVE_SECONDS) {
@@ -500,13 +507,19 @@ export class GameScene extends Phaser.Scene {
   /** Casillas del cofre con esquina en (x0, y0) (se crean vacías la primera vez). */
   chestSlots(x0, y0) {
     const key = this._chestKey(x0, y0);
-    if (!this.chests.has(key)) this.chests.set(key, new Array(CHEST_SIZE).fill(null));
+    if (!this.chests.has(key)) {
+      // Primera vez que se abre: los cofres del mundo (pirámide…) traen su tesoro
+      const slots = new Array(CHEST_SIZE).fill(null);
+      (this.world.generator.lootFor(x0, y0) || []).forEach(([id, n], i) => {
+        slots[i] = { id, count: Math.min(n, getMaxStack(id)) };
+      });
+      this.chests.set(key, slots);
+    }
     return this.chests.get(key);
   }
 
   isChestEmpty(x0, y0) {
-    const slots = this.chests.get(this._chestKey(x0, y0));
-    return !slots || slots.every((s) => !s);
+    return this.chestSlots(x0, y0).every((s) => !s);
   }
 
   /** Abrir un cofre: muestra su contenido junto al inventario. */
@@ -609,6 +622,7 @@ export class GameScene extends Phaser.Scene {
       chunks: this.world.serialize(),
       walls: this.world.serializeWalls(),
       drops: this.drops.serialize(),
+      zones: this.zones.serialize(),
       // Solo los cofres con algo adentro
       chests: Object.fromEntries(
         [...this.chests].filter(([, slots]) => slots.some(Boolean)).map(([k, slots]) => [k, cloneSlots(slots).map((s) => (s ? [s.id, s.count] : null))]),
@@ -636,6 +650,7 @@ export class GameScene extends Phaser.Scene {
     this.enemies.destroy();
     this.projectiles.destroy();
     this.drops.destroy();
+    this.ambience.destroy();
     this.player.anim.destroy();
     this.lighting.destroy();
     this.chunkManager.destroy();

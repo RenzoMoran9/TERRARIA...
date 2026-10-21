@@ -1,5 +1,5 @@
 import { TILE_SIZE } from '../config.js';
-import { BLOCK, OBJECTS, FURNITURE, PART } from '../world/blocks.js';
+import { BLOCK, OBJECTS, FURNITURE, PART, IS_PLANT } from '../world/blocks.js';
 
 const T = TILE_SIZE;
 const DOOR_CLOSE_DELAY = 0.35; // segundos lejos de una puerta abierta al pasar antes de que se cierre sola
@@ -47,7 +47,7 @@ export class Furniture {
     for (let dy = 0; dy < obj.h; dy++) {
       for (let dx = 0; dx < obj.w; dx++) {
         const id = this.world.getTile(x0 + dx, y0 + dy);
-        if (id !== BLOCK.AIR && id !== BLOCK.PLANT) return false;
+        if (id !== BLOCK.AIR && !IS_PLANT[id]) return false;
         // Nunca encima del jugador (así la silla y la cama miran hacia él)
         if (this.player.overlapsTile(x0 + dx, y0 + dy)) return false;
       }
