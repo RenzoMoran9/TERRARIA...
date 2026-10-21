@@ -748,6 +748,8 @@ function drawCoin(pc, [dark, mid, light]) {
 
 // Colores de los íconos de armadura: [oscuro, medio, claro]
 const ARMOR_ICON = {
+  gold: ['#8a6a10', '#e0b030', '#fff0a0'],
+  hell: ['#6a1a0a', '#d0401a', '#ffa050'],
   wood: ['#5e3a1c', '#9a6a35', '#c99a58'],
   cactus: ['#2c4e1f', '#4f8a3a', '#7fc060'],
   iron: ['#4a5058', '#9aa2aa', '#dce2e8'],
@@ -763,6 +765,16 @@ function drawPotion(pc, big) {
   pc.disc(8, top + 2 + r, r, (x, y) => (y < top + 2 + r * 0.7 ? '#d8eef8' : y < top + 2 + r * 1.1 ? '#ff4a6a' : '#c0203e'));
   pc.set(6, top + 3, '#ffffff');
   pc.set(6, top + 4, '#ffffff');
+  pc.outline('#1a120c');
+}
+
+// Lingote en perspectiva: [claro, medio, oscuro]
+function drawBar(pc, [light, mid, dark]) {
+  pc.rect(2, 7, 12, 5, mid);
+  pc.rect(4, 5, 10, 2, light);
+  pc.rect(2, 7, 12, 1, light);
+  pc.rect(2, 11, 12, 1, dark);
+  pc.rect(12, 6, 2, 6, dark);
   pc.outline('#1a120c');
 }
 
@@ -1700,6 +1712,66 @@ const PIXEL = {
     for (const [x, y] of [[8, 3], [5, 5], [11, 5], [6, 8], [10, 8]]) pc.disc(x, y, 2, '#e85a8a');
     pc.disc(8, 6, 1.6, '#ffe070');
     pc.outline('#1a120c');
+  },
+
+  gold_ore(pc, v) {
+    PIXEL.stone(pc, v);
+    oreClumps(pc, v, 45, ['#8a6a10', '#e0b030', '#fff0a0']);
+  },
+  hellstone(pc, v) {
+    fillNoise(pc, ['#2a1010', '#3a1414', '#4a1a16', '#5a2018', '#6a281a'], v, 230);
+    // Vetas encendidas
+    for (let k = 0; k < 3; k++) {
+      const x = 2 + Math.floor(hash(k, 1, 231 + v) * 11);
+      const y = 2 + Math.floor(hash(k, 2, 231 + v) * 11);
+      pc.line(x, y, x + 3, y + 2, '#ff6a20');
+      pc.set(x + 1, y + 1, '#ffd060');
+    }
+  },
+  cloud_block(pc, v) {
+    fillNoise(pc, ['#c8d8ec', '#dce8f6', '#eaf2fc', '#f6faff', '#ffffff'], v, 240, [0.12, 0.35, 0.65, 0.88]);
+  },
+  mushroom_grass(pc, v) {
+    PIXEL.mud(pc, v);
+    grassTop(pc, v, { light: '#b8e8ff', mid: '#4a8aff', alt: '#6aa8ff', dark: '#2a5ac8' });
+  },
+  mushroom_plant(pc) {
+    // Hongo azul que brilla
+    pc.rect(7, 8, 2, 8, '#c8e0ff');
+    pc.disc(8, 7, 5, (x, y) => (y < 5 ? '#9ad0ff' : '#4a8aff'));
+    pc.rect(3, 7, 11, 2, '#2a5ac8');
+    pc.set(6, 4, '#ffffff');
+    pc.set(10, 5, '#e0f4ff');
+    pc.outline('#102040');
+  },
+  mushroom_plant2(pc) {
+    // Dos hongos chicos
+    for (const [x, h] of [[5, 6], [11, 4]]) {
+      pc.rect(x, 16 - h, 1, h, '#c8e0ff');
+      pc.disc(x, 16 - h, 3, (xx, y) => (y < 16 - h ? '#9ad0ff' : '#4a8aff'));
+    }
+    pc.outline('#102040');
+  },
+  gold_bar(pc) {
+    drawBar(pc, ['#fff0a0', '#e0b030', '#a87a10']);
+  },
+  hellstone_bar(pc) {
+    drawBar(pc, ['#ffa050', '#d0401a', '#7a1a0a']);
+  },
+  gold_pickaxe(pc) {
+    pickaxe(pc, '#e0b030', '#fff0a0', '#a87a10');
+  },
+  hell_pickaxe(pc) {
+    pickaxe(pc, '#d0401a', '#ffa050', '#6a1a0a');
+  },
+  gold_sword(pc) {
+    sword(pc, '#fff6c0', '#e0b030', '#a87a10');
+  },
+  hell_sword(pc) {
+    sword(pc, '#ffd070', '#ff6a20', '#a02a10');
+  },
+  gold_bow(pc) {
+    bow(pc, '#e0b030', '#8a6a10');
   },
 
   trash(pc) {

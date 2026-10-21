@@ -32,10 +32,16 @@ const USES = {
   red_shingles: 'Bloque sólido para techos',
   wood_shingles: 'Bloque sólido para techos',
   sand: 'Bloque. En el Horno se funde en vidrio',
+  gold_ore: 'Se funde en el horno: 4 minerales → 1 lingote. Hace falta pico de hierro',
+  gold_bar: 'Para el pico, la espada, el arco y la armadura de oro (en el yunque)',
+  hellstone: 'Del inframundo. Hace falta pico de oro. Con 1 basalto se funde en lingote infernal',
+  hellstone_bar: 'Lo mejor: pico, espada y armadura infernales',
+  glowing_mushroom: 'De las cuevas de hongos. Con 2 pociones menores hace 2 pociones de curación',
+  cloud: 'Bloque de las islas flotantes',
   flower: 'Sale de las flores. Sirve para pociones de curación (con gel y vidrio)',
 };
 
-const TIERS = { 1: 'piedra y carbón', 2: 'piedra, carbón y hierro', 3: 'todos los minerales conocidos' };
+const TIERS = { 1: 'piedra y carbón', 2: 'hierro, cristal y piedra sombría', 3: 'oro', 4: 'piedra infernal', 5: 'todo' };
 const WEAPON_KIND = {
   swing: 'Arma cuerpo a cuerpo',
   thrust: 'Lanza: estocada larga',
@@ -83,7 +89,7 @@ export function describeItem(id) {
     }
   } else if (d.tool) {
     lines.push('Pico');
-    lines.push(`Puede minar: ${TIERS[d.tool.tier] || 'tierra y madera'}`);
+    lines.push(`Puede minar: ${TIERS[d.tool.tier] || 'tierra y madera'}${d.tool.tier > 1 && d.tool.tier < 5 ? ' (y todo lo anterior)' : ''}`);
     lines.push(`Velocidad de minado: ×${fmt(d.tool.speed)}`);
     lines.push('Se usa solo: siempre minas con tu mejor pico');
   } else if (d.hammer) {

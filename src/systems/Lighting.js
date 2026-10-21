@@ -2,6 +2,9 @@ import Phaser from 'phaser';
 import { TILE_SIZE, WORLD_WIDTH, DEPTH } from '../config.js';
 import { IS_SOLID, IS_TRANSPARENT, LIGHT_EMIT } from '../world/blocks.js';
 import { getViewRect } from './view.js';
+import { UNDERWORLD_TOP } from '../world/WorldGenerator.js';
+
+const UNDERWORLD_GLOW = UNDERWORLD_TOP + 6;
 
 const MARGIN = 12; // tiles extra fuera de pantalla (para que la luz de antorchas cercanas entre bien)
 const AIR_DECAY = 0.085; // cuánta luz se pierde por cada tile de aire
@@ -117,7 +120,8 @@ export class Lighting {
         const tx = tx0 + i;
         const id = world.getTile(tx, ty);
         S[idx] = tx >= 0 && tx < WORLD_WIDTH && ty < skyTop[tx] ? 1 : 0;
-        B[idx] = LIGHT_EMIT[id];
+        // El aire del inframundo brilla un poco por la lava (como en Terraria)
+        B[idx] = ty >= UNDERWORLD_GLOW && !IS_SOLID[id] ? Math.max(LIGHT_EMIT[id], 0.5) : LIGHT_EMIT[id];
         D[idx] = IS_SOLID[id] && !IS_TRANSPARENT[id] ? SOLID_DECAY : AIR_DECAY;
       }
     }

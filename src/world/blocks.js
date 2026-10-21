@@ -179,6 +179,12 @@ const BUILD_BLOCKS = [
   ['WOOD_SHINGLES', { name: 'Tejas de madera', texture: 'tile_wood_shingles', framed: true, solid: true, hardness: 0.8, tier: 0, drop: 'wood_shingles', color: 0x7a5530 }],
   // Cristal de vida: aparece en el piso de las cuevas; al usarlo sube la vida máxima
   ['LIFE_CRYSTAL', { name: 'Cristal de vida', texture: 'tile_life_crystal', solid: false, hardness: 1.2, tier: 0, drop: 'life_crystal', light: 0.6, color: 0xff4a6a }],
+  // Mundo, segunda parte: oro (pico de hierro), piedra infernal (pico de oro), nubes de las islas y hongos que brillan
+  ['GOLD_ORE', { name: 'Mena de oro', texture: 'tile_gold_ore', framed: true, solid: true, hardness: 3.4, tier: 3, drop: 'gold_ore', color: 0xe0b030 }],
+  ['HELLSTONE', { name: 'Piedra infernal', texture: 'tile_hellstone', framed: true, solid: true, hardness: 4.2, tier: 4, drop: 'hellstone', light: 0.45, color: 0xff5a20 }],
+  ['CLOUD', { name: 'Nube', texture: 'tile_cloud', framed: true, solid: true, hardness: 0.3, tier: 0, drop: 'cloud', color: 0xf0f6ff }],
+  ['MUSHROOM_GRASS', { name: 'Pasto de hongos', texture: 'tile_mushroom_grass', covered: 'tile_mud', grassy: true, framed: true, solid: true, hardness: 0.55, tier: 0, drop: 'mud', light: 0.4, color: 0x4a8aff }],
+  ['MUSHROOM_PLANT', { name: 'Hongo brillante', textures: ['tile_mushroom_plant', 'tile_mushroom_plant2'], plant: true, solid: false, hardness: 0.05, tier: 0, drop: 'glowing_mushroom', light: 0.85, color: 0x6ab0ff }],
 ];
 for (const [key, def] of BUILD_BLOCKS) {
   BLOCK[key] = BLOCK_DEFS.length;

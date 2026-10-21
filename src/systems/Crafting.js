@@ -31,6 +31,20 @@ export const RECIPES = [
   { result: 'iron_spear', count: 1, ingredients: [['iron_bar', 6], ['wood', 4]], station: 'anvil' },
   { result: 'iron_bow', count: 1, ingredients: [['iron_bar', 8], ['wood', 2]], station: 'anvil' },
   { result: 'throwing_knife', count: 15, ingredients: [['iron_bar', 1]], station: 'anvil' },
+  // Oro e infierno
+  { result: 'gold_bar', count: 1, ingredients: [['gold_ore', 4]], station: 'furnace' },
+  { result: 'hellstone_bar', count: 1, ingredients: [['hellstone', 3], ['basalt', 1]], station: 'furnace' },
+  { result: 'gold_pickaxe', count: 1, ingredients: [['gold_bar', 12], ['wood', 3]], station: 'anvil' },
+  { result: 'gold_sword', count: 1, ingredients: [['gold_bar', 9]], station: 'anvil' },
+  { result: 'gold_bow', count: 1, ingredients: [['gold_bar', 8], ['wood', 2]], station: 'anvil' },
+  { result: 'hell_pickaxe', count: 1, ingredients: [['hellstone_bar', 15]], station: 'anvil' },
+  { result: 'hell_sword', count: 1, ingredients: [['hellstone_bar', 18]], station: 'anvil' },
+  { result: 'gold_helmet', count: 1, ingredients: [['gold_bar', 15]], station: 'anvil' },
+  { result: 'gold_chest', count: 1, ingredients: [['gold_bar', 25]], station: 'anvil' },
+  { result: 'gold_legs', count: 1, ingredients: [['gold_bar', 20]], station: 'anvil' },
+  { result: 'hell_helmet', count: 1, ingredients: [['hellstone_bar', 15]], station: 'anvil' },
+  { result: 'hell_chest', count: 1, ingredients: [['hellstone_bar', 25]], station: 'anvil' },
+  { result: 'hell_legs', count: 1, ingredients: [['hellstone_bar', 20]], station: 'anvil' },
   // Armaduras
   { result: 'wood_helmet', count: 1, ingredients: [['planks', 20]], station: 'workbench' },
   { result: 'wood_chest', count: 1, ingredients: [['planks', 30]], station: 'workbench' },
@@ -47,6 +61,7 @@ export const RECIPES = [
   // Pociones
   { result: 'healing_potion', count: 2, ingredients: [['gel', 2], ['flower', 1], ['glass', 1]], station: 'workbench' },
   { result: 'greater_healing_potion', count: 1, ingredients: [['healing_potion', 2], ['crystal', 1]], station: 'workbench' },
+  { result: 'greater_healing_potion', count: 2, ingredients: [['healing_potion', 2], ['glowing_mushroom', 1]], station: 'workbench' },
   // Casas
   { result: 'chest', count: 1, ingredients: [['planks', 8], ['wood', 2]], station: 'workbench' },
   { result: 'wood_hammer', count: 1, ingredients: [['planks', 8]], station: 'workbench' },

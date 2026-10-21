@@ -1,5 +1,5 @@
 import { textStyle } from './styles.js';
-import { BIOME_INFO } from '../world/WorldGenerator.js';
+import { ZONE_INFO as BIOME_INFO } from '../world/WorldGenerator.js';
 import { ZONE_DESC, dangerStars } from '../systems/Zones.js';
 
 /** Cartel grande al entrar por primera vez a una zona: nombre, peligro y cuántas van descubiertas. */

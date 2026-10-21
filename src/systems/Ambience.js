@@ -19,6 +19,8 @@ const KINDS = {
   spore: { rate: 10, life: [5, 8], from: 'bottom', vx: [-10, 10], vy: [-30, -16], sway: 14, size: 3, colors: [0xc890ff, 0x9a6ad0], glow: true, alpha: 0.75 },
   sparkle: { rate: 9, life: [0.8, 1.6], from: 'any', vx: [0, 0], vy: [-6, 0], sway: 0, size: 2, colors: [0xff9ee8, 0x8ef0ff, 0xffe68a, 0xffffff], glow: true, star: true },
   ember: { rate: 18, life: [2, 3.5], from: 'bottom', vx: [-25, 25], vy: [-90, -50], sway: 26, size: 3, colors: [0xffb030, 0xff7020, 0xffe070], glow: true, blink: true },
+  mspore: { rate: 10, life: [5, 8], from: 'any', vx: [-8, 8], vy: [-14, -4], sway: 10, size: 3, colors: [0x8ad0ff, 0x4a8aff, 0xc8f0ff], glow: true, alpha: 0.8 },
+  cloud: { rate: 3, life: [6, 9], from: 'side', vx: [20, 40], vy: [-3, 3], sway: 4, size: 6, colors: [0xffffff, 0xeef4ff], alpha: 0.5 },
   ash: { rate: 14, life: [5, 8], from: 'top', vx: [-30, -5], vy: [25, 45], sway: 16, size: 3, colors: [0x6a6260, 0x8a8280, 0x4a4442], alpha: 0.85 },
 };
 // Partículas de cada zona (mismo orden que BIOME). 'night' = solo de noche.
@@ -32,6 +34,7 @@ const BIOME_KINDS = [
   [{ kind: 'ember' }, { kind: 'ash' }],
 ];
 
+const SPECIAL_KINDS = { 7: ['ember', 'ash'], 8: ['mspore'], 9: ['cloud'] };
 const rand = (a, b) => a + Math.random() * (b - a);
 
 export class Ambience {
@@ -59,7 +62,19 @@ export class Ambience {
     const night = this.dayNight.isNight();
     const area = (view.width * view.height) / (1280 * 720); // más pantalla = más partículas
 
-    if (fade > 0) {
+    // Zonas especiales: inframundo (brasas y ceniza), cuevas de hongos (esporas) e islas (nubecitas)
+    const special = SPECIAL_KINDS[this.zones.current];
+    if (special) {
+      for (const name of special) {
+        const kind = KINDS[name];
+        const key = `z:${name}`;
+        this.acc[key] = (this.acc[key] || 0) + kind.rate * area * dt;
+        while (this.acc[key] >= 1) {
+          this.acc[key] -= 1;
+          if (this.list.length < MAX_PARTICLES) this._spawn(name, kind, view);
+        }
+      }
+    } else if (fade > 0) {
       const weights = this.zones.weights;
       for (let b = 0; b < BIOME_KINDS.length; b++) {
         const w = weights[b];

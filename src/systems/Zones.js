@@ -1,5 +1,5 @@
 import { TILE_SIZE, WORLD_WIDTH } from '../config.js';
-import { BIOME_INFO } from '../world/WorldGenerator.js';
+import { BIOME_INFO, ZONE_INFO } from '../world/WorldGenerator.js';
 
 const T = TILE_SIZE;
 const BLEND_COLUMNS = 30; // columnas a cada lado de la cámara que cuentan para mezclar el fondo
@@ -14,9 +14,12 @@ export const ZONE_DESC = [
   'Pasto violeta, abismos y ojos que vuelan',
   'Torres de cristal que brillan en la noche',
   'Lava, ceniza y murciélagos de fuego. ¡Cuidado!',
+  'Lagos de lava y piedra infernal. Lo más peligroso del mundo',
+  'Hongos azules que brillan en la oscuridad',
+  'Tierra en el cielo… y un cofre con tesoro',
 ];
 
-export const dangerStars = (d) => '★'.repeat(d) + '☆'.repeat(4 - d);
+export const dangerStars = (d) => '★'.repeat(d) + '☆'.repeat(Math.max(0, 5 - d));
 
 /**
  * Zonas del mundo: cuál está pisando el jugador, cuáles ya descubrió y cuánto de cada una
@@ -36,7 +39,7 @@ export class Zones {
   }
 
   get total() {
-    return BIOME_INFO.length;
+    return ZONE_INFO.length;
   }
 
   biomeAt(tx) {
@@ -64,7 +67,7 @@ export class Zones {
     for (let i = 0; i < target.length; i++) this.weights[i] += (target[i] - this.weights[i]) * k;
 
     if (player.dead) return;
-    const b = this.biomeAt(Math.floor(player.centerX / T));
+    const b = this.gen.zoneAt(Math.floor(player.centerX / T), Math.floor(player.centerY / T));
     if (b === this.current) {
       this.pending = -1;
       return;

@@ -42,6 +42,9 @@ const MOODS = {
   jungle: { scale: 'dorian', root: 57, bpm: 104, prog: [0, 3, 6, 3], lead: 'marimba', pad: false, bass: true, perc: 'hand', density: 0.7 },
   shadow: { scale: 'minor', root: 53, bpm: 66, prog: [0, 1, 5, 4], lead: 'reed', pad: true, bass: true, perc: null, density: 0.3 },
   crystal: { scale: 'lydian', root: 67, bpm: 80, prog: [0, 4, 1, 5], lead: 'bell', pad: true, bass: false, perc: null, density: 0.55 },
+  hell: { scale: 'phrygian', root: 45, bpm: 126, prog: [0, 1, 0, 4], lead: 'reed', pad: true, bass: true, perc: 'drum', density: 0.55 },
+  mushroom: { scale: 'lydian', root: 62, bpm: 68, prog: [0, 1, 5, 4], lead: 'bell', pad: true, bass: false, perc: null, density: 0.4 },
+  sky: { scale: 'penta', root: 69, bpm: 88, prog: [0, 3, 4, 3], lead: 'bell', pad: true, bass: false, perc: 'soft', density: 0.5 },
   volcano: { scale: 'phrygian', root: 48, bpm: 112, prog: [0, 1, 0, 5], lead: 'reed', pad: true, bass: true, perc: 'drum', density: 0.45 },
 };
 

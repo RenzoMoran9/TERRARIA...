@@ -28,13 +28,14 @@ import { Housing } from '../systems/Housing.js';
 import { Progression, XP } from '../systems/Skills.js';
 import { Abilities } from '../systems/Abilities.js';
 import { audio } from '../systems/Audio.js';
-import { BIOME } from '../world/WorldGenerator.js';
+import { BIOME, ZONE } from '../world/WorldGenerator.js';
 import { cloneSlots } from '../systems/Inventory.js';
 import { ITEMS, ARMOR_SETS, getMaxStack, coinStacks, formatCoins } from '../systems/items.js';
 import { playerOutfitTexture } from '../systems/Placeholders.js';
 import { MAX_LIFE_CRYSTALS } from '../systems/Skills.js';
 import { Npcs, roomKey } from '../systems/Npcs.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
+import { IslandMist } from '../systems/IslandMist.js';
 import { textStyle } from '../ui/styles.js';
 
 const T = TILE_SIZE;
@@ -119,6 +120,7 @@ export class GameScene extends Phaser.Scene {
     // Zonas del mundo (cuáles ya se descubrieron) y partículas del clima de cada una
     this.zones = new Zones(this, this.world.generator, Array.isArray(save?.zones) ? save.zones : []);
     this.ambience = new Ambience(this, this.world, this.zones, this.dayNight);
+    this.islandMist = new IslandMist(this, this.world.generator);
     // Casas: cuartos cerrados, fachada vista desde afuera y la consulta "Revisar casa"
     this.housing = new Housing(this, this.world, this.player);
     // Monedas (en cobre) y aldeanos que viven en las casas
@@ -359,6 +361,7 @@ export class GameScene extends Phaser.Scene {
     this.housing.update(dt);
     this.npcs.update(dt);
     this.ambience.update(dt);
+    this.islandMist.update(dt);
 
     this.autosaveTimer += dt;
     if (this.autosaveTimer >= AUTOSAVE_SECONDS) {
@@ -711,6 +714,10 @@ export class GameScene extends Phaser.Scene {
     const gen = this.world.generator;
     const tx = Phaser.Math.Clamp(Math.floor(p.centerX / T), 0, WORLD_WIDTH - 1);
     const biome = gen.biome[tx];
+    const zone = gen.zoneAt(tx, Math.floor(p.centerY / T));
+    if (zone === ZONE.UNDERWORLD) return 'hell';
+    if (zone === ZONE.MUSHROOM) return 'mushroom';
+    if (zone === ZONE.SKY) return 'sky';
     if (p.centerY / T > gen.surface[tx] + 18) return biome === BIOME.VOLCANO ? 'volcano' : 'cave';
     const byBiome = { [BIOME.DESERT]: 'desert', [BIOME.SNOW]: 'snow', [BIOME.JUNGLE]: 'jungle', [BIOME.SHADOW]: 'shadow', [BIOME.CRYSTAL]: 'crystal', [BIOME.VOLCANO]: 'volcano' };
     if (byBiome[biome]) return byBiome[biome];

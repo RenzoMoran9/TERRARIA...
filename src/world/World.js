@@ -170,7 +170,11 @@ export class World extends Phaser.Events.EventEmitter {
   }
 
   _scanSkyTop(x) {
-    let y = 0;
+    // Desde un poco más arriba de la superficie (las islas flotantes no tapan la luz)
+    let y = Math.max(0, this.generator.computeSkyTop(x) - 60);
+    const gen = this.generator;
+    const is = gen.islandAt(x);
+    if (is) y = Math.max(y, is.top + is.thick + 3);
     while (y < WORLD_HEIGHT && !this.isSolid(x, y)) y++;
     return y;
   }

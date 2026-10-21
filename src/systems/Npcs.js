@@ -53,7 +53,10 @@ export const GUIDE_TIPS = [
   'La lava quema: no te quedes encima. El volcán es la zona más peligrosa.',
   'Los enemigos sueltan monedas. Con 50 de cobre vendrá el Comerciante, si tiene una casa libre.',
   'Cuando tengas más de 100 de vida máxima, la Enfermera vendrá a curarte (cobra, claro).',
-  'Para minar piedra sombría o cristal necesitas un pico de hierro.',
+  'Para el cristal y la piedra sombría alcanza un pico de piedra; el oro pide uno de hierro y la piedra infernal, uno de oro.',
+  'Muy abajo, sobre la roca madre, está el Inframundo: lava, piedra infernal y lo más peligroso del mundo.',
+  'En lo profundo hay cuevas de hongos azules que brillan. Sus hongos mejoran las pociones.',
+  'Mira al cielo: hay islas flotantes con cofres. Construye escaleras de plataformas y usa el doble salto.',
   'La espada de cristal es la más fuerte: necesitas cristal y lingotes de hierro.',
   'Si te quedas sin espacio, guarda cosas en un cofre.',
 ];

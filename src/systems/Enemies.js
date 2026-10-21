@@ -1,6 +1,6 @@
 import { TILE_SIZE, DEPTH } from '../config.js';
 import { BLOCK, IS_PLANT } from '../world/blocks.js';
-import { BIOME, BIOME_INFO } from '../world/WorldGenerator.js';
+import { BIOME, BIOME_INFO, ZONE, ZONE_INFO } from '../world/WorldGenerator.js';
 import { frameCount } from './Placeholders.js';
 import { audio } from './Audio.js';
 
@@ -137,6 +137,8 @@ export const SLIME_KINDS = {
   shadow: { name: 'Slime sombrío', tint: 0x9a5ad0, drops: [['shadow_stone', 1, 2, 0.4]] },
   crystal: { name: 'Slime de cristal', tint: 0xff9ef0, drops: [['crystal', 1, 2, 0.6]] },
   lava: { name: 'Slime de lava', tint: 0xff7a30, drops: [['coal', 1, 2, 0.6]] },
+  mushroom: { name: 'Slime de hongo', tint: 0x6ab0ff, drops: [['glowing_mushroom', 1, 1, 0.5]] },
+  hell: { name: 'Slime infernal', tint: 0xff3a20, drops: [['hellstone', 1, 2, 0.5]] },
 };
 // Zombis de cada zona (tinte sobre el dibujo)
 const ZOMBIE_TINTS = { [BIOME.DESERT]: 0xf0dca8, [BIOME.SNOW]: 0xa8d0ff, [BIOME.SHADOW]: 0xc8a8ff, [BIOME.CRYSTAL]: 0xffc8f4, [BIOME.VOLCANO]: 0xb89088 };
@@ -153,6 +155,12 @@ const SPAWN_TABLE = {
   [BIOME.SHADOW]: { day: [['eye', 0.5], ['slime', 0.5, 'shadow']], night: [['eye', 0.55], ['zombie', 0.3], ['slime', 0.15, 'shadow']] },
   [BIOME.CRYSTAL]: { day: [['slime', 0.6, 'crystal'], ['eye', 0.4]], night: [['eye', 0.4], ['slime', 0.35, 'crystal'], ['zombie', 0.25]] },
   [BIOME.VOLCANO]: { day: [['firebat', 0.55], ['slime', 0.45, 'lava']], night: [['firebat', 0.55], ['zombie', 0.25], ['slime', 0.2, 'lava']] },
+};
+/** Zonas especiales: [tipo, peso, variante de slime, tinte] (de día y de noche igual) */
+const SPECIAL_SPAWNS = {
+  [ZONE.UNDERWORLD]: [['firebat', 0.45], ['slime', 0.3, 'hell'], ['eye', 0.25, null, 0xff6040]],
+  [ZONE.MUSHROOM]: [['slime', 0.65, 'mushroom'], ['eye', 0.35, null, 0x8ab8ff]],
+  [ZONE.SKY]: [['wasp', 0.5], ['eye', 0.5, null, 0xf0f6ff]],
 };
 const CAVE_SLIME = { [BIOME.FOREST]: 'blue', [BIOME.DESERT]: 'sand', [BIOME.SNOW]: 'ice', [BIOME.JUNGLE]: 'jungle', [BIOME.SHADOW]: 'shadow', [BIOME.CRYSTAL]: 'crystal', [BIOME.VOLCANO]: 'lava' };
 const LEGACY_SLIME = ['green', 'blue']; // spawn(type, x, y, 0|1) de versiones anteriores
@@ -562,15 +570,22 @@ export class Enemies {
     const ptx = Math.floor(p.centerX / T);
     const pty = Math.floor(p.centerY / T);
     const underground = pty > gen.surface[Math.max(0, Math.min(gen.surface.length - 1, ptx))] + 12;
+    const zone = gen.zoneAt(ptx, pty);
+    const special = SPECIAL_SPAWNS[zone];
     for (let attempt = 0; attempt < 12; attempt++) {
       const side = Math.random() < 0.5 ? -1 : 1;
       const tx = ptx + side * (SPAWN_MIN + Math.floor(Math.random() * (SPAWN_MAX - SPAWN_MIN)));
       if (tx < 2 || tx >= this.world.width - 2) continue;
       const biome = gen.biome[tx];
-      const level = BIOME_INFO[biome].danger;
+      let level = BIOME_INFO[biome].danger;
       let type = 'slime';
       let kind = CAVE_SLIME[biome];
-      if (!underground) {
+      let tint;
+      if (special) {
+        const pick = pickWeighted(special);
+        [type, , kind, tint] = pick;
+        level = ZONE_INFO[zone].danger;
+      } else if (!underground) {
         const pick = pickWeighted(SPAWN_TABLE[biome][night ? 'night' : 'day']);
         type = pick[0];
         kind = pick[2];
@@ -579,7 +594,8 @@ export class Enemies {
       const hTiles = Math.ceil(def.h / T);
       // Suelo: en la superficie, el primer bloque sólido desde el cielo; bajo tierra, el piso de una cueva
       let floor;
-      if (!underground) floor = this.world.skyTop[tx];
+      if (zone === ZONE.SKY) floor = pty + 2; // en el cielo, a la altura del jugador
+      else if (!underground) floor = this.world.skyTop[tx];
       else {
         floor = -1;
         for (let ty = pty - 14; ty <= pty + 14; ty++) {
@@ -595,7 +611,7 @@ export class Enemies {
       if (!this._freeColumn(tx, floor, hTiles)) continue;
       const x = tx * T + (T - def.w) / 2;
       const y = floor * T - def.h;
-      const tint = type === 'zombie' ? ZOMBIE_TINTS[biome] : type === 'eye' && biome === BIOME.CRYSTAL ? 0xffb8f8 : undefined;
+      if (tint === undefined) tint = type === 'zombie' ? ZOMBIE_TINTS[biome] : type === 'eye' && biome === BIOME.CRYSTAL ? 0xffb8f8 : undefined;
       return this.spawn(type, x, y, { kind, level, tint });
     }
     return null;

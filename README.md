@@ -121,10 +121,12 @@ Las puertas se abren solas al caminar contra ellas y se cierran al alejarse. Par
   | Cactus | 2 / 3 / 2 | +2 | 20 / 30 / 25 cactus (Mesa) |
   | Hierro | 3 / 4 / 3 | +3 | 15 / 25 / 20 lingotes (Yunque) |
   | Cristal | 5 / 7 / 5 | +5 | cristal + lingotes (Yunque) |
+  | Oro | 4 / 5 / 4 | +4 | 15 / 25 / 20 lingotes de oro (Yunque) |
+  | Infernal | 7 / 9 / 7 | +6 | 15 / 25 / 20 lingotes infernales (Yunque) |
   Cada golpe te quita **la mitad de tu defensa** menos. Se ponen en las casillas de armadura del inventario
   (arrastrando, o con clic derecho en la PC) y **el personaje se ve con lo que lleva puesto**.
   **Pociones de curación**: menor (+50, 2 gel + 1 flor + 1 vidrio → 2, en la Mesa; también la vende el Comerciante)
-  y normal (+100, 2 menores + 1 cristal). Se toman con **R** (PC), el **botón de poción** (celular) o eligiéndolas
+  y normal (+100, 2 menores + 1 cristal, o 2 menores + 1 hongo brillante). Se toman con **R** (PC), el **botón de poción** (celular) o eligiéndolas
   y con la acción; después hay que esperar 45 s. Las **flores** sueltan *Flor* al romperlas.
   **Cristales de vida**: brillan en el piso de las cuevas profundas; cada uno da **+20 de vida máxima** para siempre
   (hasta 15). Con más vida aparecen más corazones (hasta 10, en dos filas).
@@ -172,6 +174,27 @@ Las puertas se abren solas al caminar contra ellas y se cierran al alejarse. Par
   lava, y zombis de cada zona. En las zonas lejanas tienen más vida, pegan más fuerte y aparecen más seguido.
   Sueltan materiales de su zona (arena, hielo, barro, piedra sombría, cristal, carbón, cactus).
   Las zonas nuevas aparecen completas en un **mundo nuevo**; en una partida vieja, lo que ya habías modificado se mantiene.
+- **Mundo, segunda parte** (más allá de la superficie):
+  - **Islas flotantes**: muy arriba en el cielo hay islas de **nubes** con pasto, árboles, una casita y un
+    **cofre con premio** (arco de oro, espada de oro, pico de oro o cristal de vida, más lingotes de oro,
+    pociones, nubes y flechas). Hay que construir hacia arriba (plataformas, bloques) para llegar.
+    Debajo de cada isla cuelga una **neblina** suave que se mece con el viento.
+  - **Cuevas de hongos**: bolsones bajo tierra con **pasto de hongos** azul y **hongos brillantes** que alumbran;
+    los hongos sirven para la **poción de curación** (2 menores + 1 hongo). Tienen sus slimes de hongo.
+  - **Inframundo**: el fondo del mundo, con mares de **lava**, ceniza, basalto y **piedra infernal**; el aire tiene
+    un resplandor rojizo. Aparecen murciélagos de fuego y slimes de lava. ¡Cuidado con caerte en la lava!
+  - **Minerales y picos por nivel**: el **oro** aparece en las cuevas profundas (necesita pico de hierro); la
+    **piedra infernal** solo con **pico de oro**. En el Horno: 4 mineral de oro → 1 lingote de oro;
+    3 piedra infernal + 1 basalto → 1 lingote infernal. En el Yunque:
+    | Ítem | Receta | Datos |
+    | --- | --- | --- |
+    | Pico de oro | 12 lingotes de oro + 3 madera | nivel 4, muy rápido; mina la piedra infernal |
+    | Espada de oro | 9 lingotes de oro | daño 32 |
+    | Arco de oro | 8 lingotes de oro + 2 madera | dispara flechas más rápido y fuerte |
+    | Pico infernal | 15 lingotes infernales | nivel 5, el más rápido |
+    | Espada infernal | 18 lingotes infernales | daño 46, la más fuerte |
+  Cada una de estas zonas tiene su cartel de descubrimiento, su música, sus partículas (esporas, nubes, brasas)
+  y su fondo. El Guía también da consejos sobre ellas. Aparecen completas en un **mundo nuevo**.
 - **Enemigos y combate**: **slimes** (saltan hacia ti; verdes de día, azules de noche y en cuevas) y **zombis**
   (solo de noche; caminan hacia ti, suben escalones y saltan obstáculos de 2 bloques, pero **no abren puertas**).
   Aparecen fuera de la pantalla y nunca donde hay paredes de fondo puestas por ti. Hacen daño al tocarte, te
@@ -246,7 +269,7 @@ Con `npm run dev` la página se recarga sola al agregar o cambiar una imagen. Pa
 Se recomienda **PNG con transparencia**. Si una imagen tiene otro tamaño se escala al tamaño de dibujo
 (los bloques siempre se dibujan a 32×32), así que también se pueden usar imágenes al doble de resolución.
 
-### Lista completa de imágenes (177)
+### Lista completa de imágenes (197)
 
 **Fachadas.** Desde afuera, cada casa muestra la imagen del bloque que corresponde a sus paredes
 (pared de madera → `tiles/planks.png`, de piedra → `tiles/stone_brick.png`, de tierra → `tiles/dirt.png`) y
@@ -304,6 +327,12 @@ redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pas
 | `tiles/plant_crystal3.png`           | 32 × 32     | Planta decorativa de la zona (transparente) |
 | `tiles/plant_volcano.png`            | 32 × 32     | Planta decorativa de la zona (transparente) |
 | `tiles/plant_volcano2.png`           | 32 × 32     | Planta decorativa de la zona (transparente) |
+| `tiles/gold_ore.png`                 | 32 × 32     | Mineral de oro (cuevas profundas; necesita pico de hierro) |
+| `tiles/hellstone.png`                | 32 × 32     | Piedra infernal (Inframundo; brilla, necesita pico de oro) |
+| `tiles/cloud.png`                    | 32 × 32     | Nube (islas flotantes; también ícono) |
+| `tiles/mushroom_grass.png`           | 32 × 32     | Pasto de hongos (cuevas de hongos, sobre barro) |
+| `tiles/mushroom_plant.png`           | 32 × 32     | Hongo brillante (planta, transparente; también ícono del ítem) |
+| `tiles/mushroom_plant2.png`          | 32 × 32     | Hongo brillante, otra forma (transparente) |
 | `walls/dirt_wall.png`                | 32 × 32     | Pared de fondo de tierra (más oscura que el bloque)                         |
 | `walls/stone_wall.png`               | 32 × 32     | Pared de fondo de piedra (más oscura que el bloque)                         |
 | `walls/wood_wall.png`                | 32 × 32     | Pared de fondo de madera (más oscura que los tablones)                      |
@@ -355,6 +384,20 @@ redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pas
 | `items/greater_healing_potion.png`   | 32 × 32     | Poción de curación |
 | `items/life_crystal.png`             | 32 × 32     | Cristal de vida (ítem) |
 | `items/flower.png`                   | 32 × 32     | Flor |
+| `items/gold_bar.png`                 | 32 × 32     | Lingote de oro |
+| `items/hellstone_bar.png`            | 32 × 32     | Lingote infernal |
+| `items/glowing_mushroom.png`         | 32 × 32     | Hongo brillante (ítem) |
+| `items/gold_pickaxe.png`             | 32 × 32     | Pico de oro |
+| `items/hell_pickaxe.png`             | 32 × 32     | Pico infernal |
+| `items/gold_sword.png`               | 32 × 32     | Espada de oro |
+| `items/hell_sword.png`               | 32 × 32     | Espada infernal |
+| `items/gold_bow.png`                 | 32 × 32     | Arco de oro |
+| `items/gold_helmet.png`              | 32 × 32     | Casco de oro |
+| `items/gold_chest.png`               | 32 × 32     | Pechera de oro |
+| `items/gold_legs.png`                | 32 × 32     | Grebas de oro |
+| `items/hell_helmet.png`              | 32 × 32     | Casco infernal |
+| `items/hell_chest.png`               | 32 × 32     | Pechera infernal |
+| `items/hell_legs.png`                | 32 × 32     | Grebas infernales |
 | `items/door.png`                     | 32 × 32     | Ícono de *Puerta*                                                           |
 | `items/chair.png`                    | 32 × 32     | Ícono de *Silla*                                                            |
 | `items/table.png`                    | 32 × 32     | Ícono de *Mesa*                                                             |
@@ -454,7 +497,7 @@ src/
   scenes/              BootScene (carga), BackgroundScene (cielo y paisaje), MenuScene, GameScene (mundo) y UIScene (interfaz)
   world/               Ruido con semilla, bloques, generador, datos por chunks, renderizado de chunks y tileset
   player/              Jugador: física, colisiones, vida y daño por caída (Player), poses (animations) y animaciones y efectos (PlayerAnimator)
-  systems/             Sonido y música (Audio), inventario, ítems, crafteo, minar/colocar, muebles (Furniture), casas y fachadas (Housing), experiencia y habilidades (Skills, Abilities), aldeanos (Npcs), enemigos, zonas (Zones) y sus partículas (Ambience), día/noche, iluminación, guardado y placeholders (pixel art por código)
+  systems/             Sonido y música (Audio), inventario, ítems, crafteo, minar/colocar, muebles (Furniture), casas y fachadas (Housing), experiencia y habilidades (Skills, Abilities), aldeanos (Npcs), enemigos, zonas (Zones) y sus partículas (Ambience), neblina de las islas (IslandMist), día/noche, iluminación, guardado y placeholders (pixel art por código)
   ui/                  HUD, barra rápida, inventario, controles táctiles, debug y avisos
 ```
 

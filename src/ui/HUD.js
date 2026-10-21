@@ -1,5 +1,5 @@
 import { textStyle } from './styles.js';
-import { BIOME_INFO } from '../world/WorldGenerator.js';
+import { ZONE_INFO as BIOME_INFO } from '../world/WorldGenerator.js';
 import { dangerStars } from '../systems/Zones.js';
 import { ENERGY_MAX } from '../systems/Skills.js';
 

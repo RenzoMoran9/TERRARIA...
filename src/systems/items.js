@@ -39,6 +39,24 @@ export const ITEMS = {
   coin_copper: { name: 'Moneda de cobre', icon: 'item_coin_copper', coin: 1 },
   coin_silver: { name: 'Moneda de plata', icon: 'item_coin_silver', coin: 100 },
   coin_gold: { name: 'Moneda de oro', icon: 'item_coin_gold', coin: 10000 },
+  // Mundo, segunda parte
+  gold_ore: { name: 'Mineral de oro', icon: 'tile_gold_ore', places: BLOCK.GOLD_ORE },
+  gold_bar: { name: 'Lingote de oro', icon: 'item_gold_bar' },
+  hellstone: { name: 'Piedra infernal', icon: 'tile_hellstone', places: BLOCK.HELLSTONE },
+  hellstone_bar: { name: 'Lingote infernal', icon: 'item_hellstone_bar' },
+  cloud: { name: 'Nube', icon: 'tile_cloud', places: BLOCK.CLOUD },
+  glowing_mushroom: { name: 'Hongo brillante', icon: 'item_glowing_mushroom' },
+  gold_pickaxe: { name: 'Pico de oro', icon: 'item_gold_pickaxe', maxStack: 1, tool: { tier: 4, speed: 7 } },
+  hell_pickaxe: { name: 'Pico infernal', icon: 'item_hell_pickaxe', maxStack: 1, tool: { tier: 5, speed: 9.5 } },
+  gold_sword: { name: 'Espada de oro', icon: 'item_gold_sword', maxStack: 1, weapon: { damage: 32, knockback: 360, speed: 2.7, reach: 66 } },
+  hell_sword: { name: 'Espada infernal', icon: 'item_hell_sword', maxStack: 1, weapon: { damage: 46, knockback: 420, speed: 2.9, reach: 72 } },
+  gold_bow: { name: 'Arco de oro', icon: 'item_gold_bow', maxStack: 1, weapon: { kind: 'bow', damage: 13, knockback: 180, speed: 2.4, projSpeed: 820 } },
+  gold_helmet: { name: 'Casco de oro', icon: 'item_gold_helmet', maxStack: 1, armor: { slot: 'head', defense: 4, set: 'gold' } },
+  gold_chest: { name: 'Pechera de oro', icon: 'item_gold_chest', maxStack: 1, armor: { slot: 'body', defense: 5, set: 'gold' } },
+  gold_legs: { name: 'Grebas de oro', icon: 'item_gold_legs', maxStack: 1, armor: { slot: 'legs', defense: 4, set: 'gold' } },
+  hell_helmet: { name: 'Casco infernal', icon: 'item_hell_helmet', maxStack: 1, armor: { slot: 'head', defense: 7, set: 'hell' } },
+  hell_chest: { name: 'Pechera infernal', icon: 'item_hell_chest', maxStack: 1, armor: { slot: 'body', defense: 9, set: 'hell' } },
+  hell_legs: { name: 'Grebas infernales', icon: 'item_hell_legs', maxStack: 1, armor: { slot: 'legs', defense: 7, set: 'hell' } },
   // Combate: armaduras (slot = head/body/legs; defense = defensa; set = juego completo da un bonus)
   wood_helmet: { name: 'Casco de madera', icon: 'item_wood_helmet', maxStack: 1, armor: { slot: 'head', defense: 1, set: 'wood' } },
   wood_chest: { name: 'Pechera de madera', icon: 'item_wood_chest', maxStack: 1, armor: { slot: 'body', defense: 2, set: 'wood' } },
@@ -139,7 +157,7 @@ export function coinStacks(n) {
 // Precio de algunos ítems (en cobre); el resto se calcula según qué es
 const VALUES = {
   wood: 2, planks: 1, dirt: 0, stone: 1, sand: 1, coal: 6, iron_ore: 12, iron_bar: 40, gel: 3, torch: 4, cactus: 3,
-  crystal: 25, shadow_stone: 8, glass: 4, workbench: 10, furnace: 60, anvil: 220, chest: 30, bed: 50, door: 12,
+  crystal: 25, shadow_stone: 8, gold_ore: 30, gold_bar: 120, hellstone: 50, hellstone_bar: 250, glowing_mushroom: 15, cloud: 2, glass: 4, workbench: 10, furnace: 60, anvil: 220, chest: 30, bed: 50, door: 12,
 };
 
 /** Cuánto vale un ítem (en cobre); el Comerciante paga 1/5 al comprárselo. */
@@ -161,5 +179,7 @@ export const ARMOR_SETS = {
   wood: { name: 'madera', bonus: 1, head: ['#8a5a2b', '#a3733a'], body: ['#9a6a35', '#7a4f22', '#b5843f'], legs: ['#7a4f22', '#5e3a1c'], boots: ['#5e3a1c', '#4a2d16'] },
   cactus: { name: 'cactus', bonus: 2, head: ['#3e7a2e', '#5fa04a'], body: ['#4f8a3a', '#386629', '#6fae55'], legs: ['#3e6a2c', '#2c4e1f'], boots: ['#2c4e1f', '#1e3815'] },
   iron: { name: 'hierro', bonus: 3, head: ['#8a9098', '#b8c0c8'], body: ['#9aa2aa', '#6a7078', '#c8d0d8'], legs: ['#7a8088', '#5a6068'], boots: ['#4a5058', '#383d44'] },
+  gold: { name: 'oro', bonus: 4, head: ['#d8a820', '#ffe070'], body: ['#e0b030', '#a87a10', '#ffe890'], legs: ['#c89820', '#906a10'], boots: ['#7a5a10', '#5a420a'] },
+  hell: { name: 'infernal', bonus: 6, head: ['#b8301a', '#ff7a30'], body: ['#c83a1a', '#7a1a0a', '#ff9a40'], legs: ['#9a2a14', '#6a1a0a'], boots: ['#3a1a14', '#2a100a'] },
   crystal: { name: 'cristal', bonus: 5, head: ['#c47ad8', '#f0a8ff'], body: ['#d890f0', '#a060c0', '#f8c8ff'], legs: ['#b070d0', '#8050a0'], boots: ['#7a4a98', '#5a3478'] },
 };

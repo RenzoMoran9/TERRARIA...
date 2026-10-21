@@ -25,6 +25,13 @@ export const BIOME_INFO = [
   { name: 'Tierras de Cristal', danger: 4, top: BLOCK.CRYSTAL_GRASS, soil: BLOCK.DIRT, stone: BLOCK.STONE, wallSoil: WALL.DIRT, wallStone: WALL.STONE, plant: BLOCK.PLANT_CRYSTAL, plantChance: 0.45, tree: null, treeDensity: 0 },
   { name: 'Volcán', danger: 4, top: BLOCK.ASH, soil: BLOCK.ASH, stone: BLOCK.BASALT, wallSoil: WALL.ASH, wallStone: WALL.ASH, plant: BLOCK.PLANT_VOLCANO, plantChance: 0.14, tree: null, treeDensity: 0 },
 ];
+/** Nombre y peligro de todas las zonas: las 7 de la superficie y las 3 especiales (ver ZONE) */
+export const ZONE_INFO = [
+  ...BIOME_INFO,
+  { name: 'Inframundo', danger: 5 },
+  { name: 'Cuevas de hongos', danger: 3 },
+  { name: 'Islas flotantes', danger: 3 },
+];
 export const TREE_TYPES = ['forest', 'pine', 'jungle', 'shadow', 'cactus'];
 
 // Distancia (en bloques) desde el centro a la que empieza cada anillo de zonas
@@ -33,6 +40,10 @@ const RING_MID = 470;
 const RING_FAR = 740;
 const BLEND = 18; // las alturas de dos zonas vecinas se mezclan en ±18 columnas
 const PYRAMID_HALF = 15; // la pirámide del desierto mide 31 bloques de ancho
+/** Fila donde empieza el inframundo (cavernas con lava y piedra infernal sobre la roca madre) */
+export const UNDERWORLD_TOP = WORLD_HEIGHT - 50;
+/** Zonas especiales (además de las 7 de la superficie): se detectan por profundidad o altura */
+export const ZONE = Object.freeze({ UNDERWORLD: 7, MUSHROOM: 8, SKY: 9 });
 
 /**
  * Generador procedural del mundo.
@@ -68,6 +79,90 @@ export class WorldGenerator {
     this._generateColumns();
     this._generateFeatures();
     this._generateTrees();
+    this._generateIslands();
+  }
+
+  // ------------------------------------------------------------------ islas flotantes
+
+  /** 4 islas en el cielo, lejos de la pirámide y el volcán, cada una con un cofre del tesoro. */
+  _generateIslands() {
+    this.islands = [];
+    this.islandTop = new Int16Array(WORLD_WIDTH).fill(WORLD_HEIGHT);
+    const offsets = [-640, -300, 280, 600];
+    offsets.forEach((off, i) => {
+      let cx = this.spawnX + off + Math.round((hash2(i, 5, this.seed) - 0.5) * 60);
+      if (Math.abs(cx - this.pyramidX) < 50) cx += 60;
+      if (Math.abs(cx - this.volcanoX) < 80) cx += off > 0 ? -90 : 90;
+      const half = 13 + Math.floor(hash2(i, 6, this.seed) * 5);
+      cx = Math.max(half + 4, Math.min(WORLD_WIDTH - half - 5, cx));
+      let ground = WORLD_HEIGHT;
+      for (let x = cx - half; x <= cx + half; x++) ground = Math.min(ground, this.surface[x]);
+      const top = Math.max(14, ground - 42 - Math.floor(hash2(i, 7, this.seed) * 10));
+      const island = { cx, x0: cx - half, x1: cx + half, half, top, thick: 6 + Math.floor(hash2(i, 8, this.seed) * 3) };
+      this.islands.push(island);
+      for (let x = island.x0 - 1; x <= island.x1 + 1; x++) this.islandTop[x] = Math.min(this.islandTop[x], top - 3);
+    });
+  }
+
+  /** Isla que cubre la columna x (o null) */
+  islandAt(x) {
+    for (const is of this.islands) if (x >= is.x0 && x <= is.x1) return is;
+    return null;
+  }
+
+  /** Bloque de una isla flotante en (x, y), o 0 si es aire. */
+  islandTile(x, y) {
+    const is = this.islandAt(x);
+    if (!is) return 0;
+    const dx = (x - is.cx) / (is.half + 0.5);
+    const bottom = is.top + Math.round(is.thick * Math.sqrt(Math.max(0, 1 - dx * dx)));
+    if (y < is.top || y > bottom + 1) return 0;
+    if (y === bottom + 1) return hash2(x, 41, this.seed) < 0.5 ? BLOCK.CLOUD : 0; // borde de nubes irregular
+    if (Math.abs(dx) > 0.86) return BLOCK.CLOUD;
+    if (y === is.top) return BLOCK.GRASS;
+    if (y >= bottom - 1) return BLOCK.CLOUD;
+    return BLOCK.DIRT;
+  }
+
+  /** Cofres de las islas: esquina superior izquierda */
+  get islandChests() {
+    return this.islands.map((is) => ({ x0: is.cx - 1, y0: is.top - 2 }));
+  }
+
+  // ------------------------------------------------------------------ inframundo y hongos
+
+  /** Bloque del inframundo en (x, y), o -1 si (x, y) no es parte de él. */
+  underworldTile(x, y) {
+    const u = y - UNDERWORLD_TOP;
+    if (u < 0) return -1;
+    const ceil = 8 + Math.round(this.nTerrain(x * 0.03, 91.1) * 4);
+    const floor = 34 + Math.round(this.nTerrain(x * 0.02, 92.7) * 4);
+    const rock = () => (this.nOre(x * 0.15 + 333, y * 0.15) > 0.5 ? BLOCK.HELLSTONE : BLOCK.BASALT);
+    if (u < ceil) return rock();
+    if (u < floor) {
+      if (this.nCavern(x * 0.03 + 700, y * 0.06) > 0.62) return BLOCK.BASALT; // columnas de roca
+      if (u > floor - 4 && this.nSoil(x * 0.02 + 900, 3.3) > 0.15) return BLOCK.LAVA; // lagos de lava
+      return BLOCK.AIR;
+    }
+    if (u === floor) return BLOCK.ASH;
+    return rock();
+  }
+
+  /** ¿(x, y) está en una zona de cuevas de hongos? */
+  inMushroom(x, y) {
+    const depth = y - this.surface[x];
+    if (depth < 45 || y > UNDERWORLD_TOP - 15) return false;
+    return this.nCavern(x * 0.006 + 500, y * 0.01 + 500) > 0.5;
+  }
+
+  /** Zona en (x, y): las 7 de la superficie o inframundo / cuevas de hongos / islas. */
+  zoneAt(x, y) {
+    const tx = Math.max(0, Math.min(WORLD_WIDTH - 1, Math.floor(x)));
+    if (y >= UNDERWORLD_TOP - 2) return ZONE.UNDERWORLD;
+    if (this.inMushroom(tx, y)) return ZONE.MUSHROOM;
+    const is = this.islandAt(tx);
+    if (is && y < is.top + is.thick + 2 && y < this.surface[tx] - 15) return ZONE.SKY;
+    return this.biome[tx];
   }
 
   // ------------------------------------------------------------------ biomas
@@ -252,12 +347,15 @@ export class WorldGenerator {
 
     const s = this.surface[x];
     if (y < s) return BLOCK.AIR;
+    const uw = this.underworldTile(x, y);
+    if (uw !== -1) return uw;
     const depth = y - s;
     const b = this.biome[x];
     const info = BIOME_INFO[b];
     // Lava del volcán (cráter y charcos)
     if (depth < this.lavaDepth[x]) return BLOCK.LAVA;
-    if (this.isCave(x, y)) {
+    const mushroom = this.inMushroom(x, y);
+    if (this.isCave(x, y) || (mushroom && this.nCavern(x * 0.04 + 800, y * 0.05) > 0.25)) {
       // En el volcán, las cuevas poco profundas tienen bolsones de lava
       if (b === BIOME.VOLCANO && depth > 12 && depth < 60 && this.nCavern(x * 0.05, y * 0.05) > 0.35) return BLOCK.LAVA;
       return BLOCK.AIR;
@@ -281,7 +379,11 @@ export class WorldGenerator {
     if (depth < 90 && this.nSoil(x * 0.07 + 300, y * 0.07 + 300) > 0.6) {
       return b === BIOME.JUNGLE ? BLOCK.MUD : info.soil === BLOCK.SNOW ? BLOCK.SNOW : BLOCK.DIRT;
     }
+    // Cuevas de hongos: barro, con pasto azul brillante donde da a la cueva
+    if (mushroom) return this.isCave(x, y - 1) || this.nCavern(x * 0.04 + 800, (y - 1) * 0.05) > 0.25 ? BLOCK.MUSHROOM_GRASS : BLOCK.MUD;
     if (this.nOre(x * 0.12, y * 0.12) > 0.62) return BLOCK.COAL_ORE;
+    // Oro: más abajo que el hierro (hace falta pico de hierro)
+    if (depth > 75 && this.nOre(x * 0.13 + 1777, y * 0.13 + 1777) > 0.7 - Math.min(depth, 250) * 0.0004) return BLOCK.GOLD_ORE;
     if (depth > 28 && this.nOre(x * 0.14 + 911, y * 0.14 + 911) > 0.66 - Math.min(depth, 200) * 0.0004) {
       return BLOCK.IRON_ORE;
     }
@@ -296,6 +398,8 @@ export class WorldGenerator {
 
   /** Lo que hay por encima de la superficie en (x, y): pirámide, espira o aire. */
   _aboveSurface(x, y) {
+    const island = this.islandTile(x, y);
+    if (island) return island;
     const row = this.surface[x] - 1 - y; // 0 = justo sobre el suelo
     // Pirámide del desierto, hueca, con un pasillo de entrada a la derecha y una cámara al centro
     const dp = x - this.pyramidX;
@@ -321,6 +425,8 @@ export class WorldGenerator {
     }
     if (depth < 1) return WALL.NONE;
     if (this.chasm[x] && depth < this.chasm[x]) return WALL.NONE; // los abismos se ven hasta el fondo
+    if (y >= UNDERWORLD_TOP) return WALL.ASH;
+    if (this.inMushroom(x, y)) return WALL.MUD;
     const info = BIOME_INFO[this.biome[x]];
     if (depth <= this.dirtDepth[x]) return info.wallSoil;
     return depth > 70 ? WALL.STONE : info.wallStone;
@@ -328,6 +434,7 @@ export class WorldGenerator {
 
   /** Primera fila sólida de una columna (por encima de ella llega la luz del sol). */
   computeSkyTop(x) {
+    // (las islas flotantes no cuentan: la luz del cielo pasa alrededor y llega al suelo de abajo)
     let y = Math.max(0, this.surface[x] - PYRAMID_HALF - 2);
     while (y < WORLD_HEIGHT && !IS_SOLID[this.tileAt(x, y)]) y++;
     return y;
@@ -356,6 +463,12 @@ export class WorldGenerator {
         ['gel', 5],
       ];
     }
+    // Islas flotantes: el tesoro del cielo
+    const i = this.islandChests.findIndex((q) => q.x0 === x0 && q.y0 === y0);
+    if (i >= 0) {
+      const special = [['gold_bow', 1], ['gold_sword', 1], ['life_crystal', 2], ['gold_pickaxe', 1]][i % 4];
+      return [special, ['gold_bar', 8], ['greater_healing_potion', 3], ['life_crystal', 1], ['cloud', 30], ['wood_arrow', 50]];
+    }
     return null;
   }
 
@@ -369,7 +482,7 @@ export class WorldGenerator {
     for (let lx = 0; lx < CS; lx++) {
       const x = x0 + lx;
       // Sobre la superficie solo hay aire (salvo pirámide y espiras): empezamos un poco más arriba
-      const top = Math.max(0, this.surface[x] - PYRAMID_HALF - 2 - y0);
+      const top = Math.max(0, Math.min(this.islandTop[x], this.surface[x] - PYRAMID_HALF - 2) - y0);
       for (let ly = top; ly < CS; ly++) data[ly * CS + lx] = this.tileAt(x, y0 + ly);
     }
 
@@ -398,6 +511,24 @@ export class WorldGenerator {
         if (data[ly * CS + lx] !== BLOCK.AIR || !IS_SOLID[data[(ly + 1) * CS + lx]]) continue;
         if (hash2(x * 131 + y, 77, this.seed) < 0.006) data[ly * CS + lx] = BLOCK.LIFE_CRYSTAL;
       }
+    }
+
+    // Hongos brillantes sobre el pasto de hongos; flores y cofres en las islas
+    for (let lx = 0; lx < CS; lx++) {
+      const x = x0 + lx;
+      for (let ly = 0; ly < CS - 1; ly++) {
+        if (data[ly * CS + lx] !== BLOCK.AIR || data[(ly + 1) * CS + lx] !== BLOCK.MUSHROOM_GRASS) continue;
+        if (hash2(x * 17 + y0 + ly, 61, this.seed) < 0.4) data[ly * CS + lx] = BLOCK.MUSHROOM_PLANT;
+      }
+    }
+    for (const is of this.islands) {
+      for (let x = is.x0 + 2; x <= is.x1 - 2; x++) {
+        if (Math.abs(x - is.cx) > 2 && hash2(x, 43, this.seed) < 0.35) this._put(data, x0, y0, x, is.top - 1, BLOCK.PLANT);
+      }
+    }
+    for (const c of this.islandChests) {
+      const chest = OBJECTS.chest;
+      for (let dy = 0; dy < chest.h; dy++) for (let dx = 0; dx < chest.w; dx++) this._put(data, x0, y0, c.x0 + dx, c.y0 + dy, chest.ids[dy][dx]);
     }
 
     // Cofre del tesoro dentro de la pirámide
