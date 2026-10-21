@@ -26,6 +26,14 @@ const SAMPLE_VOL = {
   place: 0.8, jump: 0.45, zombie: 0.5, slimeHop: 0.4, flyer: 0.45, drink: 0.8, teleport: 0.8, land: 0.55, hit: 0.75, hurt: 0.8, open: 0.5, lava: 0.7, levelUp: 0.8, zone: 0.75, house: 0.8,
 };
 
+/** data:audio/mpeg;base64,… → ArrayBuffer */
+function dataUrlBytes(url) {
+  const bin = atob(url.slice(url.indexOf(',') + 1));
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out.buffer;
+}
+
 const midiHz = (m) => 440 * 2 ** ((m - 69) / 12);
 const rand = (a, b) => a + Math.random() * (b - a);
 
@@ -187,8 +195,9 @@ class AudioEngine {
       const m = path.match(/([A-Za-z_]+?)_(\d+)\.mp3$/);
       if (!m) continue;
       const name = m[1];
-      fetch(url)
-        .then((r) => r.arrayBuffer())
+      // (en la versión de una sola página vienen adentro como data: URL; se decodifican sin pedir nada)
+      const bytes = url.startsWith('data:') ? Promise.resolve(dataUrlBytes(url)) : fetch(url).then((r) => r.arrayBuffer());
+      bytes
         .then((data) => this.ctx.decodeAudioData(data))
         .then((buf) => {
           (this.samples[name] ||= []).push(buf);
