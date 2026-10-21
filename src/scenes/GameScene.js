@@ -27,6 +27,8 @@ import { Ambience } from '../systems/Ambience.js';
 import { Housing } from '../systems/Housing.js';
 import { Progression, XP } from '../systems/Skills.js';
 import { Abilities } from '../systems/Abilities.js';
+import { audio } from '../systems/Audio.js';
+import { BIOME } from '../world/WorldGenerator.js';
 import { cloneSlots } from '../systems/Inventory.js';
 import { ITEMS, getMaxStack } from '../systems/items.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
@@ -91,6 +93,7 @@ export class GameScene extends Phaser.Scene {
       if (!p.dead) p.health = p.maxHealth; // subir de nivel cura
       this.spawnSparkles(p.centerX, p.centerY, 24, 0xffe08a);
       p.anim.cheer(1.2);
+      audio.play('levelUp');
       this.events.emit('levelUp', level);
     });
     this.respawnTimer = 0;
@@ -111,7 +114,13 @@ export class GameScene extends Phaser.Scene {
     this.ambience = new Ambience(this, this.world, this.zones, this.dayNight);
     // Casas: cuartos cerrados, fachada vista desde afuera y la consulta "Revisar casa"
     this.housing = new Housing(this, this.world, this.player);
-    this.events.on('zoneDiscovered', () => this.gainXp(XP.zone, this.player.centerX, this.player.y - 20));
+    this.events.on('zoneDiscovered', () => {
+      audio.play('zone');
+      this.gainXp(XP.zone, this.player.centerX, this.player.y - 20);
+    });
+    // Sonido: los efectos lejanos suenan más bajo; la música cambia con la zona, la hora y las cuevas
+    audio.listener = this.player;
+    this.musicTimer = 0;
     // Cofres: contenido de cada uno, por la posición de su esquina ("x,y" → casillas)
     this.chests = new Map();
     for (const [key, slots] of Object.entries(save?.chests || {})) {
@@ -320,6 +329,11 @@ export class GameScene extends Phaser.Scene {
     this.interaction.update(dt, this.getPointerAction());
     this.lighting.update(dt, cam);
     this.zones.update(dt, cam, this.player);
+    this.musicTimer -= dt;
+    if (this.musicTimer <= 0) {
+      this.musicTimer = 1;
+      audio.setMood(this.musicMood());
+    }
     this.housing.update(dt);
     this.ambience.update(dt);
 
@@ -664,6 +678,18 @@ export class GameScene extends Phaser.Scene {
         [...this.chests].filter(([, slots]) => slots.some(Boolean)).map(([k, slots]) => [k, cloneSlots(slots).map((s) => (s ? [s.id, s.count] : null))]),
       ),
     };
+  }
+
+  /** Qué música corresponde: cuevas, la zona donde está o (en el bosque) día/noche. */
+  musicMood() {
+    const p = this.player;
+    const gen = this.world.generator;
+    const tx = Phaser.Math.Clamp(Math.floor(p.centerX / T), 0, WORLD_WIDTH - 1);
+    const biome = gen.biome[tx];
+    if (p.centerY / T > gen.surface[tx] + 18) return biome === BIOME.VOLCANO ? 'volcano' : 'cave';
+    const byBiome = { [BIOME.DESERT]: 'desert', [BIOME.SNOW]: 'snow', [BIOME.JUNGLE]: 'jungle', [BIOME.SHADOW]: 'shadow', [BIOME.CRYSTAL]: 'crystal', [BIOME.VOLCANO]: 'volcano' };
+    if (byBiome[biome]) return byBiome[biome];
+    return this.dayNight.isNight() ? 'night' : 'day';
   }
 
   /** Hacia dónde sale la bola de fuego: al ratón en la PC; en el celular, al enemigo más cercano. */

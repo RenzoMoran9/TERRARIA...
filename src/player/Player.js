@@ -2,6 +2,7 @@ import { TILE_SIZE, PLAYER as P } from '../config.js';
 import { PlayerAnimator } from './PlayerAnimator.js';
 import { HURTS, BLOCK } from '../world/blocks.js';
 import { ENERGY_MAX } from '../systems/Skills.js';
+import { audio } from '../systems/Audio.js';
 
 const SPRINT_MULT = 1.6; // correr: 60% más rápido
 const SPRINT_COST = 22; // energía por segundo corriendo
@@ -155,6 +156,7 @@ export class Player {
       this.invuln = Math.max(this.invuln, DASH_TIME + 0.1);
       this.scene.spawnDust(this.centerX, this.y + this.h, 8);
       this.anim.jump();
+      audio.play('dash');
     }
     if (this.dashTime > 0) {
       this.dashTime -= dt;
@@ -202,6 +204,7 @@ export class Player {
       this.coyote = 0;
       this.jumping = true;
       this.anim.jump();
+      audio.play('jump');
     } else if (jumpPressed && !this.onGround && this.coyote <= 0 && !this.usedDoubleJump && this.hasSkill('doubleJump')) {
       // Doble salto: un segundo impulso en el aire, con una nubecita
       this.usedDoubleJump = true;
@@ -212,6 +215,7 @@ export class Player {
       this.peakY = this.y;
       this.anim.jump();
       this.scene.spawnDust(this.centerX, this.y + this.h, 10);
+      audio.play('doubleJump');
     }
     // Soltar el botón antes corta el salto (saltos cortos)
     if (this.jumping && !controls.jump && this.vy < 0) {
@@ -229,6 +233,7 @@ export class Player {
       // Golpe sísmico: cae en picada; al tocar el suelo, una onda golpea alrededor
       this.pounding = true;
       this.jumping = false;
+      audio.play('dash', { vol: 0.6 });
       this.vx = 0;
       this.vy = POUND_SPEED;
     }
@@ -254,11 +259,19 @@ export class Player {
         fallTiles = 3;
       }
       this.anim.land(fallTiles);
+      if (fallTiles > 0.6) audio.play('land', { fall: fallTiles });
       if (fallTiles > 1.5) this.scene.spawnDust(this.centerX, this.y + this.h, Math.min(12, 4 + Math.round(fallTiles)));
       if (fallTiles > P.SAFE_FALL_TILES) {
         this.damage(Math.round((fallTiles - P.SAFE_FALL_TILES) * P.FALL_DAMAGE_PER_TILE));
       }
       this.peakY = this.y;
+    }
+
+    // Pasos al caminar (más seguidos corriendo)
+    this.stepTimer = (this.stepTimer || 0) - dt * (Math.abs(this.vx) / P.SPEED);
+    if (this.onGround && Math.abs(this.vx) > 60 && this.stepTimer <= 0) {
+      this.stepTimer = 0.32;
+      audio.play('step');
     }
 
     this.regen(dt);
@@ -286,6 +299,7 @@ export class Player {
       this.vx *= 0.3;
       this.vy = -520; // salta de la lava
       this.scene.spawnSparkles(this.centerX, this.y + this.h, 10, 0xff8a30);
+      audio.play('lava');
       if (!this._lavaWarned) {
         this._lavaWarned = true;
         this.scene.events.emit('toast', '¡La lava quema! Sal rápido');
@@ -459,6 +473,7 @@ export class Player {
     this.scene.showFloatingText(this.centerX, this.y - 4, `-${amount}`, '#ff5252');
     this.scene.cameras.main.shake(150, 0.006);
     this.anim.hurt();
+    audio.play('hurt');
     if (this.health <= 0) this.die();
   }
 
@@ -469,6 +484,7 @@ export class Player {
     this.vx = 0;
     this.vy = 0;
     this.anim.die(); // cae de espaldas y se desvanece
+    audio.play('die');
     this.scene.onPlayerDied();
   }
 

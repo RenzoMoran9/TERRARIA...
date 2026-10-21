@@ -4,6 +4,7 @@ import { BLOCK, BLOCK_DEFS, IS_SOLID, IS_PLANT, IS_TRUNK, WALL, WALL_DEFS, PART 
 import { ITEMS, HAND } from './items.js';
 import { frameCount } from './Placeholders.js';
 import { PROJECTILE_GRAVITY } from './Projectiles.js';
+import { audio } from './Audio.js';
 
 const T = TILE_SIZE;
 const REACH_PX2 = (REACH_TILES * T) ** 2;
@@ -317,6 +318,7 @@ export class BlockInteraction {
     if (drop) this.scene.drops.spawn(drop, 1, (tx + 0.5) * T, (ty + 0.5) * T);
     if (XP.ore[drop]) this.scene.gainXp?.(XP.ore[drop], (tx + 0.5) * T, ty * T); // minerales dan experiencia
     this.scene.spawnDebris((tx + 0.5) * T, (ty + 0.5) * T, BLOCK_DEFS[id].color);
+    audio.play('break', { x: (tx + 0.5) * T, y: (ty + 0.5) * T });
     this._checkSupportAround(tx, ty);
     return true;
   }
@@ -339,6 +341,7 @@ export class BlockInteraction {
       }
     }
     this.player.anim.cheer(0.8); // ¡árbol talado!
+    audio.play('tree', { x: (tx + 0.5) * T, y: ty * T });
     this.scene.gainXp?.(XP.tree, (tx + 0.5) * T, top * T);
     return true;
   }
@@ -358,6 +361,7 @@ export class BlockInteraction {
     for (let dy = 0; dy < f.obj.h; dy++) {
       for (let dx = 0; dx < f.obj.w; dx++) this.scene.spawnDebris((f.x0 + dx + 0.5) * T, (f.y0 + dy + 0.5) * T, def.color, 4);
     }
+    audio.play('break', { x: (tx + 0.5) * T, y: (ty + 0.5) * T });
     return true;
   }
 
@@ -502,12 +506,13 @@ export class BlockInteraction {
       // La primera vez se explica para qué sirven (no frenan: se pasa por delante)
       if (!BlockInteraction.wallHintShown) {
         BlockInteraction.wallHintShown = true;
-        this.scene.events.emit('toast', 'Las paredes de fondo decoran. Para que frenen enemigos, usa bloques (tablones, piedra)');
+        this.scene.events.emit('toast', 'Las paredes de fondo van detrás y rellenan la casa. Lo que frena enemigos es el marco de bloques y la puerta');
       }
     }
     else this.furniture.place(spot.obj, spot.x0, spot.y0);
     this.inventory.removeFromSlot(this.inventory.selected, 1);
     this.player.anim.use(placer.def.icon);
+    audio.play('place', { x: (tx + 0.5) * T, y: (ty + 0.5) * T });
     return placer;
   }
 

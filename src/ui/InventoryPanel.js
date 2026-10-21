@@ -4,6 +4,7 @@ import { addToSlots } from '../systems/Inventory.js';
 import { RECIPES, canCraft, craft, describeIngredients, hasIngredients, STATION_NAMES, STATION_SHORT } from '../systems/Crafting.js';
 import { createButton } from './Button.js';
 import { COLORS, textStyle } from './styles.js';
+import { audio } from '../systems/Audio.js';
 
 // Medidas del panel sin escalar (luego se escala para que quepa en pantallas pequeñas)
 const SLOT = 44;
@@ -57,6 +58,11 @@ export class InventoryPanel {
     // Habilidades (también con la tecla K)
     this.skillsBtn = createButton(scene, PAD + GRID_W - 70, PAD + 8, 140, 26, '★ Habilidades', () => scene.toggleSkills(true), { fontSize: '14px' });
     this.container.add(this.skillsBtn);
+    // Sonido: todo → sin música → apagado
+    this.soundBtn = createButton(scene, PAD + GRID_W - 70 - 150, PAD + 8, 150, 26, audio.settingLabel(), () => this.soundBtn.label.setText(audio.cycleSetting()), {
+      fontSize: '13px',
+    });
+    this.container.add(this.soundBtn);
     this.chest = null; // casillas del cofre abierto (o null: modo crafteo)
     const craftStart = this.container.list.length;
     this.container.add(scene.add.text(CRAFT_X, PAD - 2, 'Crafteo', textStyle({ fontSize: '18px' })));
@@ -324,6 +330,7 @@ export class InventoryPanel {
     if (!result.ok) this.holdPointer = null;
     else {
       this.gs.player.anim.cheer(); // el personaje festeja lo que fabricó
+      audio.play('craft');
       this.gs.onCrafted(recipe.result); // la primera vez da experiencia
     }
     this.refreshCrafting(true);
@@ -342,6 +349,7 @@ export class InventoryPanel {
   }
 
   open() {
+    audio.play('open');
     this.isOpen = true;
     this.blocker.setVisible(true);
     this.container.setVisible(true);

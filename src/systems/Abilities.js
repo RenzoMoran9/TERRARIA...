@@ -1,4 +1,5 @@
 import { TILE_SIZE } from '../config.js';
+import { audio } from './Audio.js';
 
 const T = TILE_SIZE;
 const FIRE_COST = 20;
@@ -52,6 +53,7 @@ export class Abilities {
       e.vy = -520;
     }
     this.scene.cameras.main.shake(220, 0.012);
+    audio.play('pound');
     this.scene.spawnDust(x - 40, y, 10);
     this.scene.spawnDust(x + 40, y, 10);
     this.scene.spawnSparkles(x, y - 6, 16, 0xffe08a);

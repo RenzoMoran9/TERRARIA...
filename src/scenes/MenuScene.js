@@ -3,6 +3,7 @@ import { SaveSystem } from '../systems/SaveSystem.js';
 import { seedFromString } from '../world/noise.js';
 import { createButton } from '../ui/Button.js';
 import { textStyle } from '../ui/styles.js';
+import { audio } from '../systems/Audio.js';
 
 /** Semilla del mundo nuevo: ?seed=... en la URL, o una al azar. */
 function pickSeed() {
@@ -37,6 +38,8 @@ export class MenuScene extends Phaser.Scene {
   create() {
     // Sin color de fondo: se ve BackgroundScene (cielo y paisaje en movimiento) detrás
     this.confirmNew = false;
+    audio.listener = null;
+    audio.setMood('menu');
     this.build();
     this.scale.on('resize', this.build, this);
     // Si el navegador avisa que el juego se puede instalar, aparece el botón "Instalar"
@@ -116,7 +119,7 @@ export class MenuScene extends Phaser.Scene {
 
     const help = touch
       ? 'Joystick: moverse · Flecha: saltar · Toca un bloque para marcarlo\nBotón del pico: minar/colocar lo marcado · Flechas: cambiar modo · Cuadritos: inventario'
-      : 'A/D o flechas: moverse · Espacio/W: saltar · Clic izq.: minar · Clic der.: colocar\n1-9 o rueda: barra rápida · E: inventario y crafteo · F3: debug';
+      : 'A/D o flechas: moverse · Espacio/W: saltar · Clic izq.: minar · Clic der.: colocar\n1-9 o rueda: barra rápida · E: inventario · K: habilidades · H: revisar casa · F3: debug';
     const helpText = this.add
       .text(
         W / 2,
@@ -130,6 +133,9 @@ export class MenuScene extends Phaser.Scene {
     this.add
       .rectangle(W / 2, helpText.y - helpText.height / 2, Math.min(W - 16, helpText.width + 24), helpText.height + 12, 0x10163a, 0.6)
       .setStrokeStyle(1, 0x7d8fe0, 0.6);
+
+    // Sonido: todo → sin música → apagado (arriba a la derecha)
+    const sound = createButton(this, W - 92, 28, 168, 34, audio.settingLabel(), () => sound.label.setText(audio.cycleSetting()), { fontSize: '14px' });
   }
 
   /** Muestra el aviso del navegador para instalar el juego como app. */

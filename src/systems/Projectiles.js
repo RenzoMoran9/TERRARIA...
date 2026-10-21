@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { TILE_SIZE, DEPTH } from '../config.js';
+import { audio } from './Audio.js';
 
 const T = TILE_SIZE;
 const ICON_ANGLE = -Math.PI / 4; // los íconos de armas apuntan arriba a la derecha
@@ -44,6 +45,7 @@ export class Projectiles {
       dead: false,
     };
     this.list.push(p);
+    audio.play(kind === 'arrow' ? 'bow' : kind === 'fireball' ? 'fireball' : 'throw', { x, y });
     return p;
   }
 
@@ -137,6 +139,7 @@ export class Projectiles {
       e.hit(p.damage, p.knockback, p.x);
     }
     this.scene.spawnSparkles(p.x, p.y, 18, 0xff8a30);
+    audio.play('explode', { x: p.x, y: p.y });
     this.scene.spawnDebris(p.x, p.y, 0xffc040, 8);
     this.scene.showShockwave?.(p.x, p.y, FIREBALL_RADIUS, 0xff8a30);
   }

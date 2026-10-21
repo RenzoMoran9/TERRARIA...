@@ -1,5 +1,6 @@
 import { TILE_SIZE } from '../config.js';
 import { BLOCK, OBJECTS, FURNITURE, PART, IS_PLANT } from '../world/blocks.js';
+import { audio } from './Audio.js';
 
 const T = TILE_SIZE;
 const DOOR_CLOSE_DELAY = 0.35; // segundos lejos de una puerta abierta al pasar antes de que se cierre sola
@@ -124,6 +125,7 @@ export class Furniture {
   }
 
   _setDoor(f, open) {
+    audio.play('door', { x: (f.x0 + 0.5) * T, y: (f.y0 + 1.5) * T });
     const obj = open ? OBJECTS.door_open : OBJECTS.door_closed;
     for (let dy = 0; dy < obj.h; dy++) this.world.setTile(f.x0, f.y0 + dy, obj.ids[dy][0]);
   }
@@ -207,6 +209,7 @@ export class Furniture {
     }
     if (f.type === 'chest') {
       this.scene.openChest(f.x0, f.y0);
+      audio.play('chest');
       return true;
     }
     return false;

@@ -64,6 +64,7 @@ La carpeta `dist/` se puede subir tal cual a cualquier hosting estático (GitHub
 | Barra rápida          | Teclas `1`–`9` o rueda del ratón    | Tocar la casilla                               |
 | Inventario y crafteo  | `E` (cerrar: `E` o `Esc`)           | Botón de cuadritos                             |
 | Revisar casa          | `H` (o el botón del inventario)     | Botón *Revisar casa* del inventario            |
+| Sonido / música       | Botón *Sonido* (menú o inventario)  | Botón *Sonido* (menú o inventario)             |
 | Modo debug (FPS)      | `F3`                                | Tocar el reloj                                 |
 | Pantalla completa     | —                                   | Botón de esquinas (arriba a la derecha)        |
 
@@ -182,6 +183,15 @@ Las puertas se abren solas al caminar contra ellas y se cierran al alejarse. Par
   de piedra (3 tablones + 10 piedra); para las casas: martillo de madera (8 tablones),
   paredes ×4 (1 tablón, 1 piedra o 1 tierra), puerta (6 tablones), silla (4), mesa (8) y cama (15 tablones + 5 madera).
   La lista de recetas se desplaza con la rueda del ratón, arrastrando con el dedo o con las flechas ▲▼.
+- **Sonido y música** (hechos por código con WebAudio, sin archivos): efectos al minar (distinto en tierra,
+  piedra y madera), romper, colocar, talar, recoger, pasos, saltar, aterrizar, golpes de espada, impactos, enemigos
+  que mueren, daño, arcos, cuchillos, bola de fuego y explosiones, embestida, golpe sísmico, lava, puertas, cofres,
+  crafteo, subir de nivel, zona descubierta y casa válida. Los sonidos lejanos se oyen más bajo.
+  **Música generativa** que cambia con suavidad según dónde estás: menú, bosque de día y de noche, cuevas,
+  desierto (escala árabe con tambores de mano), tundra (campanas), selva (marimba y percusión), Tierras Sombrías,
+  Tierras de Cristal y volcán (tambores graves); se compone sola con variaciones. Botón **Sonido** en el menú y en
+  el inventario: todo → sin música → apagado (se recuerda). El sonido empieza con el primer toque o tecla
+  (los navegadores no permiten sonar antes).
 - **Día y noche**: ciclo de 10 minutos con amanecer y atardecer graduales. La luz se propaga por bloques:
   bajo tierra está oscuro y las antorchas iluminan alrededor.
 - **Vida**: barra de vida, daño por caídas de más de 12 bloques, regeneración lenta y reaparición en el punto de inicio.
@@ -390,7 +400,7 @@ src/
   scenes/              BootScene (carga), BackgroundScene (cielo y paisaje), MenuScene, GameScene (mundo) y UIScene (interfaz)
   world/               Ruido con semilla, bloques, generador, datos por chunks, renderizado de chunks y tileset
   player/              Jugador: física, colisiones, vida y daño por caída (Player), poses (animations) y animaciones y efectos (PlayerAnimator)
-  systems/             Inventario, ítems, crafteo, minar/colocar, muebles (Furniture), casas y fachadas (Housing), experiencia y habilidades (Skills, Abilities), enemigos, zonas (Zones) y sus partículas (Ambience), día/noche, iluminación, guardado y placeholders (pixel art por código)
+  systems/             Sonido y música (Audio), inventario, ítems, crafteo, minar/colocar, muebles (Furniture), casas y fachadas (Housing), experiencia y habilidades (Skills, Abilities), enemigos, zonas (Zones) y sus partículas (Ambience), día/noche, iluminación, guardado y placeholders (pixel art por código)
   ui/                  HUD, barra rápida, inventario, controles táctiles, debug y avisos
 ```
 

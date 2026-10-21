@@ -1,6 +1,7 @@
 import { textStyle, COLORS } from './styles.js';
 import { createButton } from './Button.js';
 import { SKILLS, BRANCHES, xpForLevel, MAX_LEVEL } from '../systems/Skills.js';
+import { audio } from '../systems/Audio.js';
 
 const PANEL_W = 640;
 const PANEL_H = 428;
@@ -79,6 +80,7 @@ export class SkillsPanel {
   }
 
   open() {
+    audio.play('open');
     this.isOpen = true;
     this.blocker.setVisible(true);
     this.container.setVisible(true);
@@ -102,6 +104,7 @@ export class SkillsPanel {
     }
     const p = this.gs.player;
     this.gs.spawnSparkles(p.centerX, p.centerY, 16, 0x9be7ff);
+    audio.play('learn');
     this.scene.toast.show(`¡Aprendiste ${s.name}!${s.keys ? ` ${s.keys}` : ''}`);
   }
 

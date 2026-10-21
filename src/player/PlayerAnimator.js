@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { PLAYER as P, DEPTH, TILE_SIZE } from '../config.js';
 import { FRAME, WALK_FRAMES, ART_W, ART_H, frontHand } from './animations.js';
 import { frameCount } from '../systems/Placeholders.js';
+import { audio, digSound } from '../systems/Audio.js';
 
 // Tiempos del personaje quieto (segundos sin tocar nada)
 const LOOK_AT = 6; // mira hacia atrás y se da vuelta
@@ -341,7 +342,10 @@ export class PlayerAnimator {
     // Al pasar por el impacto: chispas del bloque (o golpe de la espada) y un pequeño sacudón
     if (Math.floor(before - 0.6) !== Math.floor(this.swingPhase - 0.6)) {
       if (m.color != null) this.scene.spawnDebris(m.x, m.y, m.color, 3);
-      if (m.onHit) m.onHit();
+      if (m.onHit) {
+        audio.play('swing');
+        m.onHit();
+      } else if (m.color != null) audio.play(digSound(this.player.world.getTile(Math.floor(m.x / 32), Math.floor(m.y / 32))));
       this.sx = 1.06;
       this.sy = 0.95;
     }

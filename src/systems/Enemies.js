@@ -2,6 +2,7 @@ import { TILE_SIZE, DEPTH } from '../config.js';
 import { BLOCK, IS_PLANT } from '../world/blocks.js';
 import { BIOME, BIOME_INFO } from '../world/WorldGenerator.js';
 import { frameCount } from './Placeholders.js';
+import { audio } from './Audio.js';
 
 const T = TILE_SIZE;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -419,6 +420,7 @@ class Enemy {
     this.dashing = 0;
     this.scene.showFloatingText(this.centerX, this.y - 6, `${damage}`, '#ffb347', 15);
     this.scene.spawnDebris(this.centerX, this.centerY, this.blood, 4);
+    audio.play('hit', { x: this.centerX, y: this.centerY });
     if (this.hp <= 0) this.die(true);
   }
 
@@ -427,6 +429,7 @@ class Enemy {
     if (byPlayer) {
       this.scene.spawnDust(this.centerX, this.y + this.h, 10);
       this.scene.spawnDebris(this.centerX, this.centerY, this.blood, 10);
+      audio.play(this.type === 'slime' ? 'slimeDie' : 'enemyDie', { x: this.centerX, y: this.centerY });
       this.manager.giveDrops(this);
       // Experiencia: más por los enemigos fuertes (y los de las zonas lejanas)
       this.scene.gainXp?.(Math.max(3, Math.round(this.maxHp * 0.5 + this.damage * 0.3)), this.centerX, this.y - 8);

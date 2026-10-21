@@ -1,5 +1,6 @@
 import { TILE_SIZE, DEPTH } from '../config.js';
 import { ITEMS } from './items.js';
+import { audio } from './Audio.js';
 
 const T = TILE_SIZE;
 const SIZE = 18; // tamaño del ícono en el suelo
@@ -121,6 +122,7 @@ export class ItemDrops {
   }
 
   _pickUp(d) {
+    audio.play('pickup');
     const left = this.inventory.add(d.id, d.count);
     const got = d.count - left;
     if (got > 0) this._picked.set(d.id, (this._picked.get(d.id) || 0) + got);

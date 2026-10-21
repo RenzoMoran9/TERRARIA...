@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { TILE_SIZE, DEPTH, WORLD_WIDTH, WORLD_HEIGHT, CHUNK_SIZE, WORLD_CHUNKS_X } from '../config.js';
 import { XP } from './Skills.js';
 import { BLOCK, IS_SOLID, IS_PLATFORM, LIGHT_EMIT, PART, WALL_DEFS } from '../world/blocks.js';
+import { audio } from './Audio.js';
 
 const T = TILE_SIZE;
 // Reglas de Terraria: el cuarto con su marco mide entre 60 y 750 bloques
@@ -272,6 +273,7 @@ export class Housing {
     this.announced.add(id);
     if (this.loading) return;
     this.scene.events.emit('toast', '¡Casa válida! Aquí podrá vivir un aldeano');
+    audio.play('house');
     this.scene.gainXp?.(XP.house, (room.x0 + room.x1 + 1) * T * 0.5, room.y0 * T);
     this.scene.spawnSparkles?.((room.x0 + room.x1 + 1) * T * 0.5, (room.y0 + room.y1 + 1) * T * 0.5, 14, 0x9cff9c);
   }
