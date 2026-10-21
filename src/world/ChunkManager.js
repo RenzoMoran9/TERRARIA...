@@ -10,12 +10,14 @@ import {
   CHUNKS_PER_FRAME,
   DEPTH,
 } from '../config.js';
-import { BLOCK, IS_SOLID, IS_FRAMED, WALL, WALL_MATERIAL, tileIndex, variantAt } from './blocks.js';
+import { BLOCK, IS_SOLID, IS_FRAMED, WALL, WALL_MATERIAL, PART, tileIndex, variantAt } from './blocks.js';
 import { getViewRect } from '../systems/view.js';
 import { frameCount } from '../systems/Placeholders.js';
 import { hash2 } from './noise.js';
 
 const T = TILE_SIZE;
+// Parte de abajo a la izquierda del horno: ahí se agrega el brillo del fuego
+const isFurnaceFire = (id) => PART[id] !== null && PART[id].type === 'furnace' && PART[id].dx === 0 && PART[id].dy === 1;
 const CHUNK_PX = CHUNK_SIZE * T;
 const NEIGHBORS = [
   [0, -1],
@@ -145,6 +147,7 @@ export class ChunkManager {
         const w = this.wallIndex(tx, ty, id);
         if (w !== -1) walls.putTileAt(w, lx, ly, false);
         if (id === BLOCK.TORCH) this._addGlow(entry, tx, ty);
+        else if (isFurnaceFire(id)) this._addGlow(entry, tx, ty, (tx + 1) * T, (ty + 0.45) * T, 1.5);
         else if (id === BLOCK.LOG) this._addTreeDecor(entry, tx, ty);
       }
     }
@@ -188,12 +191,13 @@ export class ChunkManager {
     entry.decor.delete(k);
   }
 
-  _addGlow(entry, tx, ty) {
+  /** Brillo que parpadea (antorchas, fuego del horno), guardado como decoración del bloque (tx, ty). */
+  _addGlow(entry, tx, ty, x = (tx + 0.5) * T, y = (ty + 0.3) * T, scale = 1.6) {
     const g = this.scene.add
-      .image((tx + 0.5) * T, (ty + 0.3) * T, 'fx_glow')
+      .image(x, y, 'fx_glow')
       .setBlendMode(Phaser.BlendModes.ADD)
       .setDepth(DEPTH.LIGHT + 0.5);
-    g.baseScale = 1.6;
+    g.baseScale = scale;
     g.phase = hash2(tx, ty, 5) * 100;
     g.setScale(g.baseScale);
     this.glows.add(g);
@@ -241,8 +245,9 @@ export class ChunkManager {
       this._refreshCell(entry, tx, ty, id);
       entry.walls.putTileAt(this.wallIndex(tx, ty, id), tx - cx * CHUNK_SIZE, ty - cy * CHUNK_SIZE, false);
       const k = ty * WORLD_WIDTH + tx;
-      if (old === BLOCK.TORCH || old === BLOCK.LOG) this._removeDecor(entry, k);
+      if (old === BLOCK.TORCH || old === BLOCK.LOG || isFurnaceFire(old)) this._removeDecor(entry, k);
       if (id === BLOCK.TORCH) this._addGlow(entry, tx, ty);
+      else if (isFurnaceFire(id)) this._addGlow(entry, tx, ty, (tx + 1) * T, (ty + 0.45) * T, 1.5);
     }
     // Los bordes de los 4 vecinos pueden cambiar
     for (const [dx, dy] of NEIGHBORS) {

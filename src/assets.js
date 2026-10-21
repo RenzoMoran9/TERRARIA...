@@ -32,6 +32,7 @@ export const ASSETS = {
   tile_plant_grass: { file: 'tiles/plant_grass.png', width: 32, height: 32, placeholder: 'plant_grass' },
   tile_plant_flower_red: { file: 'tiles/plant_flower_red.png', width: 32, height: 32, placeholder: 'plant_flower_red' },
   tile_plant_flower_yellow: { file: 'tiles/plant_flower_yellow.png', width: 32, height: 32, placeholder: 'plant_flower_yellow' },
+  tile_stone_brick: { file: 'tiles/stone_brick.png', width: 32, height: 32, placeholder: 'stone_brick' },
 
   // ---------- Paredes de fondo (32×32) ----------
   wall_dirt: { file: 'walls/dirt_wall.png', width: 32, height: 32, placeholder: 'wall_dirt' },
@@ -45,6 +46,8 @@ export const ASSETS = {
   obj_chair: { file: 'furniture/chair.png', width: 32, height: 64, placeholder: 'chair' },
   obj_table: { file: 'furniture/table.png', width: 96, height: 64, placeholder: 'table' },
   obj_bed: { file: 'furniture/bed.png', width: 128, height: 64, placeholder: 'bed' },
+  obj_furnace: { file: 'furniture/furnace.png', width: 64, height: 64, placeholder: 'furnace' },
+  obj_anvil: { file: 'furniture/anvil.png', width: 64, height: 32, placeholder: 'anvil' },
 
   // ---------- Árboles ----------
   // Copa: 3 variantes de 144×128 una al lado de la otra
@@ -68,6 +71,12 @@ export const ASSETS = {
   item_gel: { file: 'items/gel.png', width: 32, height: 32, placeholder: 'gel' },
   item_wood_sword: { file: 'items/wood_sword.png', width: 32, height: 32, placeholder: 'wood_sword' },
   item_stone_sword: { file: 'items/stone_sword.png', width: 32, height: 32, placeholder: 'stone_sword' },
+  item_furnace: { file: 'items/furnace.png', width: 32, height: 32, placeholder: 'furnace_item' },
+  item_anvil: { file: 'items/anvil.png', width: 32, height: 32, placeholder: 'anvil_item' },
+  item_iron_bar: { file: 'items/iron_bar.png', width: 32, height: 32, placeholder: 'iron_bar' },
+  item_iron_pickaxe: { file: 'items/iron_pickaxe.png', width: 32, height: 32, placeholder: 'iron_pickaxe' },
+  item_iron_sword: { file: 'items/iron_sword.png', width: 32, height: 32, placeholder: 'iron_sword' },
+  item_iron_hammer: { file: 'items/iron_hammer.png', width: 32, height: 32, placeholder: 'iron_hammer' },
 
   // ---------- Enemigos (mirando a la derecha; los pies abajo al centro) ----------
   // Slime: 3 cuadros de 32×24 (quieto, aplastado, estirado), en gris claro: el juego lo tiñe de verde o azul

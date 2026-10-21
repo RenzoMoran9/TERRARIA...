@@ -99,6 +99,11 @@ Las puertas se abren solas al caminar contra ellas y se cierran al alejarse. Par
   (1 madera + 1 gel → 3 antorchas). Al reaparecer se van los enemigos cercanos.
   **Para que una casa te proteja**: piso, techo y costados de **bloques** (tablones, piedra…) y una **puerta**.
   Las paredes de fondo solo decoran (se pasa por delante) y evitan que aparezcan enemigos adentro.
+- **Progresión**: con el **Horno** (20 piedra + 4 madera + 3 antorchas, en la mesa) se funde el mineral de hierro
+  (3 → 1 lingote) y se hacen **ladrillos de piedra** (2 piedra → 1, un bloque sólido para construir). Con 5 lingotes
+  se hace el **Yunque de hierro**, donde se fabrican el pico (12 lingotes + 3 madera, el más rápido), la espada
+  (8 lingotes, la más fuerte) y el martillo de hierro (10 lingotes + 3 madera). El horno ilumina y su fuego brilla.
+  En el inventario se ve qué estaciones hay cerca (Mesa, Horno, Yunque).
 - **Inventario**: 36 casillas (9 de barra rápida), pilas de hasta 99.
 - **Crafteo**: Madera → Tablones → Mesa de trabajo; cerca de la mesa: Pico de madera y Pico de piedra (más rápido).
   Antorchas: 1 madera + 1 carbón → 4 (o 1 madera + 1 gel → 3). Cerca de la mesa: espada de madera (7 tablones) y
@@ -131,7 +136,7 @@ Con `npm run dev` la página se recarga sola al agregar o cambiar una imagen. Pa
 Se recomienda **PNG con transparencia**. Si una imagen tiene otro tamaño se escala al tamaño de dibujo
 (los bloques siempre se dibujan a 32×32), así que también se pueden usar imágenes al doble de resolución.
 
-### Lista completa de imágenes (63)
+### Lista completa de imágenes (72)
 
 **Bloques.** Basta con dibujar un bloque "entero" de 32×32: el juego genera solo el contorno oscuro y las esquinas
 redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pasto tapado por otro bloque usa la imagen de la tierra.
@@ -152,6 +157,7 @@ redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pas
 | `tiles/plant_grass.png`              | 32 × 32     | Pasto alto decorativo (transparente)                                        |
 | `tiles/plant_flower_red.png`         | 32 × 32     | Flor roja decorativa (transparente)                                         |
 | `tiles/plant_flower_yellow.png`      | 32 × 32     | Flor amarilla decorativa (transparente)                                     |
+| `tiles/stone_brick.png`              | 32 × 32     | Ladrillo de piedra (también ícono del ítem)                                 |
 | `walls/dirt_wall.png`                | 32 × 32     | Pared de fondo de tierra (más oscura que el bloque)                         |
 | `walls/stone_wall.png`               | 32 × 32     | Pared de fondo de piedra (más oscura que el bloque)                         |
 | `walls/wood_wall.png`                | 32 × 32     | Pared de fondo de madera (más oscura que los tablones)                      |
@@ -159,6 +165,8 @@ redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pas
 | `furniture/door_open.png`            | 32 × 96     | Puerta abierta (1×3 bloques; la hoja de canto del lado de las bisagras, a la izquierda) |
 | `furniture/chair.png`                | 32 × 64     | Silla (1×2) **mirando a la derecha**: respaldo a la izquierda, asiento a unos 20 px del piso (se refleja para la izquierda) |
 | `furniture/table.png`                | 96 × 64     | Mesa (3×2 bloques)                                                          |
+| `furniture/furnace.png`              | 64 × 64     | Horno (2×2 bloques) con la boca y el fuego abajo                            |
+| `furniture/anvil.png`                | 64 × 32     | Yunque de hierro (2×1 bloques)                                              |
 | `furniture/bed.png`                  | 128 × 64    | Cama (4×2) con la cabecera y la almohada **a la izquierda**; el colchón a unos 32 px del piso (se refleja para el otro lado) |
 | `trees/tree_top.png`                 | 432 × 128   | Copas de árbol: **3 variantes de 144×128** una al lado de la otra; la base de la copa va abajo al centro |
 | `trees/tree_branch.png`              | 32 × 32     | Ramita con hojas que sale del tronco **hacia la derecha** (se refleja para la izquierda) |
@@ -174,6 +182,12 @@ redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pas
 | `items/chair.png`                    | 32 × 32     | Ícono de *Silla*                                                            |
 | `items/table.png`                    | 32 × 32     | Ícono de *Mesa*                                                             |
 | `items/bed.png`                      | 32 × 32     | Ícono de *Cama*                                                             |
+| `items/furnace.png`                  | 32 × 32     | Ícono de *Horno*                                                            |
+| `items/anvil.png`                    | 32 × 32     | Ícono de *Yunque de hierro*                                                 |
+| `items/iron_bar.png`                 | 32 × 32     | Ícono de *Lingote de hierro*                                                |
+| `items/iron_pickaxe.png`             | 32 × 32     | Ícono de *Pico de hierro* (misma orientación que los otros picos)          |
+| `items/iron_sword.png`               | 32 × 32     | Ícono de *Espada de hierro* (misma orientación que las otras espadas)      |
+| `items/iron_hammer.png`              | 32 × 32     | Ícono de *Martillo de hierro*                                               |
 | `items/gel.png`                      | 32 × 32     | Ícono de *Gel*                                                              |
 | `items/wood_sword.png`               | 32 × 32     | Ícono de *Espada de madera* (mango abajo a la izquierda, punta arriba a la derecha: así se ve en la mano) |
 | `items/stone_sword.png`              | 32 × 32     | Ícono de *Espada de piedra* (misma orientación)                             |

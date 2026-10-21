@@ -72,6 +72,20 @@ function pickaxe(pc, head, light, dark) {
   pc.outline('#20160e');
 }
 
+// Martillo: mango en diagonal y cabeza atravesada arriba a la derecha
+function hammer(pc, light, mid, dark) {
+  for (let i = 0; i < 8; i++) {
+    pc.set(3 + i, 13 - i, '#8a5a2b');
+    pc.set(4 + i, 13 - i, '#6b4420');
+  }
+  pc.line(7, 3, 12, 8, dark);
+  pc.line(8, 2, 13, 7, mid);
+  pc.line(9, 1, 14, 6, light);
+  pc.line(8, 3, 13, 8, dark);
+  pc.line(9, 2, 14, 7, mid);
+  pc.outline('#20160e');
+}
+
 // Espada: hoja en diagonal hacia arriba a la derecha, mango y guarda abajo a la izquierda
 function sword(pc, blade, mid, dark) {
   for (let i = 0; i < 9; i++) {
@@ -584,17 +598,92 @@ const PIXEL = {
     pc.outline('#1d3f6e');
   },
   wood_hammer(pc) {
-    // Mango en diagonal y cabeza atravesada arriba a la derecha
-    for (let i = 0; i < 8; i++) {
-      pc.set(3 + i, 13 - i, '#8a5a2b');
-      pc.set(4 + i, 13 - i, '#6b4420');
+    hammer(pc, '#d9a865', '#b5843f', '#8a5f2b');
+  },
+  iron_hammer(pc) {
+    hammer(pc, '#e6eaef', '#b4bcc6', '#7c8590');
+  },
+  iron_pickaxe(pc) {
+    pickaxe(pc, '#b4bcc6', '#e6eaef', '#7c8590');
+  },
+  iron_sword(pc) {
+    sword(pc, '#eef2f6', '#b4bcc6', '#7c8590');
+  },
+  iron_bar(pc) {
+    // Lingote en perspectiva
+    pc.rect(2, 7, 12, 5, '#9aa3ad');
+    pc.rect(4, 5, 10, 2, '#d4dae0');
+    pc.rect(2, 7, 12, 1, '#c2c9d1');
+    pc.rect(2, 11, 12, 1, '#6c7480');
+    pc.rect(12, 6, 2, 6, '#7c8590');
+    pc.set(5, 8, '#ffffff');
+    pc.outline('#2a2e34');
+  },
+  furnace_item(pc) {
+    pc.rect(2, 4, 12, 11, '#7d7d84');
+    pc.rect(3, 3, 10, 1, '#9a9aa2');
+    pc.rect(5, 9, 6, 6, '#2a1a12');
+    pc.rect(6, 11, 4, 4, '#ff8f00');
+    pc.rect(7, 12, 2, 3, '#ffd54f');
+    pc.rect(10, 1, 2, 3, '#5c5c63');
+    pc.outline('#1e1e22');
+  },
+  anvil_item(pc) {
+    pc.rect(2, 6, 12, 3, '#7c8590');
+    pc.rect(1, 6, 2, 2, '#7c8590');
+    pc.rect(3, 6, 10, 1, '#b4bcc6');
+    pc.rect(6, 9, 4, 3, '#5d636b');
+    pc.rect(4, 12, 8, 2, '#6c7480');
+    pc.outline('#1e2024');
+  },
+  stone_brick(pc, v) {
+    // Ladrillos grises con junta clara, en hileras alternadas
+    for (let y = 0; y < 16; y++) {
+      const row = y >> 2;
+      const off = row % 2 ? 4 : 0;
+      for (let x = 0; x < 16; x++) {
+        const mortar = (y & 3) === 3 || (x + off) % 8 === 7;
+        const brick = Math.floor((x + off) / 8) + row * 3;
+        const base = ['#8a8a92', '#7e7e86', '#95959c'][Math.floor(hash(brick, 4, 130 + v) * 3)];
+        let c = mortar ? '#5a5a62' : base;
+        if (!mortar && (y & 3) === 0) c = '#a8a8ae';
+        if (!mortar && hash(x, y, 131 + v) < 0.08) c = '#707078';
+        pc.set(x, y, c);
+      }
     }
-    pc.line(7, 3, 12, 8, '#8a5f2b');
-    pc.line(8, 2, 13, 7, '#b5843f');
-    pc.line(9, 1, 14, 6, '#d9a865');
-    pc.line(8, 3, 13, 8, '#8a5f2b');
-    pc.line(9, 2, 14, 7, '#b5843f');
-    pc.outline('#20160e');
+  },
+  furnace(pc) {
+    // Horno de piedra (2×2 bloques): boca con fuego abajo y chimenea
+    pc.disc(16, 16, 14, '#7d7d84');
+    pc.rect(2, 16, 28, 16, '#7d7d84');
+    // Juntas de los ladrillos (solo sobre la piedra)
+    const mortar = (x, y) => {
+      if (pc.get(x, y)) pc.set(x, y, '#66666d');
+    };
+    for (let y = 4; y < 32; y += 4) for (let x = (y / 4) % 2 ? 2 : 6; x < 30; x += 8) for (let k = 0; k < 3; k++) mortar(x, y + k);
+    for (let y = 7; y < 32; y += 4) for (let x = 2; x < 30; x++) mortar(x, y);
+    pc.rect(25, 0, 4, 6, '#5c5c63');
+    pc.rect(25, 0, 4, 1, '#8a8a92');
+    pc.disc(16, 22, 6, '#2a1a12');
+    pc.rect(10, 22, 13, 8, '#2a1a12');
+    pc.rect(11, 25, 11, 5, '#ff8f00');
+    pc.rect(12, 26, 9, 4, '#ffb300');
+    pc.rect(14, 27, 5, 3, '#ffe082');
+    pc.rect(9, 30, 15, 2, '#4a4a50');
+    pc.outline('#1e1e22');
+  },
+  anvil(pc) {
+    // Yunque de hierro (2×1 bloques) sobre un tronco
+    pc.rect(5, 2, 22, 4, '#8a929c');
+    pc.rect(2, 2, 4, 3, '#8a929c');
+    pc.rect(5, 2, 22, 1, '#c8ced6');
+    pc.rect(27, 3, 2, 2, '#6c7480');
+    pc.rect(11, 6, 10, 3, '#6c7480');
+    pc.rect(9, 9, 14, 2, '#7c8590');
+    pc.rect(8, 11, 16, 5, '#7a4f22');
+    pc.rect(8, 11, 16, 1, '#a3733a');
+    pc.rect(10, 13, 1, 3, '#5a3a1a');
+    pc.outline('#1e2024');
   },
   wood_wall_item(pc) {
     drawWoodWall(pc, 2, 2, 12, 12, 0);

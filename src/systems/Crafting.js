@@ -12,6 +12,14 @@ export const RECIPES = [
   // Combate
   { result: 'wood_sword', count: 1, ingredients: [['planks', 7]], station: 'workbench' },
   { result: 'stone_sword', count: 1, ingredients: [['planks', 3], ['stone', 10]], station: 'workbench' },
+  // Progresión: horno → lingotes de hierro → yunque → herramientas de hierro
+  { result: 'furnace', count: 1, ingredients: [['stone', 20], ['wood', 4], ['torch', 3]], station: 'workbench' },
+  { result: 'iron_bar', count: 1, ingredients: [['iron_ore', 3]], station: 'furnace' },
+  { result: 'stone_brick', count: 1, ingredients: [['stone', 2]], station: 'furnace' },
+  { result: 'anvil', count: 1, ingredients: [['iron_bar', 5]], station: 'workbench' },
+  { result: 'iron_pickaxe', count: 1, ingredients: [['iron_bar', 12], ['wood', 3]], station: 'anvil' },
+  { result: 'iron_sword', count: 1, ingredients: [['iron_bar', 8]], station: 'anvil' },
+  { result: 'iron_hammer', count: 1, ingredients: [['iron_bar', 10], ['wood', 3]], station: 'anvil' },
   // Casas
   { result: 'wood_hammer', count: 1, ingredients: [['planks', 8]], station: 'workbench' },
   { result: 'wood_wall', count: 4, ingredients: [['planks', 1]], station: 'workbench' },
@@ -23,7 +31,9 @@ export const RECIPES = [
   { result: 'bed', count: 1, ingredients: [['planks', 15], ['wood', 5]], station: 'workbench' },
 ];
 
-export const STATION_NAMES = { workbench: 'Mesa de trabajo' };
+// Estaciones: nombre con artículo (para los avisos) y nombre corto (para la lista)
+export const STATION_NAMES = { workbench: 'una Mesa de trabajo', furnace: 'un Horno', anvil: 'un Yunque de hierro' };
+export const STATION_SHORT = { workbench: 'Mesa', furnace: 'Horno', anvil: 'Yunque' };
 
 export function hasIngredients(inventory, recipe) {
   return recipe.ingredients.every(([id, n]) => inventory.count(id) >= n);
@@ -41,7 +51,7 @@ export function describeIngredients(recipe) {
 /** Intenta craftear. Devuelve { ok, message }. */
 export function craft(inventory, recipe, stations) {
   if (recipe.station && !stations[recipe.station]) {
-    return { ok: false, message: `Necesitas estar cerca de una ${STATION_NAMES[recipe.station]}` };
+    return { ok: false, message: `Necesitas estar cerca de ${STATION_NAMES[recipe.station]}` };
   }
   if (!hasIngredients(inventory, recipe)) return { ok: false, message: 'Te faltan materiales' };
 

@@ -32,6 +32,14 @@ export const ITEMS = {
   gel: { name: 'Gel', icon: 'item_gel' },
   wood_sword: { name: 'Espada de madera', icon: 'item_wood_sword', maxStack: 1, weapon: { damage: 9, knockback: 260, speed: 2.4, reach: 54 } },
   stone_sword: { name: 'Espada de piedra', icon: 'item_stone_sword', maxStack: 1, weapon: { damage: 15, knockback: 300, speed: 2.2, reach: 58 } },
+  // Progresión: horno, hierro y yunque
+  furnace: { name: 'Horno', icon: 'item_furnace', object: 'furnace' },
+  anvil: { name: 'Yunque de hierro', icon: 'item_anvil', object: 'anvil' },
+  iron_bar: { name: 'Lingote de hierro', icon: 'item_iron_bar' },
+  stone_brick: { name: 'Ladrillo de piedra', icon: 'tile_stone_brick', places: BLOCK.STONE_BRICK },
+  iron_pickaxe: { name: 'Pico de hierro', icon: 'item_iron_pickaxe', maxStack: 1, tool: { tier: 3, speed: 5.5 } },
+  iron_sword: { name: 'Espada de hierro', icon: 'item_iron_sword', maxStack: 1, weapon: { damage: 24, knockback: 340, speed: 2.6, reach: 62 } },
+  iron_hammer: { name: 'Martillo de hierro', icon: 'item_iron_hammer', maxStack: 1, hammer: { speed: 4.5 } },
 };
 
 /** ¿Este ítem se coloca en el mundo (bloque, pared o mueble)? */

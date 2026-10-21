@@ -1,6 +1,7 @@
 // Definición de todos los tipos de bloque del mundo.
 
-export const BLOCK = Object.freeze({
+// (los bloques agregados más adelante, como STONE_BRICK, toman el id que les toca más abajo)
+export const BLOCK = {
   AIR: 0,
   GRASS: 1,
   DIRT: 2,
@@ -14,7 +15,7 @@ export const BLOCK = Object.freeze({
   TORCH: 10,
   BEDROCK: 11,
   PLANT: 12, // pasto alto y flores decorativas
-});
+};
 
 // hardness: segundos para minarlo a mano (se divide por la velocidad del pico)
 // tier: nivel mínimo de pico (0 = a mano, 1 = pico de madera, 2 = pico de piedra)
@@ -56,8 +57,11 @@ export const BLOCK_DEFS = [
 // así, desde cualquier parte se sabe dónde empieza el objeto y se lo puede quitar entero.
 // Los ids se generan en este orden: para no romper partidas guardadas, agregar siempre al final.
 // ---------------------------------------------------------------------------
+// station = estación de crafteo; light = luz que da
 export const FURNITURE = {
   door: { name: 'Puerta', item: 'door', hardness: 0.8, color: 0x9a6a35, interactive: true },
+  furnace: { name: 'Horno', item: 'furnace', hardness: 1.4, color: 0x7a7a7a, station: 'furnace', light: 0.8 },
+  anvil: { name: 'Yunque de hierro', item: 'anvil', hardness: 1.6, color: 0x6b6b75, station: 'anvil' },
   chair: { name: 'Silla', item: 'chair', hardness: 0.6, color: 0xa3733a, interactive: true },
   table: { name: 'Mesa', item: 'table', hardness: 0.7, color: 0xa3733a },
   bed: { name: 'Cama', item: 'bed', hardness: 0.8, color: 0xc0392b, interactive: true },
@@ -78,33 +82,49 @@ export const OBJECTS = {
 /** Parte de mueble de cada id de bloque (o null): { object, type, dx, dy } */
 export const PART = new Array(256).fill(null);
 
-for (const [key, obj] of Object.entries(OBJECTS)) {
-  const f = FURNITURE[obj.type];
-  obj.key = key;
-  obj.ids = []; // ids[dy][dx]
-  for (let dy = 0; dy < obj.h; dy++) {
-    const row = [];
-    for (let dx = 0; dx < obj.w; dx++) {
-      const id = BLOCK_DEFS.length;
-      row.push(id);
-      PART[id] = { object: obj, type: obj.type, dx, dy };
-      BLOCK_DEFS.push({
-        id,
-        name: f.name,
-        texture: null,
-        // Recorte de la imagen del objeto que le toca a esta parte
-        crop: { key: obj.texture, col: obj.mirrored ? obj.w - 1 - dx : dx, row: dy, cols: obj.w, mirrored: !!obj.mirrored },
-        solid: !!obj.solid,
-        hardness: f.hardness,
-        tier: 0,
-        drop: f.item,
-        light: 0,
-        color: f.color,
-      });
+/** Crea un id de bloque por cada parte de cada objeto. */
+function addObjectParts(objects) {
+  for (const [key, obj] of Object.entries(objects)) {
+    const f = FURNITURE[obj.type];
+    obj.key = key;
+    obj.ids = []; // ids[dy][dx]
+    for (let dy = 0; dy < obj.h; dy++) {
+      const row = [];
+      for (let dx = 0; dx < obj.w; dx++) {
+        const id = BLOCK_DEFS.length;
+        row.push(id);
+        PART[id] = { object: obj, type: obj.type, dx, dy };
+        BLOCK_DEFS.push({
+          id,
+          name: f.name,
+          texture: null,
+          // Recorte de la imagen del objeto que le toca a esta parte
+          crop: { key: obj.texture, col: obj.mirrored ? obj.w - 1 - dx : dx, row: dy, cols: obj.w, mirrored: !!obj.mirrored },
+          solid: !!obj.solid,
+          hardness: f.hardness,
+          tier: 0,
+          drop: f.item,
+          light: f.light || 0,
+          color: f.color,
+        });
+      }
+      obj.ids.push(row);
     }
-    obj.ids.push(row);
   }
 }
+addObjectParts(OBJECTS);
+
+// Bloques agregados después de los primeros muebles (su id va a continuación)
+BLOCK.STONE_BRICK = BLOCK_DEFS.length;
+BLOCK_DEFS.push({ id: BLOCK.STONE_BRICK, name: 'Ladrillo de piedra', texture: 'tile_stone_brick', framed: true, solid: true, hardness: 2.0, tier: 1, drop: 'stone_brick', light: 0, color: 0x8a8a90 });
+
+// Estaciones de crafteo de la progresión (2×2 y 2×1)
+const STATIONS = {
+  furnace: { type: 'furnace', texture: 'obj_furnace', w: 2, h: 2 },
+  anvil: { type: 'anvil', texture: 'obj_anvil', w: 2, h: 1 },
+};
+addObjectParts(STATIONS);
+Object.assign(OBJECTS, STATIONS);
 
 // ---------------------------------------------------------------------------
 // Paredes de fondo. Las naturales las calcula el generador; las que pone o quita el

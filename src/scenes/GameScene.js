@@ -12,7 +12,7 @@ import {
 } from '../config.js';
 import { World } from '../world/World.js';
 import { ChunkManager } from '../world/ChunkManager.js';
-import { BLOCK } from '../world/blocks.js';
+import { BLOCK, PART, FURNITURE } from '../world/blocks.js';
 import { Player } from '../player/Player.js';
 import { Inventory } from '../systems/Inventory.js';
 import { DayNight } from '../systems/DayNight.js';
@@ -127,7 +127,7 @@ export class GameScene extends Phaser.Scene {
         emitting: false,
       })
       .setDepth(DEPTH.PARTICLES);
-    this._stations = { workbench: false };
+    this._stations = { workbench: false, furnace: false, anvil: false };
 
     // --- Estado de controles (lo escriben el teclado y los controles táctiles) ---
     // action = botón de acción apretado; aimX/aimY = hacia dónde apunta el joystick
@@ -433,17 +433,18 @@ export class GameScene extends Phaser.Scene {
     const p = this.player;
     const ptx = Math.floor(p.centerX / T);
     const pty = Math.floor(p.centerY / T);
-    let workbench = false;
-    for (let dy = -STATION_RANGE; dy <= STATION_RANGE && !workbench; dy++) {
+    const st = this._stations;
+    st.workbench = false;
+    st.furnace = false;
+    st.anvil = false;
+    for (let dy = -STATION_RANGE; dy <= STATION_RANGE; dy++) {
       for (let dx = -STATION_RANGE; dx <= STATION_RANGE; dx++) {
-        if (this.world.getTile(ptx + dx, pty + dy) === BLOCK.WORKBENCH) {
-          workbench = true;
-          break;
-        }
+        const id = this.world.getTile(ptx + dx, pty + dy);
+        if (id === BLOCK.WORKBENCH) st.workbench = true;
+        else if (PART[id] && FURNITURE[PART[id].type].station) st[FURNITURE[PART[id].type].station] = true;
       }
     }
-    this._stations.workbench = workbench;
-    return this._stations;
+    return st;
   }
 
   setTouchMode(isTouch) {

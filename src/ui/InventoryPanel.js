@@ -1,6 +1,6 @@
 import { INVENTORY_SIZE, HOTBAR_SIZE } from '../config.js';
 import { ITEMS } from '../systems/items.js';
-import { RECIPES, canCraft, craft, describeIngredients, hasIngredients, STATION_NAMES } from '../systems/Crafting.js';
+import { RECIPES, canCraft, craft, describeIngredients, hasIngredients, STATION_NAMES, STATION_SHORT } from '../systems/Crafting.js';
 import { createButton } from './Button.js';
 import { COLORS, textStyle } from './styles.js';
 
@@ -263,13 +263,12 @@ export class InventoryPanel {
   /** Colorea las recetas según si se pueden craftear y actualiza el detalle y el botón. */
   refreshCrafting(force = false) {
     const stations = this.gs.getStations();
-    const stationState = stations.workbench;
+    // Qué estaciones hay cerca, p. ej. "Cerca: Mesa sí · Horno no · Yunque no"
+    const stationState = Object.keys(STATION_SHORT).map((k) => `${STATION_SHORT[k]} ${stations[k] ? 'sí' : 'no'}`).join(' · ');
     const stationChanged = stationState !== this.lastStationState;
     if (force || stationChanged) {
       this.lastStationState = stationState;
-      this.stationText.setText(
-        stationState ? `${STATION_NAMES.workbench} cerca: Sí` : `${STATION_NAMES.workbench} cerca: No`,
-      );
+      this.stationText.setText(`Cerca: ${stationState}`);
     }
     let changed = force || stationChanged;
     this.rows.forEach((row, k) => {
@@ -286,7 +285,7 @@ export class InventoryPanel {
           row.icon.setTexture(item.icon).setDisplaySize(24, 24);
           row.name.setText(`${item.name} ×${recipe.count}`);
           row.ingredients.setText(describeIngredients(recipe));
-          row.tag.setText(recipe.station ? 'Mesa' : '');
+          row.tag.setText(recipe.station ? STATION_SHORT[recipe.station] : '');
         }
       }
       if (!recipe) return;
@@ -315,7 +314,7 @@ export class InventoryPanel {
     let text = `Necesitas: ${needs}`;
     let color = '#b9f6a8';
     if (recipe.station && !stations[recipe.station]) {
-      text = `Acércate a una ${STATION_NAMES[recipe.station]}. ${text}`;
+      text = `Acércate a ${STATION_NAMES[recipe.station]}. ${text}`;
       color = '#ffb4a8';
     } else if (!hasIngredients(this.inv, recipe)) {
       color = '#ffb4a8';
