@@ -55,9 +55,56 @@ setInterval(() => {
 const standalonePage = window.self === window.top;
 if (import.meta.env.PROD && standalonePage && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch((e) => console.warn('[pwa] No se pudo registrar:', e));
+    navigator.serviceWorker
+      .register('./sw.js', { updateViaCache: 'none' })
+      .catch((e) => console.warn('[pwa] No se pudo registrar:', e));
   });
 }
+
+// --- Aviso de actualización ---
+// Se compara la versión de este juego con version.json del servidor (al abrir, cada 2 minutos y
+// al volver a la app). Si hay una nueva, aparece un botón: guarda la partida y recarga.
+export const BUILD_ID = typeof __BUILD_ID__ !== 'undefined' ? __BUILD_ID__ : 'desarrollo';
+window.__buildId = BUILD_ID;
+
+function showUpdateBanner() {
+  if (document.getElementById('update-banner')) return;
+  const b = document.createElement('button');
+  b.id = 'update-banner';
+  b.textContent = '¡Hay una versión nueva! Toca aquí para actualizar';
+  b.style.cssText =
+    'position:fixed;left:50%;top:max(8px,env(safe-area-inset-top));transform:translateX(-50%);z-index:1000;' +
+    'padding:10px 18px;border:2px solid #ffd84a;border-radius:10px;background:#1a2258;color:#fff;' +
+    'font:bold 15px "Pixelify Sans",sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.5);cursor:pointer';
+  b.addEventListener('click', () => {
+    b.textContent = 'Actualizando…';
+    try {
+      const gs = game.scene.getScene('GameScene');
+      if (gs && gs.sys.isActive()) gs.saveGame(false);
+    } catch (e) {
+      // sin partida en curso
+    }
+    window.location.reload();
+  });
+  document.body.appendChild(b);
+}
+
+async function checkForUpdate() {
+  if (!import.meta.env.PROD || !standalonePage) return;
+  try {
+    const res = await fetch(`./version.json?t=${Date.now()}`, { cache: 'no-store' });
+    if (!res.ok) return;
+    const { build } = await res.json();
+    if (build && build !== BUILD_ID) showUpdateBanner();
+  } catch (e) {
+    // sin conexión: se vuelve a intentar más tarde
+  }
+}
+window.addEventListener('load', checkForUpdate);
+setInterval(checkForUpdate, 120000);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') checkForUpdate();
+});
 // Android/Chrome avisa cuando el juego se puede instalar: guardamos el aviso para el botón del menú
 window.addEventListener('beforeinstallprompt', (event) => {
   event.preventDefault();

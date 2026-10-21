@@ -69,6 +69,11 @@ export class MenuScene extends Phaser.Scene {
     this.add
       .text(W / 2, H * 0.16 + titleSize * 0.72, 'Supervivencia y construcción', textStyle({ fontSize: '16px', color: '#ffffff' }))
       .setOrigin(0.5);
+    // Versión instalada (para comprobar que llegó la actualización)
+    this.add
+      .text(8, H - 6, `Versión ${window.__buildId || 'desarrollo'}`, textStyle({ fontSize: '11px', color: '#d8e0f0', strokeThickness: 3 }))
+      .setOrigin(0, 1)
+      .setAlpha(0.85);
 
     const save = SaveSystem.load();
     const bw = Math.min(300, W - 40);

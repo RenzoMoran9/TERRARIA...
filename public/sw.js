@@ -2,7 +2,7 @@
 // - Archivos con hash (carpeta bundle/): se sirven desde la caché (nunca cambian).
 // - Todo lo demás (index.html, imágenes de assets/): primero la red, para recibir
 //   actualizaciones; si no hay conexión, la copia guardada.
-const CACHE = 'terra2d-v1';
+const CACHE = 'terra2d-v2';
 const CORE = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', (event) => {
@@ -35,8 +35,10 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(caches.match(req).then((hit) => hit || fetch(req).then(save)));
     return;
   }
+  // cache: 'no-cache' = preguntarle siempre al servidor si cambió (si no, el navegador
+  // puede usar una copia de hasta 10 minutos y la actualización tarda en llegar)
   event.respondWith(
-    fetch(req)
+    fetch(req, { cache: 'no-cache' })
       .then(save)
       .catch(() => caches.match(req).then((hit) => hit || caches.match('./index.html'))),
   );

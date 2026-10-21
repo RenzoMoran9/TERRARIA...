@@ -51,14 +51,29 @@ function assetManifest() {
   };
 }
 
-export default defineConfig({
+// Versión del build (fecha y hora UTC). El juego la compara con version.json del servidor
+// para avisar cuando hay una actualización publicada.
+const BUILD_ID = new Date().toISOString().slice(0, 16).replace('T', ' ');
+
+function versionFile() {
+  return {
+    name: 'terra2d-version',
+    apply: 'build',
+    generateBundle() {
+      this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ build: BUILD_ID }) });
+    },
+  };
+}
+
+export default defineConfig(({ command }) => ({
   // Rutas relativas: el build funciona aunque se publique en una subcarpeta
   base: './',
-  plugins: [assetManifest()],
+  plugins: [assetManifest(), versionFile()],
+  define: { __BUILD_ID__: JSON.stringify(command === 'build' ? BUILD_ID : 'desarrollo') },
   build: {
     // El JS compilado va a dist/bundle/ para no mezclarse con dist/assets/ (las imágenes)
     assetsDir: 'bundle',
     // Phaser ocupa ~1.2 MB; evitamos el aviso de tamaño de chunk
     chunkSizeWarningLimit: 2000,
   },
-});
+}));
