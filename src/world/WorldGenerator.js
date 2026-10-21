@@ -389,6 +389,17 @@ export class WorldGenerator {
       }
     }
 
+    // Cristales de vida: raros, en el piso de las cuevas (bien bajo tierra)
+    for (let lx = 0; lx < CS; lx++) {
+      const x = x0 + lx;
+      for (let ly = 0; ly < CS - 1; ly++) {
+        const y = y0 + ly;
+        if (y < this.surface[x] + 30 || y > WORLD_HEIGHT - 12) continue;
+        if (data[ly * CS + lx] !== BLOCK.AIR || !IS_SOLID[data[(ly + 1) * CS + lx]]) continue;
+        if (hash2(x * 131 + y, 77, this.seed) < 0.006) data[ly * CS + lx] = BLOCK.LIFE_CRYSTAL;
+      }
+    }
+
     // Cofre del tesoro dentro de la pirámide
     if (this.pyramidX >= 0) {
       const c = this.pyramidChest;

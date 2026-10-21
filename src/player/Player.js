@@ -92,6 +92,12 @@ export class Player {
     return true;
   }
 
+  /** Cuánto daño resta cada golpe (armadura + Piel dura). */
+  defenseReduction() {
+    const armor = this.scene.inventory ? this.scene.inventory.defense : 0;
+    return Math.floor(armor / 2) + (this.progress ? this.progress.defense : 0);
+  }
+
   /** Vida máxima con los bonos de las habilidades (se llama al aprender una). */
   refreshStats() {
     const max = P.MAX_HEALTH + (this.progress ? this.progress.maxHealthBonus : 0);
@@ -456,8 +462,8 @@ export class Player {
   hit(amount, fromX) {
     if (this.dead || this.invuln > 0) return false;
     this.invuln = P.HIT_INVULN;
-    // Defensa (Piel dura): cada golpe quita menos, como mínimo 1
-    this.damage(Math.max(1, amount - (this.progress ? this.progress.defense : 0)));
+    // Defensa: la armadura resta la mitad de su defensa (como Terraria) y Piel dura resta 2 por nivel; mínimo 1
+    this.damage(Math.max(1, amount - this.defenseReduction()));
     if (this.dead) return true;
     this.vx = (Math.sign(this.centerX - fromX) || -this.facing) * P.KNOCKBACK;
     this.vy = Math.min(this.vy, -320);

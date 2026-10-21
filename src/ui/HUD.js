@@ -6,7 +6,8 @@ import { ENERGY_MAX } from '../systems/Skills.js';
 const BAR_W = 112;
 const ENERGY_SKILLS = ['sprint', 'dash', 'fireball', 'groundPound'];
 
-const HEARTS = 5; // 20 de vida por corazón (como Terraria)
+const HEARTS = 10; // hasta 10 corazones (5 por fila); con más vida máxima cada uno vale más
+const PER_ROW = 5;
 const HEART_SIZE = 24;
 const HEART_GAP = 3;
 const LOW_HEALTH = 0.3; // con poca vida los corazones laten
@@ -61,9 +62,10 @@ export class HUD {
   layout(width) {
     this.hpText.setPosition(10, 4);
     this.hearts.forEach((h, i) => {
-      const x = 10 + HEART_SIZE / 2 + i * (HEART_SIZE + HEART_GAP);
-      h.empty.setPosition(x, 32);
-      h.full.setPosition(x, 32);
+      const x = 10 + HEART_SIZE / 2 + (i % PER_ROW) * (HEART_SIZE + HEART_GAP);
+      const y = 32 + Math.floor(i / PER_ROW) * (HEART_SIZE + 2);
+      h.empty.setPosition(x, y);
+      h.full.setPosition(x, y);
     });
     this.clockText.setPosition(width - 12, 12);
     this.layoutLevel(this.levelY);
@@ -72,7 +74,10 @@ export class HUD {
   }
 
   /** Fila de nivel / experiencia / energía (baja si la barra rápida ocupa una segunda fila). */
-  layoutLevel(y) {
+  layoutLevel(y = this.baseLevelY ?? 54) {
+    this.baseLevelY = y;
+    // Con la segunda fila de corazones, el nivel baja un poco
+    if ((this.heartCount || 5) > PER_ROW) y += HEART_SIZE + 2;
     this.levelY = y;
     this.levelText.setPosition(10, y - 8);
     this.xpBg.setPosition(56, y);
@@ -113,11 +118,25 @@ export class HUD {
     this.updateLevel();
     const p = this.gs.player;
     const hp = Math.max(0, Math.round(p.health));
-    if (hp !== this.lastHp) {
+    const sick = Math.ceil(this.gs.potionSickness || 0);
+    if (hp !== this.lastHp || sick !== this.lastSick || p.maxHealth !== this.lastMax) {
       this.lastHp = hp;
-      this.hpText.setText(`Vida ${hp}/${p.maxHealth}`);
-      const perHeart = p.maxHealth / HEARTS;
+      this.lastSick = sick;
+      this.lastMax = p.maxHealth;
+      this.hpText.setText(`Vida ${hp}/${p.maxHealth}${sick > 0 ? `  ·  poción en ${sick}s` : ''}`);
+      // 1 corazón cada 20 de vida (entre 5 y 10)
+      const count = Math.max(5, Math.min(HEARTS, Math.round(p.maxHealth / 20)));
+      if (count !== this.heartCount) {
+        this.heartCount = count;
+        this.hearts.forEach((h, i) => {
+          h.empty.setVisible(i < count);
+          h.full.setVisible(i < count);
+        });
+        this.layoutLevel();
+      }
+      const perHeart = p.maxHealth / count;
       this.hearts.forEach((h, i) => {
+        if (i >= count) return;
         const frac = Math.max(0, Math.min(1, (hp - i * perHeart) / perHeart));
         const w = h.full.frame.width;
         h.full.setVisible(frac > 0).setCrop(0, 0, w * frac, h.full.frame.height);

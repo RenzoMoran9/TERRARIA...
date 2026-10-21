@@ -30,7 +30,9 @@ import { Abilities } from '../systems/Abilities.js';
 import { audio } from '../systems/Audio.js';
 import { BIOME } from '../world/WorldGenerator.js';
 import { cloneSlots } from '../systems/Inventory.js';
-import { ITEMS, getMaxStack, coinStacks, formatCoins } from '../systems/items.js';
+import { ITEMS, ARMOR_SETS, getMaxStack, coinStacks, formatCoins } from '../systems/items.js';
+import { playerOutfitTexture } from '../systems/Placeholders.js';
+import { MAX_LIFE_CRYSTALS } from '../systems/Skills.js';
 import { Npcs, roomKey } from '../systems/Npcs.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import { textStyle } from '../ui/styles.js';
@@ -89,6 +91,10 @@ export class GameScene extends Phaser.Scene {
     this.player.health = this.player.maxHealth;
     if (save?.player?.health) this.player.health = Phaser.Math.Clamp(save.player.health, 1, this.player.maxHealth);
     this.progress.on('skills', () => this.player.refreshStats());
+    // Armadura: el personaje se dibuja con lo que tiene puesto
+    this.potionSickness = 0; // segundos hasta poder tomar otra poción
+    this.inventory.on('armor', () => this.updateOutfit());
+    this.updateOutfit();
     this.progress.on('levelUp', (level) => {
       const p = this.player;
       if (!p.dead) p.health = p.maxHealth; // subir de nivel cura
@@ -312,6 +318,7 @@ export class GameScene extends Phaser.Scene {
 
     this.player.update(dt, this.readControls());
     this.abilities.update(dt);
+    this.potionSickness = Math.max(0, this.potionSickness - dt);
     // Bola de fuego: F (apunta al ratón) o el botón táctil (apunta al enemigo más cercano)
     if ((this.keys.f.isDown || this.touchState.fire) && !this.uiBlocking && this.player.hasSkill('fireball')) {
       this.abilities.fireball(this.fireAngle());
@@ -722,6 +729,77 @@ export class GameScene extends Phaser.Scene {
     const e = this.enemies.nearest(14 * T);
     if (e) return Math.atan2(e.centerY - oy, e.centerX - p.centerX);
     return p.facing > 0 ? 0 : Math.PI;
+  }
+
+  /** El personaje se ve con la armadura puesta. */
+  updateOutfit() {
+    const key = playerOutfitTexture(this, this.inventory.armor.map((a) => (a ? a.id : null)), ITEMS, ARMOR_SETS);
+    const s = this.player.anim.sprite;
+    if (s.texture.key !== key) s.setTexture(key, s.frame.name);
+  }
+
+  /**
+   * Usa el consumible de una casilla (poción o cristal de vida). Devuelve true si se usó.
+   * Pociones: después de tomar una hay que esperar ("mareo de pociones", como Terraria).
+   */
+  useItem(index) {
+    const p = this.player;
+    const stack = this.inventory.slots[index];
+    const use = stack && ITEMS[stack.id].use;
+    if (!use || p.dead) return false;
+    if (use.heal) {
+      if (this.potionSickness > 0) {
+        this.events.emit('toast', `Espera ${Math.ceil(this.potionSickness)} s para otra poción`);
+        return false;
+      }
+      if (p.health >= p.maxHealth) {
+        this.events.emit('toast', 'Ya tienes toda la vida');
+        return false;
+      }
+      const before = p.health;
+      p.health = Math.min(p.maxHealth, p.health + use.heal);
+      this.potionSickness = 45;
+      this.showFloatingText(p.centerX, p.y - 8, `+${Math.round(p.health - before)}`, '#7dff8a', 16);
+      this.spawnSparkles(p.centerX, p.centerY, 12, 0xff6a8a);
+      audio.play('learn');
+    } else if (use.maxHealth) {
+      if (this.progress.lifeCrystals >= MAX_LIFE_CRYSTALS) {
+        this.events.emit('toast', 'Ya usaste todos los cristales de vida posibles');
+        return false;
+      }
+      this.progress.lifeCrystals++;
+      p.refreshStats();
+      p.health = Math.min(p.maxHealth, p.health + use.maxHealth);
+      this.events.emit('toast', `¡Vida máxima: ${p.maxHealth}!`);
+      this.spawnSparkles(p.centerX, p.centerY, 24, 0xff4a6a);
+      audio.play('levelUp');
+    }
+    this.inventory.removeFromSlot(index, 1);
+    p.anim.cheer(0.4);
+    return true;
+  }
+
+  /** Curación rápida (R / botón): toma la poción que mejor alcanza. */
+  quickHeal() {
+    const p = this.player;
+    const missing = p.maxHealth - p.health;
+    let best = -1;
+    let bestHeal = 0;
+    this.inventory.slots.forEach((s, i) => {
+      const h = s && ITEMS[s.id].use && ITEMS[s.id].use.heal;
+      if (!h) return;
+      // La que cura lo que falta sin desperdiciar; si ninguna alcanza, la más fuerte
+      const better = best < 0 || (h >= missing ? bestHeal < missing || h < bestHeal : h > bestHeal);
+      if (better) {
+        best = i;
+        bestHeal = h;
+      }
+    });
+    if (best < 0) {
+      this.events.emit('toast', 'No tienes pociones de curación');
+      return false;
+    }
+    return this.useItem(best);
   }
 
   /** Tira una pila al suelo delante del jugador (se puede volver a recoger después de unos segundos). */

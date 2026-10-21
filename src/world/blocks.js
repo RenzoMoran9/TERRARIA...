@@ -177,6 +177,8 @@ const BUILD_BLOCKS = [
   ['GLASS', { name: 'Vidrio', texture: 'tile_glass', framed: true, solid: true, transparent: true, hardness: 0.4, tier: 0, drop: 'glass', color: 0xbfe6f5 }],
   ['RED_SHINGLES', { name: 'Tejas rojas', texture: 'tile_red_shingles', framed: true, solid: true, hardness: 1.0, tier: 0, drop: 'red_shingles', color: 0xb5443a }],
   ['WOOD_SHINGLES', { name: 'Tejas de madera', texture: 'tile_wood_shingles', framed: true, solid: true, hardness: 0.8, tier: 0, drop: 'wood_shingles', color: 0x7a5530 }],
+  // Cristal de vida: aparece en el piso de las cuevas; al usarlo sube la vida máxima
+  ['LIFE_CRYSTAL', { name: 'Cristal de vida', texture: 'tile_life_crystal', solid: false, hardness: 1.2, tier: 0, drop: 'life_crystal', light: 0.6, color: 0xff4a6a }],
 ];
 for (const [key, def] of BUILD_BLOCKS) {
   BLOCK[key] = BLOCK_DEFS.length;

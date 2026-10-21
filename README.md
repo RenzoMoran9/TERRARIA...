@@ -65,6 +65,7 @@ La carpeta `dist/` se puede subir tal cual a cualquier hosting estático (GitHub
 | Inventario y crafteo  | `E` (cerrar: `E` o `Esc`)           | Botón de cuadritos                             |
 | Revisar casa          | `H` (o el botón del inventario)     | Botón *Revisar casa* del inventario            |
 | Hablar con un aldeano | **Clic derecho** sobre él           | **Tocarlo**                                    |
+| Tomar una poción      | `R`                                 | Botón de poción (aparece si tienes)            |
 | Tirar lo de la mano   | `T`                                 | En el inventario: *Tirar al suelo* o la *Basura* |
 | Sonido / música       | Botón *Sonido* (menú o inventario)  | Botón *Sonido* (menú o inventario)             |
 | Modo debug (FPS)      | `F3`                                | Tocar el reloj                                 |
@@ -113,6 +114,20 @@ Las puertas se abren solas al caminar contra ellas y se cierran al alejarse. Par
   martillo), puertas de 3 bloques, sillas, mesas y camas. La silla y la cama miran hacia el jugador al colocarlas.
   Los muebles se quitan enteros y se caen si se les quita el suelo (también se apoyan sobre plataformas).
   **Cama**: dormir en ella la vuelve el punto de reaparición; de noche, la noche pasa rápido hasta la mañana.
+- **Armaduras, pociones y cristales de vida** (como Terraria):
+  | Armadura | Casco / Pechera / Grebas (defensa) | Juego completo | Receta |
+  | --- | --- | --- | --- |
+  | Madera | 1 / 2 / 1 | +1 | 20 / 30 / 25 tablones (Mesa) |
+  | Cactus | 2 / 3 / 2 | +2 | 20 / 30 / 25 cactus (Mesa) |
+  | Hierro | 3 / 4 / 3 | +3 | 15 / 25 / 20 lingotes (Yunque) |
+  | Cristal | 5 / 7 / 5 | +5 | cristal + lingotes (Yunque) |
+  Cada golpe te quita **la mitad de tu defensa** menos. Se ponen en las casillas de armadura del inventario
+  (arrastrando, o con clic derecho en la PC) y **el personaje se ve con lo que lleva puesto**.
+  **Pociones de curación**: menor (+50, 2 gel + 1 flor + 1 vidrio → 2, en la Mesa; también la vende el Comerciante)
+  y normal (+100, 2 menores + 1 cristal). Se toman con **R** (PC), el **botón de poción** (celular) o eligiéndolas
+  y con la acción; después hay que esperar 45 s. Las **flores** sueltan *Flor* al romperlas.
+  **Cristales de vida**: brillan en el piso de las cuevas profundas; cada uno da **+20 de vida máxima** para siempre
+  (hasta 15). Con más vida aparecen más corazones (hasta 10, en dos filas).
 - **Aldeanos y monedas** (como los NPC de Terraria): los enemigos sueltan **monedas** de cobre, plata y oro
   (100 cobre = 1 plata, 100 plata = 1 oro; van a la bolsa, no ocupan lugar). Los aldeanos viven en **casas válidas**
   (cada uno en la suya), pasean de día y vuelven a casa de noche, abren puertas y se esconden tras la fachada:
@@ -231,7 +246,7 @@ Con `npm run dev` la página se recarga sola al agregar o cambiar una imagen. Pa
 Se recomienda **PNG con transparencia**. Si una imagen tiene otro tamaño se escala al tamaño de dibujo
 (los bloques siempre se dibujan a 32×32), así que también se pueden usar imágenes al doble de resolución.
 
-### Lista completa de imágenes (159)
+### Lista completa de imágenes (177)
 
 **Fachadas.** Desde afuera, cada casa muestra la imagen del bloque que corresponde a sus paredes
 (pared de madera → `tiles/planks.png`, de piedra → `tiles/stone_brick.png`, de tierra → `tiles/dirt.png`) y
@@ -261,6 +276,7 @@ redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pas
 | `tiles/glass.png`                    | 32 × 32     | Bloque de vidrio (semitransparente) |
 | `tiles/red_shingles.png`             | 32 × 32     | Tejas rojas (techos) |
 | `tiles/wood_shingles.png`            | 32 × 32     | Tejas de madera (techos) |
+| `tiles/life_crystal.png`             | 32 × 32     | Cristal de vida en la cueva (transparente alrededor) |
 | `tiles/sand.png`                     | 32 × 32     | Arena (Desierto; también ícono) |
 | `tiles/sandstone.png`                | 32 × 32     | Arenisca (piedra del Desierto y de la pirámide) |
 | `tiles/snow.png`                     | 32 × 32     | Nieve (Tundra) |
@@ -323,6 +339,22 @@ redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pas
 | `items/coin_copper.png`              | 32 × 32     | Moneda de cobre |
 | `items/coin_silver.png`              | 32 × 32     | Moneda de plata |
 | `items/coin_gold.png`                | 32 × 32     | Moneda de oro |
+| `items/wood_helmet.png`              | 32 × 32     | Casco de madera |
+| `items/wood_chest.png`               | 32 × 32     | Pechera de madera |
+| `items/wood_legs.png`                | 32 × 32     | Grebas de madera |
+| `items/cactus_helmet.png`            | 32 × 32     | Casco de cactus |
+| `items/cactus_chest.png`             | 32 × 32     | Pechera de cactus |
+| `items/cactus_legs.png`              | 32 × 32     | Grebas de cactus |
+| `items/iron_helmet.png`              | 32 × 32     | Casco de hierro |
+| `items/iron_chest.png`               | 32 × 32     | Pechera de hierro |
+| `items/iron_legs.png`                | 32 × 32     | Grebas de hierro |
+| `items/crystal_helmet.png`           | 32 × 32     | Casco de cristal |
+| `items/crystal_chest.png`            | 32 × 32     | Pechera de cristal |
+| `items/crystal_legs.png`             | 32 × 32     | Grebas de cristal |
+| `items/healing_potion.png`           | 32 × 32     | Poción de curación menor |
+| `items/greater_healing_potion.png`   | 32 × 32     | Poción de curación |
+| `items/life_crystal.png`             | 32 × 32     | Cristal de vida (ítem) |
+| `items/flower.png`                   | 32 × 32     | Flor |
 | `items/door.png`                     | 32 × 32     | Ícono de *Puerta*                                                           |
 | `items/chair.png`                    | 32 × 32     | Ícono de *Silla*                                                            |
 | `items/table.png`                    | 32 × 32     | Ícono de *Mesa*                                                             |
@@ -397,6 +429,7 @@ redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pas
 | `ui/button_attack.png`               | 80 × 80     | Botón táctil de acción con una espada elegida (ATACAR)                      |
 | `ui/button_swap.png`                 | 64 × 64     | Botón táctil para cambiar entre MINAR y COLOCAR                             |
 | `ui/trash.png`                       | 32 × 32     | Tacho de la casilla Basura del inventario |
+| `ui/button_potion.png`               | 64 × 64     | Botón táctil de curación rápida |
 | `ui/button_dash.png`                 | 64 × 64     | Botón táctil de la Embestida |
 | `ui/button_fire.png`                 | 64 × 64     | Botón táctil de la Bola de fuego |
 | `ui/button_inventory.png`            | 64 × 64     | Botón táctil de inventario                                                  |
@@ -405,7 +438,8 @@ redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pas
 Las hojas de sprites (`player.png`, `tree_top.png`, `crack.png`) también aceptan un solo cuadro: si el jugador tiene
 un único cuadro de 48×64, se usa sin animación. El pico y la antorcha se dibujan en la mano de adelante según la
 posición de la mano en cada pose de `src/player/animations.js` (si dibujas tus propias poses, respeta esas posiciones
-o ajústalas ahí).
+o ajústalas ahí). Con el dibujo por código, la armadura puesta cambia los colores del pelo (casco), la camisa
+(pechera) y el pantalón y las botas (grebas); con una imagen propia del jugador, la armadura no se dibuja.
 
 ## Estructura del código
 

@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { INVENTORY_SIZE, HOTBAR_SIZE } from '../config.js';
-import { ITEMS, getMaxStack } from './items.js';
+import { ITEMS, getMaxStack, ARMOR_SETS } from './items.js';
+
+export const ARMOR_SLOTS = ['head', 'body', 'legs'];
 
 // ---- Funciones sobre arrays de casillas (también se usan para simular el crafteo) ----
 
@@ -61,6 +63,63 @@ export class Inventory extends Phaser.Events.EventEmitter {
     this.selected = 0;
     this.held = null;
     this.trash = null; // última pila tirada a la basura (se puede recuperar hasta tirar otra)
+    this.armor = [null, null, null]; // casco, pechera, grebas
+  }
+
+  /**
+   * Casilla de armadura (0 casco, 1 pechera, 2 grebas): con una pieza que va ahí en el cursor, se la pone
+   * (y la que estaba pasa al cursor); sin nada en el cursor, se la saca.
+   */
+  clickArmor(index) {
+    const held = this.held;
+    if (held) {
+      const a = ITEMS[held.id].armor;
+      if (!a || ARMOR_SLOTS[index] !== a.slot) return false;
+      this.held = this.armor[index];
+      this.armor[index] = { id: held.id, count: 1 };
+    } else if (this.armor[index]) {
+      this.held = this.armor[index];
+      this.armor[index] = null;
+    } else return false;
+    this.emit('change');
+    this.emit('armor');
+    return true;
+  }
+
+  /** Ponerse una pieza directo desde una casilla (tocar la armadura con nada en el cursor la equipa). */
+  equipFromSlot(index) {
+    const s = this.slots[index];
+    const a = s && ITEMS[s.id].armor;
+    if (!a) return false;
+    const k = ARMOR_SLOTS.indexOf(a.slot);
+    this.slots[index] = this.armor[k];
+    this.armor[k] = { id: s.id, count: 1 };
+    this.emit('change');
+    this.emit('armor');
+    return true;
+  }
+
+  /** Defensa total de la armadura (+ bonus si las 3 piezas son del mismo juego). */
+  get defense() {
+    let d = 0;
+    const sets = new Set();
+    for (const a of this.armor) {
+      if (!a) {
+        sets.add(null);
+        continue;
+      }
+      const def = ITEMS[a.id].armor;
+      d += def.defense;
+      sets.add(def.set);
+    }
+    const full = sets.size === 1 && !sets.has(null) ? [...sets][0] : null;
+    return d + (full ? ARMOR_SETS[full].bonus : 0);
+  }
+
+  /** Juego completo puesto (o null). */
+  get fullSet() {
+    const sets = new Set(this.armor.map((a) => (a ? ITEMS[a.id].armor.set : null)));
+    return sets.size === 1 && !sets.has(null) ? [...sets][0] : null;
   }
 
   /** Casilla de basura: con algo en el cursor, lo borra; sin nada, recupera lo último que se tiró. */
@@ -194,7 +253,7 @@ export class Inventory extends Phaser.Events.EventEmitter {
   serialize() {
     const slots = cloneSlots(this.slots);
     if (this.held) addToSlots(slots, this.held.id, this.held.count);
-    return { selected: this.selected, slots: slots.map((s) => (s ? [s.id, s.count] : null)) };
+    return { selected: this.selected, slots: slots.map((s) => (s ? [s.id, s.count] : null)), armor: this.armor.map((a) => (a ? a.id : null)) };
   }
 
   deserialize(data) {
@@ -208,6 +267,13 @@ export class Inventory extends Phaser.Events.EventEmitter {
       }
     }
     this.selected = Math.max(0, Math.min(HOTBAR_SIZE - 1, data.selected | 0));
+    if (Array.isArray(data.armor)) {
+      this.armor = ARMOR_SLOTS.map((slot, i) => {
+        const id = data.armor[i];
+        return id && ITEMS[id] && ITEMS[id].armor && ITEMS[id].armor.slot === slot ? { id, count: 1 } : null;
+      });
+    }
     this.emit('change');
+    this.emit('armor');
   }
 }

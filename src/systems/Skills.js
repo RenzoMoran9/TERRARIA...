@@ -118,6 +118,7 @@ export const MAX_LEVEL = 30;
 export const xpForLevel = (L) => 40 + 30 * (L - 1) + 10 * (L - 1) * (L - 1);
 
 export const ENERGY_MAX = 100;
+export const MAX_LIFE_CRYSTALS = 15; // como Terraria: hasta +300 de vida
 
 /**
  * Experiencia, nivel y habilidades del jugador (se guardan con la partida).
@@ -131,12 +132,14 @@ export class Progression extends Phaser.Events.EventEmitter {
     this.points = 0;
     this.ranks = {}; // habilidad → nivel aprendido
     this.crafted = new Set(); // ítems ya fabricados alguna vez (dan experiencia la primera vez)
+    this.lifeCrystals = 0; // cristales de vida usados (+20 de vida máxima cada uno)
     if (saved && typeof saved === 'object') {
       this.level = Phaser.Math.Clamp(saved.level | 0 || 1, 1, MAX_LEVEL);
       this.xp = Math.max(0, saved.xp | 0);
       this.points = Math.max(0, saved.points | 0);
       for (const [id, r] of Object.entries(saved.ranks || {})) if (SKILLS[id]) this.ranks[id] = Math.min(r | 0, SKILLS[id].ranks || 1);
       for (const id of saved.crafted || []) this.crafted.add(id);
+      this.lifeCrystals = Math.max(0, Math.min(MAX_LIFE_CRYSTALS, saved.lifeCrystals | 0));
     }
   }
 
@@ -188,7 +191,7 @@ export class Progression extends Phaser.Events.EventEmitter {
 
   /** Bonos de las pasivas */
   get maxHealthBonus() {
-    return this.rank('extraLife') * 20;
+    return this.rank('extraLife') * 20 + this.lifeCrystals * 20;
   }
 
   get defense() {
@@ -208,6 +211,6 @@ export class Progression extends Phaser.Events.EventEmitter {
   }
 
   serialize() {
-    return { level: this.level, xp: this.xp, points: this.points, ranks: { ...this.ranks }, crafted: [...this.crafted] };
+    return { level: this.level, xp: this.xp, points: this.points, ranks: { ...this.ranks }, crafted: [...this.crafted], lifeCrystals: this.lifeCrystals };
   }
 }

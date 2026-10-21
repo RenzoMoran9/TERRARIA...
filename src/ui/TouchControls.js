@@ -60,6 +60,7 @@ export class TouchControls {
     this.fireBtn = this._circleButton('ui_button_fire', (pointer) => {
       this.firePointer = pointer;
     });
+    this.potionBtn = this._circleButton('ui_button_potion', () => this.gs.quickHeal());
     this.dashBtn.on('pointerup', () => (this.state.dash = false));
     this.dashBtn.on('pointerout', () => (this.state.dash = false));
     this.fsBtn = scene.add.image(0, 0, 'ui_button_fullscreen').setInteractive();
@@ -79,6 +80,7 @@ export class TouchControls {
       this.fsBtn,
       this.dashBtn,
       this.fireBtn,
+      this.potionBtn,
     ]);
     this._updateModeVisual();
     this.setVisible(gameScene.isTouch);
@@ -128,10 +130,12 @@ export class TouchControls {
   _updateModeVisual() {
     const mine = this.state.mode === 'mine';
     const attack = this._weaponSelected();
+    const stack = this.gs.inventory.selectedStack;
+    const usable = !!(stack && ITEMS[stack.id].use);
     const size = this.actionBtn.displayWidth;
     this.actionBtn.setTexture(attack ? 'ui_button_attack' : mine ? 'ui_button_mine' : 'ui_button_place');
     if (size) this.actionBtn.setDisplaySize(size, size);
-    this.modeLabel.setText(attack ? 'ATACAR' : mine ? 'MINAR' : 'COLOCAR');
+    this.modeLabel.setText(usable ? 'USAR' : attack ? 'ATACAR' : mine ? 'MINAR' : 'COLOCAR');
   }
 
   setVisible(visible) {
@@ -182,6 +186,8 @@ export class TouchControls {
     // Poderes: encima del inventario y del cambio de modo
     this.fireBtn.setPosition(jx, this.invBtn.y - 32 * s - 12 - 30 * s).setDisplaySize(60 * s, 60 * s);
     this.dashBtn.setPosition(ax, this.modeBtn.y - 28 * s - 12 - 30 * s).setDisplaySize(60 * s, 60 * s);
+    // Poción: a la izquierda del botón de acción
+    this.potionBtn.setPosition(ax - 48 * s - 14 - 28 * s, jy + 10 * s).setDisplaySize(56 * s, 56 * s);
     this.fsBtn.setPosition(width - 30, fullscreenY).setDisplaySize(40, 40);
   }
 
@@ -196,6 +202,11 @@ export class TouchControls {
     const p = this.gs.player;
     this.dashBtn.setVisible(p.hasSkill('dash'));
     this.fireBtn.setVisible(p.hasSkill('fireball'));
+    // Con pociones en el inventario aparece el botón de curación rápida
+    if (!this._potionCheck || this.gs.time.now > this._potionCheck) {
+      this._potionCheck = this.gs.time.now + 400;
+      this.potionBtn.setVisible(this.gs.inventory.slots.some((s) => s && ITEMS[s.id].use && ITEMS[s.id].use.heal));
+    }
     if (this.firePointer && !this.firePointer.isDown) this.firePointer = null;
     st.fire = !!this.firePointer;
 

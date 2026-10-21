@@ -746,6 +746,26 @@ function drawCoin(pc, [dark, mid, light]) {
   pc.outline('#1a120c');
 }
 
+// Colores de los íconos de armadura: [oscuro, medio, claro]
+const ARMOR_ICON = {
+  wood: ['#5e3a1c', '#9a6a35', '#c99a58'],
+  cactus: ['#2c4e1f', '#4f8a3a', '#7fc060'],
+  iron: ['#4a5058', '#9aa2aa', '#dce2e8'],
+  crystal: ['#7a4a98', '#d890f0', '#fbd8ff'],
+};
+
+// Frasco de poción: chico (menor) o grande
+function drawPotion(pc, big) {
+  const top = big ? 3 : 5;
+  pc.rect(6, top - 2, 4, 2, '#a3733a'); // corcho
+  pc.rect(6, top, 4, 2, '#d8eef8'); // cuello
+  const r = big ? 5.5 : 4.5;
+  pc.disc(8, top + 2 + r, r, (x, y) => (y < top + 2 + r * 0.7 ? '#d8eef8' : y < top + 2 + r * 1.1 ? '#ff4a6a' : '#c0203e'));
+  pc.set(6, top + 3, '#ffffff');
+  pc.set(6, top + 4, '#ffffff');
+  pc.outline('#1a120c');
+}
+
 // ---------------------------------------------------------------- pintores en pixel art
 const PIXEL = {
   dirt(pc, v) {
@@ -1626,6 +1646,62 @@ const PIXEL = {
     pc.outline('#1a0806');
   },
 
+  // ---------- armaduras (el color sale de ARMOR_COLORS según asset.set) ----------
+  armor_helmet(pc, v, asset) {
+    const [dark, mid, light] = ARMOR_ICON[asset.set];
+    pc.disc(8, 8, 5.5, (x, y) => (y < 6 ? light : mid));
+    pc.rect(2, 9, 12, 5, mid);
+    pc.rect(3, 9, 10, 1, light);
+    pc.rect(5, 10, 6, 2, '#1a120c'); // visor
+    pc.rect(2, 13, 12, 1, dark);
+    pc.outline('#1a120c');
+  },
+  armor_chest(pc, v, asset) {
+    const [dark, mid, light] = ARMOR_ICON[asset.set];
+    pc.rect(2, 3, 12, 4, mid); // hombros
+    pc.rect(4, 3, 8, 11, mid);
+    pc.rect(5, 4, 2, 9, light);
+    pc.rect(4, 13, 8, 1, dark);
+    pc.rect(7, 3, 2, 2, dark); // cuello
+    pc.outline('#1a120c');
+  },
+  armor_legs(pc, v, asset) {
+    const [dark, mid, light] = ARMOR_ICON[asset.set];
+    pc.rect(3, 2, 10, 3, mid);
+    pc.rect(3, 5, 4, 8, mid);
+    pc.rect(9, 5, 4, 8, mid);
+    pc.rect(3, 5, 1, 8, light);
+    pc.rect(9, 5, 1, 8, light);
+    pc.rect(2, 12, 5, 2, dark);
+    pc.rect(9, 12, 5, 2, dark);
+    pc.outline('#1a120c');
+  },
+  potion_small(pc) {
+    drawPotion(pc, false);
+  },
+  potion_big(pc) {
+    drawPotion(pc, true);
+  },
+  life_crystal(pc) {
+    // Cristal rojo con forma de corazón y brillo
+    const heart = (x, y) => {
+      const u = (x - 7.5) / 6;
+      const w = (8 - y) / 6;
+      return (u * u + w * w - 1) ** 3 - u * u * w * w * w < 0;
+    };
+    for (let y = 2; y < 15; y++) for (let x = 1; x < 15; x++) if (heart(x, y)) pc.set(x, y, y < 6 ? '#ff8aa0' : x < 7 ? '#ff4a6a' : '#d02848');
+    pc.rect(4, 4, 2, 2, '#ffd0d8');
+    pc.set(7, 7, '#ffd0d8');
+    pc.outline('#4a0814');
+  },
+  flower_item(pc) {
+    pc.rect(7, 8, 2, 7, '#3e8a34');
+    pc.rect(9, 11, 3, 1, '#4caf50');
+    for (const [x, y] of [[8, 3], [5, 5], [11, 5], [6, 8], [10, 8]]) pc.disc(x, y, 2, '#e85a8a');
+    pc.disc(8, 6, 1.6, '#ffe070');
+    pc.outline('#1a120c');
+  },
+
   trash(pc) {
     // Tacho de basura con tapa
     pc.rect(3, 3, 10, 2, '#c8ccd4');
@@ -1680,9 +1756,10 @@ const PIXEL = {
   },
 
   // ---------- jugador (hoja de 8 cuadros) ----------
-  player(pc) {
-    // Todas las poses de player/animations.js, 8 por fila
-    POSES.forEach((pose, i) => drawPose(pc, (i % SHEET_COLS) * ART_W, Math.floor(i / SHEET_COLS) * ART_H, pose));
+  player(pc, v, asset) {
+    // Todas las poses de player/animations.js, 8 por fila (con la armadura puesta, si hay: asset.colors)
+    const C = asset?.colors ? { ...PLAYER_COLORS, ...asset.colors } : PLAYER_COLORS;
+    POSES.forEach((pose, i) => drawPose(pc, (i % SHEET_COLS) * ART_W, Math.floor(i / SHEET_COLS) * ART_H, pose, C));
     pc.outline('#1a120c');
   },
 
@@ -1872,6 +1949,13 @@ const CTX = {
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, w, h);
   },
+  button_potion(ctx, w, h) {
+    // Poción roja (curación rápida)
+    circleBtn(ctx, w, h);
+    const pc = new PixelCanvas(16, 16);
+    drawPotion(pc, false);
+    pc.draw(ctx, w / 2 - 16, h / 2 - 16, 2);
+  },
   button_swap(ctx, w, h) {
     // Dos flechas opuestas (cambiar entre minar y colocar)
     circleBtn(ctx, w, h);
@@ -1987,6 +2071,27 @@ export function paintPlaceholder(asset, variant = 0) {
   }
   return canvas;
 }
+
+/**
+ * Hoja del jugador con la armadura puesta: el casco cambia el pelo, la pechera la camisa y las grebas
+ * el pantalón y las botas. armor = [idCasco, idPechera, idGrebas] (o null). Devuelve la clave de la textura.
+ * Si el jugador tiene una imagen propia (player.png), se usa esa sin cambios.
+ */
+export function playerOutfitTexture(scene, armor, items, sets) {
+  const base = scene.textures.get('player').getSourceImage();
+  if (!(base instanceof HTMLCanvasElement) || armor.every((a) => !a)) return 'player';
+  const key = `player_${armor.map((a) => a || '-').join('_')}`;
+  if (scene.textures.exists(key)) return key;
+  const colors = {};
+  const set = (i) => armor[i] && sets[items[armor[i]].armor.set];
+  if (set(0)) Object.assign(colors, { hair: set(0).head[0], hairLight: set(0).head[1] });
+  if (set(1)) Object.assign(colors, { shirt: set(1).body[0], shirtShade: set(1).body[1], shirtLight: set(1).body[2] });
+  if (set(2)) Object.assign(colors, { pants: set(2).legs[0], pantsShade: set(2).legs[1], boots: set(2).boots[0], bootsShade: set(2).boots[1] });
+  const asset = { ...ASSET_PLAYER, colors };
+  createPlaceholderTexture(scene, key, asset);
+  return key;
+}
+const ASSET_PLAYER = { width: 384, height: 256, frameWidth: 48, frameHeight: 64, placeholder: 'player' };
 
 /** Crea en el TextureManager la textura placeholder (y sus cuadros si es una hoja de sprites). */
 export function createPlaceholderTexture(scene, key, asset) {

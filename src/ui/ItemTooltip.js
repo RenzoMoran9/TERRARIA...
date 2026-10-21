@@ -1,4 +1,4 @@
-import { ITEMS, getMaxStack } from '../systems/items.js';
+import { ITEMS, ARMOR_SETS, getMaxStack } from '../systems/items.js';
 import { BLOCK, BLOCK_DEFS, IS_SOLID, LIGHT_EMIT } from '../world/blocks.js';
 import { TILE_SIZE } from '../config.js';
 import { textStyle, COLORS } from './styles.js';
@@ -32,6 +32,7 @@ const USES = {
   red_shingles: 'Bloque sólido para techos',
   wood_shingles: 'Bloque sólido para techos',
   sand: 'Bloque. En el Horno se funde en vidrio',
+  flower: 'Sale de las flores. Sirve para pociones de curación (con gel y vidrio)',
 };
 
 const TIERS = { 1: 'piedra y carbón', 2: 'piedra, carbón y hierro', 3: 'todos los minerales conocidos' };
@@ -63,6 +64,23 @@ export function describeItem(id) {
     else lines.push('Alcance: a distancia');
     lines.push(`Empuje: ${knock(w.knockback)}`);
     if (kind === 'bow') lines.push('Gasta 1 flecha por disparo');
+  } else if (d.armor) {
+    const a = d.armor;
+    const set = ARMOR_SETS[a.set];
+    lines.push(`Armadura (${a.slot === 'head' ? 'casco' : a.slot === 'body' ? 'pechera' : 'grebas'})`);
+    lines.push(`Defensa: ${a.defense}`);
+    lines.push(`Juego completo de ${set.name}: +${set.bonus} de defensa`);
+    lines.push('Cada golpe te quita la mitad de tu defensa menos');
+    lines.push('Para ponértela: arrástrala a su casilla (o clic derecho)');
+  } else if (d.use) {
+    if (d.use.heal) {
+      lines.push(`Cura ${d.use.heal} de vida`);
+      lines.push('Después hay que esperar 45 s para tomar otra');
+      lines.push('Úsala eligiéndola y con la acción, o con R / el botón de poción');
+    } else if (d.use.maxHealth) {
+      lines.push(`+${d.use.maxHealth} de vida máxima, para siempre (hasta 15)`);
+      lines.push('Se encuentran en el piso de las cuevas, bien abajo');
+    }
   } else if (d.tool) {
     lines.push('Pico');
     lines.push(`Puede minar: ${TIERS[d.tool.tier] || 'tierra y madera'}`);

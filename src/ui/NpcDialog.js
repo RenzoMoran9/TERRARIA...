@@ -12,6 +12,7 @@ const GAP = 5;
 
 /** Lo que vende el Comerciante: [ítem, cantidad por compra, precio en cobre] */
 export const SHOP = [
+  ['healing_potion', 1, 200],
   ['torch', 5, 25],
   ['wood_arrow', 20, 30],
   ['wood_platform', 20, 15],

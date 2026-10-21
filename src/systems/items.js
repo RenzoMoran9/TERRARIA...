@@ -39,6 +39,24 @@ export const ITEMS = {
   coin_copper: { name: 'Moneda de cobre', icon: 'item_coin_copper', coin: 1 },
   coin_silver: { name: 'Moneda de plata', icon: 'item_coin_silver', coin: 100 },
   coin_gold: { name: 'Moneda de oro', icon: 'item_coin_gold', coin: 10000 },
+  // Combate: armaduras (slot = head/body/legs; defense = defensa; set = juego completo da un bonus)
+  wood_helmet: { name: 'Casco de madera', icon: 'item_wood_helmet', maxStack: 1, armor: { slot: 'head', defense: 1, set: 'wood' } },
+  wood_chest: { name: 'Pechera de madera', icon: 'item_wood_chest', maxStack: 1, armor: { slot: 'body', defense: 2, set: 'wood' } },
+  wood_legs: { name: 'Grebas de madera', icon: 'item_wood_legs', maxStack: 1, armor: { slot: 'legs', defense: 1, set: 'wood' } },
+  cactus_helmet: { name: 'Casco de cactus', icon: 'item_cactus_helmet', maxStack: 1, armor: { slot: 'head', defense: 2, set: 'cactus' } },
+  cactus_chest: { name: 'Pechera de cactus', icon: 'item_cactus_chest', maxStack: 1, armor: { slot: 'body', defense: 3, set: 'cactus' } },
+  cactus_legs: { name: 'Grebas de cactus', icon: 'item_cactus_legs', maxStack: 1, armor: { slot: 'legs', defense: 2, set: 'cactus' } },
+  iron_helmet: { name: 'Casco de hierro', icon: 'item_iron_helmet', maxStack: 1, armor: { slot: 'head', defense: 3, set: 'iron' } },
+  iron_chest: { name: 'Pechera de hierro', icon: 'item_iron_chest', maxStack: 1, armor: { slot: 'body', defense: 4, set: 'iron' } },
+  iron_legs: { name: 'Grebas de hierro', icon: 'item_iron_legs', maxStack: 1, armor: { slot: 'legs', defense: 3, set: 'iron' } },
+  crystal_helmet: { name: 'Casco de cristal', icon: 'item_crystal_helmet', maxStack: 1, armor: { slot: 'head', defense: 5, set: 'crystal' } },
+  crystal_chest: { name: 'Pechera de cristal', icon: 'item_crystal_chest', maxStack: 1, armor: { slot: 'body', defense: 7, set: 'crystal' } },
+  crystal_legs: { name: 'Grebas de cristal', icon: 'item_crystal_legs', maxStack: 1, armor: { slot: 'legs', defense: 5, set: 'crystal' } },
+  // Consumibles: use = qué hace al usarlo (se gasta)
+  healing_potion: { name: 'Poción de curación menor', icon: 'item_healing_potion', maxStack: 30, use: { heal: 50 } },
+  greater_healing_potion: { name: 'Poción de curación', icon: 'item_greater_healing_potion', maxStack: 30, use: { heal: 100 } },
+  life_crystal: { name: 'Cristal de vida', icon: 'item_life_crystal', maxStack: 99, use: { maxHealth: 20 } },
+  flower: { name: 'Flor', icon: 'item_flower' },
   // Casas
   wood_hammer: { name: 'Martillo de madera', icon: 'item_wood_hammer', maxStack: 1, hammer: { speed: 2.5 } },
   wood_wall: { name: 'Pared de fondo de madera', icon: 'item_wood_wall', wall: WALL.WOOD },
@@ -137,3 +155,11 @@ export function itemValue(id) {
   if (d.wall !== undefined) return 1;
   return 2;
 }
+
+/** Juegos de armadura: bonus de defensa con las 3 piezas puestas, y colores con que se dibuja en el personaje */
+export const ARMOR_SETS = {
+  wood: { name: 'madera', bonus: 1, head: ['#8a5a2b', '#a3733a'], body: ['#9a6a35', '#7a4f22', '#b5843f'], legs: ['#7a4f22', '#5e3a1c'], boots: ['#5e3a1c', '#4a2d16'] },
+  cactus: { name: 'cactus', bonus: 2, head: ['#3e7a2e', '#5fa04a'], body: ['#4f8a3a', '#386629', '#6fae55'], legs: ['#3e6a2c', '#2c4e1f'], boots: ['#2c4e1f', '#1e3815'] },
+  iron: { name: 'hierro', bonus: 3, head: ['#8a9098', '#b8c0c8'], body: ['#9aa2aa', '#6a7078', '#c8d0d8'], legs: ['#7a8088', '#5a6068'], boots: ['#4a5058', '#383d44'] },
+  crystal: { name: 'cristal', bonus: 5, head: ['#c47ad8', '#f0a8ff'], body: ['#d890f0', '#a060c0', '#f8c8ff'], legs: ['#b070d0', '#8050a0'], boots: ['#7a4a98', '#5a3478'] },
+};

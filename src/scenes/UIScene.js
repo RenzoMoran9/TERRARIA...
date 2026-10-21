@@ -56,6 +56,10 @@ export class UIScene extends Phaser.Scene {
     kb.on('keydown-F3', () => this.debug.toggle());
     kb.on('keydown-H', () => this.checkHouse());
     kb.on('keydown-K', () => this.toggleSkills());
+    // R: curación rápida (toma una poción)
+    kb.on('keydown-R', () => {
+      if (!gs.uiBlocking) gs.quickHeal();
+    });
     // T: tira al suelo lo que tienes en la mano (la pila entera, como en Terraria)
     kb.on('keydown-T', () => {
       if (gs.uiBlocking || gs.player.dead) return;
@@ -193,7 +197,7 @@ export class UIScene extends Phaser.Scene {
     this.inventoryPanel.layout(W, H);
     this.skillsPanel.layout(W, H);
     this.npcDialog.layout(W, H);
-    this.hud.layoutLevel(y === 42 ? hotbarBottom + 14 : 54);
+    this.hud.layoutLevel(y === 42 ? hotbarBottom + 14 : 54); // (baja solo si hay 2 filas de corazones)
     this.touchControls.layout(W, H, y === 42 ? hotbarBottom + 28 : 62);
     this.deathText.setPosition(W / 2, H / 2);
   }

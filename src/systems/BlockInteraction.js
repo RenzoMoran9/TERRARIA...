@@ -1,6 +1,6 @@
 import { TILE_SIZE, WORLD_WIDTH, WORLD_HEIGHT, REACH_TILES, DEPTH } from '../config.js';
 import { XP } from './Skills.js';
-import { BLOCK, BLOCK_DEFS, IS_SOLID, IS_PLANT, IS_TRUNK, WALL, WALL_DEFS, PART } from '../world/blocks.js';
+import { BLOCK, BLOCK_DEFS, IS_SOLID, IS_PLANT, IS_TRUNK, WALL, WALL_DEFS, PART, variantAt } from '../world/blocks.js';
 import { ITEMS, HAND } from './items.js';
 import { frameCount } from './Placeholders.js';
 import { PROJECTILE_GRAVITY } from './Projectiles.js';
@@ -98,6 +98,20 @@ export class BlockInteraction {
       this._resetPlacing();
       return;
     }
+    // Poción o cristal de vida elegido: la acción lo usa (una vez por pulsación)
+    const stack = this.inventory.selectedStack;
+    if (stack && ITEMS[stack.id].use) {
+      this.highlight.setVisible(false);
+      this.ghost.setVisible(false);
+      this._resetMining();
+      this._resetPlacing();
+      if (pa.action && !this.useLock) {
+        this.useLock = true;
+        this.scene.useItem(this.inventory.selected);
+      } else if (!pa.action) this.useLock = false;
+      return;
+    }
+    this.useLock = false;
     // Con una espada elegida no se mina ni se coloca: se ataca
     const weapon = this.selectedWeapon();
     if (weapon) {
@@ -312,7 +326,9 @@ export class BlockInteraction {
     if (IS_TRUNK[id]) return this._fellTree(tx, ty, id);
     if (PART[id]) return this._breakFurniture(tx, ty, id);
 
-    const drop = BLOCK_DEFS[id].drop;
+    let drop = BLOCK_DEFS[id].drop;
+    // Las flores (no el pasto) sueltan una Flor: para pociones
+    if ((id === BLOCK.PLANT && variantAt(tx, ty) > 0) || id === BLOCK.PLANT_JUNGLE) drop = 'flower';
     this.world.setTile(tx, ty, BLOCK.AIR);
     // Lo obtenido salta al suelo y se recoge al pasar cerca
     if (drop) this.scene.drops.spawn(drop, 1, (tx + 0.5) * T, (ty + 0.5) * T);
@@ -374,7 +390,7 @@ export class BlockInteraction {
     ];
     for (const [x, y] of around) {
       const id = this.world.getTile(x, y);
-      if ((id === BLOCK.TORCH || id === BLOCK.WORKBENCH || IS_PLANT[id]) && !this.hasSupport(x, y, id)) {
+      if ((id === BLOCK.TORCH || id === BLOCK.WORKBENCH || id === BLOCK.LIFE_CRYSTAL || IS_PLANT[id]) && !this.hasSupport(x, y, id)) {
         this._dropBlock(x, y, id);
       }
     }
@@ -394,7 +410,7 @@ export class BlockInteraction {
     if (id === BLOCK.TORCH) {
       return w.isFloor(x, y + 1) || w.isSolid(x - 1, y) || w.isSolid(x + 1, y) || w.getWall(x, y) !== WALL.NONE;
     }
-    if (id === BLOCK.WORKBENCH) return w.isFloor(x, y + 1);
+    if (id === BLOCK.WORKBENCH || id === BLOCK.LIFE_CRYSTAL) return w.isFloor(x, y + 1);
     if (IS_PLANT[id]) return w.isSolid(x, y + 1);
     // Bloques normales: necesitan algo al lado o una pared detrás
     return (

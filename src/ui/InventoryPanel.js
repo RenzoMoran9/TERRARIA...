@@ -1,5 +1,5 @@
 import { INVENTORY_SIZE, HOTBAR_SIZE } from '../config.js';
-import { ITEMS } from '../systems/items.js';
+import { ITEMS, ARMOR_SETS } from '../systems/items.js';
 import { addToSlots } from '../systems/Inventory.js';
 import { RECIPES, canCraft, craft, describeIngredients, hasIngredients, STATION_NAMES, STATION_SHORT } from '../systems/Crafting.js';
 import { createButton } from './Button.js';
@@ -70,13 +70,26 @@ export class InventoryPanel {
     this.container.add(this.soundBtn);
     // Bolsa de monedas
     const extraY = GRID_Y + 4 * (SLOT + GAP) + 10;
-    this.coinsText = scene.add.text(PAD, extraY, '', textStyle({ fontSize: '14px', color: '#ffd84a' }));
+    // Armadura: casco, pechera y grebas (se arrastra la pieza a su casilla)
+    this.armorViews = ['Casco', 'Pecho', 'Piernas'].map((label, k) => {
+      const x = PAD + k * (SLOT + GAP);
+      const bg = scene.add.image(x, extraY - 6, 'ui_slot').setOrigin(0).setDisplaySize(SLOT, SLOT).setTint(0xb8c8ff).setInteractive();
+      const icon = scene.add.image(x + SLOT / 2, extraY - 6 + SLOT / 2, 'ui_slot').setVisible(false);
+      const text = scene.add.text(x + SLOT / 2, extraY - 6 + SLOT / 2, label, textStyle({ fontSize: '10px', color: '#c8d2ff', strokeThickness: 2 })).setOrigin(0.5);
+      scene.tooltip.attach(bg, () => this.inv.armor[k]?.id, () => {
+        if (this.inv.held && !this.inv.clickArmor(k)) scene.toast.show('Esa pieza no va ahí');
+        else if (!this.inv.held) this.inv.clickArmor(k);
+      });
+      this.container.add([bg, icon, text]);
+      return { bg, icon, text };
+    });
+    this.coinsText = scene.add.text(PAD + 3 * (SLOT + GAP) + 4, extraY - 6, '', textStyle({ fontSize: '13px', color: '#ffd84a', lineSpacing: 4 }));
     this.container.add(this.coinsText);
     // Basura (borra lo que se pone; lo último se puede recuperar) y "Tirar" al suelo
     const tx = PAD + (HOTBAR_SIZE - 1) * (SLOT + GAP);
     this.trashBg = scene.add.image(tx, extraY - 6, 'ui_slot').setOrigin(0).setDisplaySize(SLOT, SLOT).setTint(0xff9a9a).setInteractive();
     this.trashIcon = scene.add.image(tx + SLOT / 2, extraY - 6 + SLOT / 2, 'ui_slot').setVisible(false);
-    this.trashLabel = scene.add.text(tx - 6, extraY + 16, 'Basura', textStyle({ fontSize: '12px', color: '#ffb0b0' })).setOrigin(1, 0.5);
+    this.trashLabel = scene.add.text(tx + SLOT / 2, extraY - 8, 'Basura', textStyle({ fontSize: '10px', color: '#ffb0b0', strokeThickness: 2 })).setOrigin(0.5, 1);
     scene.tooltip.attach(this.trashBg, () => this.inv.trash?.id, () => this.inv.clickTrash());
     this.throwBtn = createButton(scene, tx - 120, extraY + 16, 120, 30, 'Tirar al suelo', () => this.gs.throwStack(this.inv.takeHeld()), { fontSize: '13px' });
     this.container.add([this.trashBg, this.trashIcon, this.trashLabel, this.throwBtn]);
@@ -131,6 +144,7 @@ export class InventoryPanel {
         (pointer) => {
           // Con un cofre abierto, tocar una casilla pasa esa pila al cofre
           if (this.chest && !this.inv.held) this.moveToChest(i);
+          else if (!this.inv.held && pointer.rightButtonDown() && this.inv.equipFromSlot(i)) return; // clic derecho: ponerse la armadura
           else this.inv.clickSlot(i, pointer.rightButtonDown());
         },
       );
@@ -368,7 +382,6 @@ export class InventoryPanel {
   open() {
     audio.play('open');
     this.isOpen = true;
-    this.coinsText.setText(`Monedas: ${formatCoins(this.gs.coins)}`);
     this.blocker.setVisible(true);
     this.container.setVisible(true);
     this.refresh();
@@ -410,7 +423,17 @@ export class InventoryPanel {
     else this.trashIcon.setTexture('ui_trash').setDisplaySize(ICON, ICON).setAlpha(0.8);
     this.throwBtn.setVisible(!!inv.held && !this.chest);
     this.trashLabel.setVisible(!inv.held || !!this.chest);
-    this.coinsText.setText(`Monedas: ${formatCoins(this.gs.coins)}`).setVisible(!inv.held || !!this.chest);
+    const def = inv.defense;
+    const set = inv.fullSet;
+    this.coinsText
+      .setText(`Monedas: ${formatCoins(this.gs.coins)}\nDefensa: ${def}${set ? ` (juego de ${ARMOR_SETS[set].name})` : ''}`)
+      .setVisible(!inv.held || !!this.chest);
+    this.armorViews.forEach((v, k) => {
+      const a = inv.armor[k];
+      v.icon.setVisible(!!a);
+      v.text.setVisible(!a);
+      if (a) v.icon.setTexture(ITEMS[a.id].icon).setDisplaySize(ICON, ICON);
+    });
     const held = inv.held;
     if (held) {
       this.heldIcon.setTexture(ITEMS[held.id].icon).setDisplaySize(this.heldIconSize, this.heldIconSize).setVisible(true);
