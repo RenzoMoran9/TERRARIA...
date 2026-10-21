@@ -113,8 +113,10 @@ export class InventoryPanel {
       createButton(scene, PAD + 55, FOOT_Y, 110, BUTTON_H, 'Guardar', () => this.gs.saveGame(true), { fontSize: '15px' }),
     );
     this.container.add(
-      createButton(scene, PAD + 125 + 75, FOOT_Y, 150, BUTTON_H, 'Menú principal', () => this.gs.backToMenu(), { fontSize: '15px' }),
+      createButton(scene, PAD + 165, FOOT_Y, 80, BUTTON_H, 'Menú', () => this.gs.backToMenu(), { fontSize: '15px' }),
     );
+    // Mapa del mundo (también con la tecla M)
+    this.container.add(createButton(scene, PAD + 250, FOOT_Y, 76, BUTTON_H, 'Mapa', () => scene.toggleMap(true), { fontSize: '15px' }));
     // Como la consulta "?" de Terraria: dice si el cuarto donde estás es una casa válida
     this.container.add(
       createButton(scene, PAD + 290 + 70, FOOT_Y, 140, BUTTON_H, 'Revisar casa', () => scene.checkHouse(), { fontSize: '15px' }),

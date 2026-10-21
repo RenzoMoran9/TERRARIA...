@@ -10,6 +10,7 @@ import { ZoneBanner } from '../ui/ZoneBanner.js';
 import { HouseReport } from '../ui/HouseReport.js';
 import { SkillsPanel } from '../ui/SkillsPanel.js';
 import { NpcDialog } from '../ui/NpcDialog.js';
+import { Minimap, FullMap, HomeArrows } from '../ui/MapPanel.js';
 import { textStyle } from '../ui/styles.js';
 
 /**
@@ -37,6 +38,10 @@ export class UIScene extends Phaser.Scene {
     this.houseReport = new HouseReport(this);
     this.skillsPanel = new SkillsPanel(this, gs);
     this.npcDialog = new NpcDialog(this, gs);
+    // Mapa: minimapa, mapa completo y flechas hacia tu casa y tus marcadores
+    this.homeArrows = new HomeArrows(this, gs);
+    this.minimap = new Minimap(this, gs);
+    this.fullMap = new FullMap(this, gs);
 
     this.deathText = this.add
       .text(0, 0, '', textStyle({ fontSize: '30px', strokeThickness: 5, color: '#ff6b6b', align: 'center' }))
@@ -49,6 +54,7 @@ export class UIScene extends Phaser.Scene {
     kb.addCapture(['F3']);
     kb.on('keydown-E', () => this.toggleInventory());
     kb.on('keydown-ESC', () => {
+      this.toggleMap(false);
       this.closeNpcDialog();
       this.toggleInventory(false);
       this.toggleSkills(false);
@@ -56,6 +62,9 @@ export class UIScene extends Phaser.Scene {
     kb.on('keydown-F3', () => this.debug.toggle());
     kb.on('keydown-H', () => this.checkHouse());
     kb.on('keydown-K', () => this.toggleSkills());
+    kb.on('keydown-M', () => this.toggleMap());
+    // N: mostrar u ocultar el minimapa
+    kb.on('keydown-N', () => this.minimap.setVisible(!this.minimap.visible));
     // R: curación rápida (toma una poción)
     kb.on('keydown-R', () => {
       if (!gs.uiBlocking) gs.quickHeal();
@@ -71,7 +80,7 @@ export class UIScene extends Phaser.Scene {
     });
     // Rueda del ratón: cambia de casilla en la barra rápida
     this.input.on('wheel', (pointer, over, dx, dy) => {
-      if (dy === 0) return;
+      if (dy === 0 || this.fullMap.isOpen) return;
       // Con el inventario abierto, la rueda desplaza la lista de recetas
       if (this.inventoryPanel.isOpen) {
         this.inventoryPanel.scrollBy(dy > 0 ? 1 : -1);
@@ -133,6 +142,20 @@ export class UIScene extends Phaser.Scene {
     this.gs.uiBlocking = this.inventoryPanel.isOpen || this.skillsPanel.isOpen;
   }
 
+  /** Abre o cierra el mapa completo. */
+  toggleMap(force) {
+    const open = force ?? !this.fullMap.isOpen;
+    if (open === this.fullMap.isOpen) return;
+    if (open) {
+      if (this.gs.player.dead) return;
+      this.toggleInventory(false);
+      this.toggleSkills(false);
+      this.closeNpcDialog();
+      this.fullMap.open();
+    } else this.fullMap.close();
+    this.gs.uiBlocking = open;
+  }
+
   /** Abre o cierra el panel de habilidades. */
   toggleSkills(force) {
     const open = force ?? !this.skillsPanel.isOpen;
@@ -164,6 +187,7 @@ export class UIScene extends Phaser.Scene {
     if (open === this.inventoryPanel.isOpen) return;
     if (open && this.gs.player.dead) return;
     if (open) this.skillsPanel.close();
+    if (open) this.toggleMap(false);
     if (open) this.inventoryPanel.open();
     else this.inventoryPanel.close();
     this.gs.uiBlocking = open;
@@ -197,6 +221,15 @@ export class UIScene extends Phaser.Scene {
     this.inventoryPanel.layout(W, H);
     this.skillsPanel.layout(W, H);
     this.npcDialog.layout(W, H);
+    this.fullMap.layout(W, H);
+    // Minimapa: en la PC arriba a la derecha (bajo la zona); en el celular a la izquierda, bajo el nivel
+    if (this.gs.isTouch) {
+      const levelY = y === 42 ? hotbarBottom + 14 : 54;
+      this.minimap.layout(10, levelY + 40, Math.min(160, W * 0.2), Math.min(84, H * 0.22), 1.5, false);
+    } else {
+      const top = this.hud.zoneText.y + 22;
+      this.minimap.layout(W - 12 - 210, top, 210, 126, 2, true);
+    }
     this.hud.layoutLevel(y === 42 ? hotbarBottom + 14 : 54); // (baja solo si hay 2 filas de corazones)
     this.touchControls.layout(W, H, y === 42 ? hotbarBottom + 28 : 62);
     this.deathText.setPosition(W / 2, H / 2);
@@ -214,6 +247,9 @@ export class UIScene extends Phaser.Scene {
     if (d.isOpen && (this.gs.player.dead || Math.hypot(d.npc.centerX - this.gs.player.centerX, d.npc.centerY - this.gs.player.centerY) > 8 * 32)) this.closeNpcDialog();
     if (d.isOpen && d.npc.talkTime < 1) d.npc.talkTime = 1;
     this.touchControls.update();
+    this.minimap.update(delta / 1000);
+    this.fullMap.update();
+    this.homeArrows.update();
     this.inventoryPanel.update(delta);
     this.debug.update(delta);
     if (this.gs.player.dead) {

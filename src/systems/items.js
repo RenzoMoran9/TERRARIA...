@@ -74,6 +74,10 @@ export const ITEMS = {
   healing_potion: { name: 'Poción de curación menor', icon: 'item_healing_potion', maxStack: 30, use: { heal: 50 } },
   greater_healing_potion: { name: 'Poción de curación', icon: 'item_greater_healing_potion', maxStack: 30, use: { heal: 100 } },
   life_crystal: { name: 'Cristal de vida', icon: 'item_life_crystal', maxStack: 99, use: { maxHealth: 20 } },
+  recall_potion: { name: 'Poción de regreso', icon: 'item_recall_potion', maxStack: 30, use: { recall: true } },
+  magic_mirror: { name: 'Espejo mágico', icon: 'item_magic_mirror', maxStack: 1, use: { recall: true, keep: true } },
+  compass: { name: 'Brújula', icon: 'item_compass', maxStack: 1, info: 'compass' },
+  depth_meter: { name: 'Medidor de profundidad', icon: 'item_depth_meter', maxStack: 1, info: 'depth' },
   flower: { name: 'Flor', icon: 'item_flower' },
   // Casas
   wood_hammer: { name: 'Martillo de madera', icon: 'item_wood_hammer', maxStack: 1, hammer: { speed: 2.5 } },
@@ -157,6 +161,7 @@ export function coinStacks(n) {
 // Precio de algunos ítems (en cobre); el resto se calcula según qué es
 const VALUES = {
   wood: 2, planks: 1, dirt: 0, stone: 1, sand: 1, coal: 6, iron_ore: 12, iron_bar: 40, gel: 3, torch: 4, cactus: 3,
+  recall_potion: 60, magic_mirror: 600, compass: 250, depth_meter: 250,
   crystal: 25, shadow_stone: 8, gold_ore: 30, gold_bar: 120, hellstone: 50, hellstone_bar: 250, glowing_mushroom: 15, cloud: 2, glass: 4, workbench: 10, furnace: 60, anvil: 220, chest: 30, bed: 50, door: 12,
 };
 

@@ -62,6 +62,11 @@ export const RECIPES = [
   { result: 'healing_potion', count: 2, ingredients: [['gel', 2], ['flower', 1], ['glass', 1]], station: 'workbench' },
   { result: 'greater_healing_potion', count: 1, ingredients: [['healing_potion', 2], ['crystal', 1]], station: 'workbench' },
   { result: 'greater_healing_potion', count: 2, ingredients: [['healing_potion', 2], ['glowing_mushroom', 1]], station: 'workbench' },
+  // Para orientarse
+  { result: 'recall_potion', count: 2, ingredients: [['glowing_mushroom', 1], ['flower', 1], ['glass', 1]], station: 'workbench' },
+  { result: 'magic_mirror', count: 1, ingredients: [['glass', 10], ['iron_bar', 6], ['crystal', 3]], station: 'anvil' },
+  { result: 'compass', count: 1, ingredients: [['iron_bar', 4], ['glass', 1]], station: 'anvil' },
+  { result: 'depth_meter', count: 1, ingredients: [['iron_bar', 4], ['coal', 3]], station: 'anvil' },
   // Casas
   { result: 'chest', count: 1, ingredients: [['planks', 8], ['wood', 2]], station: 'workbench' },
   { result: 'wood_hammer', count: 1, ingredients: [['planks', 8]], station: 'workbench' },

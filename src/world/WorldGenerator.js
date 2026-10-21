@@ -456,6 +456,7 @@ export class WorldGenerator {
     if (this.pyramidX >= 0 && x0 === c.x0 && y0 === c.y0) {
       return [
         ['iron_bow', 1],
+        ['magic_mirror', 1],
         ['wood_arrow', 60],
         ['iron_bar', 12],
         ['throwing_knife', 25],
@@ -467,7 +468,7 @@ export class WorldGenerator {
     const i = this.islandChests.findIndex((q) => q.x0 === x0 && q.y0 === y0);
     if (i >= 0) {
       const special = [['gold_bow', 1], ['gold_sword', 1], ['life_crystal', 2], ['gold_pickaxe', 1]][i % 4];
-      return [special, ['gold_bar', 8], ['greater_healing_potion', 3], ['life_crystal', 1], ['cloud', 30], ['wood_arrow', 50]];
+      return [special, ['gold_bar', 8], ['greater_healing_potion', 3], ['life_crystal', 1], ['recall_potion', 3], ['cloud', 30], ['wood_arrow', 50]];
     }
     return null;
   }

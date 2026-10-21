@@ -86,7 +86,14 @@ export function describeItem(id) {
     } else if (d.use.maxHealth) {
       lines.push(`+${d.use.maxHealth} de vida máxima, para siempre (hasta 15)`);
       lines.push('Se encuentran en el piso de las cuevas, bien abajo');
+    } else if (d.use.recall) {
+      lines.push('Te lleva de vuelta a tu cama (o al inicio del mundo)');
+      lines.push(d.use.keep ? 'No se gasta: úsalo cuantas veces quieras' : 'Se gasta al usarla');
+      lines.push('Úsalo eligiéndolo y con la acción');
     }
+  } else if (d.info) {
+    lines.push(d.info === 'compass' ? 'Con ella en el inventario ves cuántos bloques estás al Este u Oeste del inicio' : 'Con él en el inventario ves a qué profundidad estás');
+    lines.push('Se lee arriba a la derecha, bajo el nombre de la zona');
   } else if (d.tool) {
     lines.push('Pico');
     lines.push(`Puede minar: ${TIERS[d.tool.tier] || 'tierra y madera'}${d.tool.tier > 1 && d.tool.tier < 5 ? ' (y todo lo anterior)' : ''}`);

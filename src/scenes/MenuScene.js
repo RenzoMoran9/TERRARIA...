@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { WorldMap } from '../systems/WorldMap.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import { seedFromString } from '../world/noise.js';
 import { createButton } from '../ui/Button.js';
@@ -98,6 +99,7 @@ export class MenuScene extends Phaser.Scene {
         return;
       }
       SaveSystem.clear();
+      WorldMap.clearSaved();
       this.startGame({ continue: false, seed: pickSeed() });
     });
     if (this.confirmNew) newBtn.label.setText('¿Borrar el mundo guardado? Toca otra vez').setFontSize(14);

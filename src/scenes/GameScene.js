@@ -36,6 +36,7 @@ import { MAX_LIFE_CRYSTALS } from '../systems/Skills.js';
 import { Npcs, roomKey } from '../systems/Npcs.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import { IslandMist } from '../systems/IslandMist.js';
+import { WorldMap } from '../systems/WorldMap.js';
 import { textStyle } from '../ui/styles.js';
 
 const T = TILE_SIZE;
@@ -121,6 +122,9 @@ export class GameScene extends Phaser.Scene {
     this.zones = new Zones(this, this.world.generator, Array.isArray(save?.zones) ? save.zones : []);
     this.ambience = new Ambience(this, this.world, this.zones, this.dayNight);
     this.islandMist = new IslandMist(this, this.world.generator);
+    // Mapa: se descubre al explorar; marcadores del jugador
+    this.worldMap = new WorldMap(this, this.world, save?.pins);
+    if (save) this.worldMap.load();
     // Casas: cuartos cerrados, fachada vista desde afuera y la consulta "Revisar casa"
     this.housing = new Housing(this, this.world, this.player);
     // Monedas (en cobre) y aldeanos que viven en las casas
@@ -364,6 +368,7 @@ export class GameScene extends Phaser.Scene {
     this.npcs.update(dt);
     this.ambience.update(dt);
     this.islandMist.update(dt);
+    this.worldMap.update(dt, this.player);
 
     this.autosaveTimer += dt;
     if (this.autosaveTimer >= AUTOSAVE_SECONDS) {
@@ -627,19 +632,41 @@ export class GameScene extends Phaser.Scene {
     else if (!same) this.events.emit('toast', 'Punto de reaparición: tu cama');
   }
 
-  respawn() {
-    // En la cama (si todavía existe) o en el punto de inicio
-    let spot = this.spawn;
+  /** Dónde está tu "casa": junto a tu cama (si todavía existe) o el punto de inicio del mundo. */
+  homeSpot() {
     if (this.bedSpawn) {
       const bed = this.furniture.bedAt(this.bedSpawn.tx, this.bedSpawn.ty);
       if (bed) {
         const s = this.furniture.bedStandSpot(bed);
-        spot = { x: s.standX, y: s.standY };
-      } else {
-        this.bedSpawn = null;
-        this.events.emit('toast', 'Tu cama ya no está: apareces en el inicio');
+        return { x: s.standX, y: s.standY, bed: true };
       }
+      this.bedSpawn = null;
+      this.events.emit('toast', 'Tu cama ya no está: tu casa vuelve a ser el inicio');
     }
+    return { x: this.spawn.x, y: this.spawn.y, bed: false };
+  }
+
+  /** Espejo mágico / poción de regreso: vuelves a tu cama (o al inicio) con un destello. */
+  recallHome() {
+    const p = this.player;
+    const spot = this.homeSpot();
+    this.spawnSparkles(p.centerX, p.centerY, 20, 0x9be7ff);
+    p.standUp();
+    p.x = spot.x;
+    p.y = spot.y;
+    p.vx = 0;
+    p.vy = 0;
+    p.peakY = p.y; // sin daño por caída
+    this.cameras.main.centerOn(p.centerX, p.centerY);
+    this.spawnSparkles(p.centerX, p.centerY, 24, 0x9be7ff);
+    this.enemies.clearNear(p.centerX, p.centerY, 30);
+    audio.play('zone');
+    this.events.emit('toast', spot.bed ? 'De vuelta en tu cama' : 'De vuelta al inicio (duerme en una cama para que sea tu casa)');
+  }
+
+  respawn() {
+    // En la cama (si todavía existe) o en el punto de inicio
+    const spot = this.homeSpot();
     this.player.respawn(spot.x, spot.y);
     this.enemies.clearNear(this.player.centerX, this.player.centerY, 30);
     this.events.emit('playerRespawned');
@@ -706,6 +733,7 @@ export class GameScene extends Phaser.Scene {
       progress: this.progress.serialize(),
       coins: this.coins,
       npcs: this.npcs.serialize(),
+      pins: this.worldMap.pins,
       // Solo los cofres con algo adentro
       chests: Object.fromEntries(
         [...this.chests].filter(([, slots]) => slots.some(Boolean)).map(([k, slots]) => [k, cloneSlots(slots).map((s) => (s ? [s.id, s.count] : null))]),
@@ -774,6 +802,9 @@ export class GameScene extends Phaser.Scene {
       this.showFloatingText(p.centerX, p.y - 8, `+${Math.round(p.health - before)}`, '#7dff8a', 16);
       this.spawnSparkles(p.centerX, p.centerY, 12, 0xff6a8a);
       audio.play('learn');
+    } else if (use.recall) {
+      this.recallHome();
+      if (use.keep) return true; // el espejo mágico no se gasta
     } else if (use.maxHealth) {
       if (this.progress.lifeCrystals >= MAX_LIFE_CRYSTALS) {
         this.events.emit('toast', 'Ya usaste todos los cristales de vida posibles');
@@ -882,6 +913,7 @@ export class GameScene extends Phaser.Scene {
 
   saveGame(showToast) {
     const ok = SaveSystem.save(this.buildSaveData());
+    this.worldMap.save();
     if (showToast) this.events.emit('toast', ok ? 'Partida guardada' : 'No se pudo guardar');
     return ok;
   }
@@ -903,6 +935,7 @@ export class GameScene extends Phaser.Scene {
     this.ambience.destroy();
     this.housing.destroy();
     this.npcs.destroy();
+    this.worldMap.destroy();
     this.player.anim.destroy();
     this.lighting.destroy();
     this.chunkManager.destroy();

@@ -756,15 +756,28 @@ const ARMOR_ICON = {
   crystal: ['#7a4a98', '#d890f0', '#fbd8ff'],
 };
 
-// Frasco de poción: chico (menor) o grande
-function drawPotion(pc, big) {
+// Frasco de poción: chico (menor) o grande; liquid = [claro, oscuro]
+function drawPotion(pc, big, liquid = ['#ff4a6a', '#c0203e']) {
   const top = big ? 3 : 5;
   pc.rect(6, top - 2, 4, 2, '#a3733a'); // corcho
   pc.rect(6, top, 4, 2, '#d8eef8'); // cuello
   const r = big ? 5.5 : 4.5;
-  pc.disc(8, top + 2 + r, r, (x, y) => (y < top + 2 + r * 0.7 ? '#d8eef8' : y < top + 2 + r * 1.1 ? '#ff4a6a' : '#c0203e'));
+  pc.disc(8, top + 2 + r, r, (x, y) => (y < top + 2 + r * 0.7 ? '#d8eef8' : y < top + 2 + r * 1.1 ? liquid[0] : liquid[1]));
   pc.set(6, top + 3, '#ffffff');
   pc.set(6, top + 4, '#ffffff');
+  pc.outline('#1a120c');
+}
+
+// Cabeza chiquita para el mapa: piel, pelo y (opcional) gorro
+function drawMapHead(pc, hair, hat = null, beard = null) {
+  pc.disc(8, 9, 5.5, '#f0c090');
+  pc.rect(3, 3, 11, 4, hair);
+  pc.rect(3, 6, 2, 4, hair);
+  pc.rect(12, 6, 2, 3, hair);
+  if (hat) pc.rect(4, 1, 9, 3, hat);
+  if (beard) pc.rect(5, 11, 7, 3, beard);
+  pc.rect(6, 8, 1, 2, '#1a120c');
+  pc.rect(10, 8, 1, 2, '#1a120c');
   pc.outline('#1a120c');
 }
 
@@ -1705,6 +1718,62 @@ const PIXEL = {
     pc.rect(4, 4, 2, 2, '#ffd0d8');
     pc.set(7, 7, '#ffd0d8');
     pc.outline('#4a0814');
+  },
+  recall_potion(pc) {
+    drawPotion(pc, false, ['#5ab8ff', '#2a6ad0']);
+  },
+  magic_mirror(pc) {
+    // Espejo de mano: marco dorado, vidrio celeste con reflejo y mango
+    pc.rect(7, 11, 2, 4, '#a3733a');
+    pc.disc(8, 6.5, 5.5, '#e8b830');
+    pc.disc(8, 6.5, 4.2, (x, y) => (x + y < 13 ? '#c8f0ff' : '#7ac0e8'));
+    pc.line(6, 5, 8, 3, '#ffffff');
+    pc.set(10, 8, '#ffffff');
+    pc.outline('#1a120c');
+  },
+  compass(pc) {
+    pc.disc(8, 8, 6.5, '#b8862a');
+    pc.disc(8, 8, 5.2, '#f4ecd8');
+    pc.line(8, 3, 8, 8, '#d83030');
+    pc.line(8, 8, 8, 13, '#4a5058');
+    pc.rect(7, 7, 3, 2, '#1a120c');
+    pc.set(8, 2, '#ffe070');
+    pc.outline('#1a120c');
+  },
+  depth_meter(pc) {
+    // Medidor: caja de metal con una escala y una aguja
+    pc.rect(3, 2, 10, 12, '#6a7280');
+    pc.rect(4, 3, 8, 10, '#1e2a3a');
+    for (let y = 4; y < 13; y += 2) pc.rect(4, y, y % 4 ? 2 : 3, 1, '#9be7ff');
+    pc.rect(7, 7, 5, 1, '#ffd84a');
+    pc.rect(11, 6, 1, 3, '#ffd84a');
+    pc.outline('#1a120c');
+  },
+  map_home(pc) {
+    // Casita (tu cama / tu casa en el mapa)
+    for (let y = 0; y < 6; y++) pc.rect(7 - y, 2 + y, 2 + y * 2, 1, '#d83a2a');
+    pc.rect(3, 8, 10, 6, '#f0e2c0');
+    pc.rect(7, 10, 3, 4, '#8a5a2a');
+    pc.rect(4, 9, 2, 2, '#7ac0e8');
+    pc.outline('#1a120c');
+  },
+  map_pin(pc) {
+    pc.disc(8, 6, 4.5, '#ff4a4a');
+    pc.disc(7, 5, 1.5, '#ffd0d0');
+    for (let y = 10; y < 15; y++) pc.rect(8 - Math.max(0, 14 - y) / 3, y, 1 + Math.max(0, (14 - y) / 2), 1, '#c02020');
+    pc.outline('#1a120c');
+  },
+  map_player(pc) {
+    drawMapHead(pc, '#5a3418');
+  },
+  map_guide(pc) {
+    drawMapHead(pc, '#7a4a1e', null, null);
+  },
+  map_merchant(pc) {
+    drawMapHead(pc, '#d8d8d8', '#5a3a8a', '#e8e8e8');
+  },
+  map_nurse(pc) {
+    drawMapHead(pc, '#d84a2a', '#ffffff');
   },
   flower_item(pc) {
     pc.rect(7, 8, 2, 7, '#3e8a34');

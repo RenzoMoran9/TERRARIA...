@@ -269,7 +269,14 @@ export class BlockInteraction {
 
   /** Si se pidió otro golpe durante el anterior, sale apenas termina (con la misma arma). */
   _tickCombo() {
-    if (!this.comboQueued || this.player.anim.attack) return;
+    const anim = this.player.anim;
+    // Cambiar de arma (o soltarla) corta el golpe en curso
+    if (anim.attack && this.selectedWeapon()?.id !== this.comboWeapon) {
+      anim.attack = null;
+      anim.attackEnd = anim.time;
+      this.comboQueued = false;
+    }
+    if (!this.comboQueued || anim.attack) return;
     this.comboQueued = false;
     const weapon = this.selectedWeapon();
     if (weapon && weapon.id === this.comboWeapon && !this.player.dead) this._startMove(weapon);

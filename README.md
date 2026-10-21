@@ -64,6 +64,7 @@ La carpeta `dist/` se puede subir tal cual a cualquier hosting estático (GitHub
 | Barra rápida          | Teclas `1`–`9` o rueda del ratón    | Tocar la casilla                               |
 | Inventario y crafteo  | `E` (cerrar: `E` o `Esc`)           | Botón de cuadritos                             |
 | Revisar casa          | `H` (o el botón del inventario)     | Botón *Revisar casa* del inventario            |
+| Mapa                  | `M` (o el botón *Mapa* del inventario); `N` muestra u oculta el minimapa | Tocar el minimapa (a la izquierda, bajo el nivel) |
 | Hablar con un aldeano | **Clic derecho** sobre él           | **Tocarlo**                                    |
 | Tomar una poción      | `R`                                 | Botón de poción (aparece si tienes)            |
 | Tirar lo de la mano   | `T`                                 | En el inventario: *Tirar al suelo* o la *Basura* |
@@ -200,6 +201,21 @@ Las puertas se abren solas al caminar contra ellas y se cierran al alejarse. Par
   Aparecen fuera de la pantalla y nunca donde hay paredes de fondo puestas por ti. Hacen daño al tocarte, te
   empujan y quedas invulnerable un momento (parpadeas). Espadas de madera y de piedra; los slimes sueltan **gel**
   (1 madera + 1 gel → 3 antorchas). Al reaparecer se van los enemigos cercanos.
+- **Mapa y orientación** (como en Terraria):
+  - **Minimapa** (arriba a la derecha en la PC, a la izquierda en el celular): muestra lo que ya exploraste,
+    con tu cabeza, **tu casa** (tu cama, o el inicio si no dormiste en una), los **aldeanos** y tus marcadores.
+  - **Mapa completo** (`M`, botón *Mapa* del inventario o tocando el minimapa): empieza todo negro y se va
+    descubriendo al explorar (en la superficie se ve más lejos, con el cielo). Se arrastra para moverlo, tiene
+    zoom (rueda o − / +) y botones **Yo** y **Casa** para centrarlo. Muestra los nombres de las zonas
+    descubiertas y abajo dice **dónde estás** y **hacia dónde queda tu casa** ("120 bloques al Oeste y 13 hacia
+    abajo"). **Tocar el mapa pone o quita un marcador** (hasta 8). Lo explorado y los marcadores se guardan.
+  - **Flechas en el borde de la pantalla**: cuando estás lejos, una flecha con una casita apunta a tu casa (con
+    la distancia en bloques) y flechas rojas apuntan a tus marcadores.
+  - **Brújula** (4 lingotes de hierro + 1 vidrio, Yunque) y **Medidor de profundidad** (4 lingotes + 3 carbón,
+    Yunque): llevándolos en el inventario, bajo el minimapa se lee "120 al Este · 35 de profundidad".
+  - **Espejo mágico** (está en el cofre de la pirámide; o 10 vidrio + 6 lingotes + 3 cristal en el Yunque):
+    úsalo y vuelves a tu cama (o al inicio); no se gasta. **Poción de regreso** (1 hongo brillante + 1 flor +
+    1 vidrio → 2, en la Mesa; también en los cofres de las islas): lo mismo, pero se gasta.
 - **Combos de armas**: **un toque = un golpe entero** (no hace falta mantener apretado; si lo mantienes, sigue
   atacando solo). Cada toque hace el **siguiente movimiento** del combo (5 por arma) y el arma deja un rastro del
   color de su material; si dejas de atacar un segundo, el combo vuelve a empezar. El último golpe se anuncia.
@@ -280,7 +296,7 @@ Con `npm run dev` la página se recarga sola al agregar o cambiar una imagen. Pa
 Se recomienda **PNG con transparencia**. Si una imagen tiene otro tamaño se escala al tamaño de dibujo
 (los bloques siempre se dibujan a 32×32), así que también se pueden usar imágenes al doble de resolución.
 
-### Lista completa de imágenes (197)
+### Lista completa de imágenes (207)
 
 **Fachadas.** Desde afuera, cada casa muestra la imagen del bloque que corresponde a sus paredes
 (pared de madera → `tiles/planks.png`, de piedra → `tiles/stone_brick.png`, de tierra → `tiles/dirt.png`) y
@@ -395,6 +411,10 @@ redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pas
 | `items/greater_healing_potion.png`   | 32 × 32     | Poción de curación |
 | `items/life_crystal.png`             | 32 × 32     | Cristal de vida (ítem) |
 | `items/flower.png`                   | 32 × 32     | Flor |
+| `items/recall_potion.png`            | 32 × 32     | Poción de regreso |
+| `items/magic_mirror.png`             | 32 × 32     | Espejo mágico |
+| `items/compass.png`                  | 32 × 32     | Brújula |
+| `items/depth_meter.png`              | 32 × 32     | Medidor de profundidad |
 | `items/gold_bar.png`                 | 32 × 32     | Lingote de oro |
 | `items/hellstone_bar.png`            | 32 × 32     | Lingote infernal |
 | `items/glowing_mushroom.png`         | 32 × 32     | Hongo brillante (ítem) |
@@ -488,6 +508,12 @@ redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pas
 | `ui/button_fire.png`                 | 64 × 64     | Botón táctil de la Bola de fuego |
 | `ui/button_inventory.png`            | 64 × 64     | Botón táctil de inventario                                                  |
 | `ui/button_fullscreen.png`           | 48 × 48     | Botón táctil de pantalla completa                                           |
+| `ui/map_player.png`                  | 32 × 32     | Tu cabeza en el mapa |
+| `ui/map_home.png`                    | 32 × 32     | Tu casa (cama o inicio) en el mapa y en la flecha |
+| `ui/map_pin.png`                     | 32 × 32     | Marcador del mapa |
+| `ui/map_guide.png`                   | 32 × 32     | Guía en el mapa |
+| `ui/map_merchant.png`                | 32 × 32     | Comerciante en el mapa |
+| `ui/map_nurse.png`                   | 32 × 32     | Enfermera en el mapa |
 
 Las hojas de sprites (`player.png`, `tree_top.png`, `crack.png`) también aceptan un solo cuadro: si el jugador tiene
 un único cuadro de 48×64, se usa sin animación. El pico y la antorcha se dibujan en la mano de adelante según la
@@ -508,8 +534,8 @@ src/
   scenes/              BootScene (carga), BackgroundScene (cielo y paisaje), MenuScene, GameScene (mundo) y UIScene (interfaz)
   world/               Ruido con semilla, bloques, generador, datos por chunks, renderizado de chunks y tileset
   player/              Jugador: física, colisiones, vida y daño por caída (Player), poses (animations), combos de las armas (attacks) y animaciones y efectos (PlayerAnimator)
-  systems/             Sonido y música (Audio), inventario, ítems, crafteo, minar/colocar, muebles (Furniture), casas y fachadas (Housing), experiencia y habilidades (Skills, Abilities), aldeanos (Npcs), enemigos, zonas (Zones) y sus partículas (Ambience), neblina de las islas (IslandMist), día/noche, iluminación, guardado y placeholders (pixel art por código)
-  ui/                  HUD, barra rápida, inventario, controles táctiles, debug y avisos
+  systems/             Sonido y música (Audio), inventario, ítems, crafteo, minar/colocar, muebles (Furniture), casas y fachadas (Housing), experiencia y habilidades (Skills, Abilities), aldeanos (Npcs), enemigos, zonas (Zones) y sus partículas (Ambience), neblina de las islas (IslandMist), mapa explorado (WorldMap), día/noche, iluminación, guardado y placeholders (pixel art por código)
+  ui/                  HUD, barra rápida, inventario, mapa y minimapa (MapPanel), controles táctiles, debug y avisos
 ```
 
 ## Notas de rendimiento
