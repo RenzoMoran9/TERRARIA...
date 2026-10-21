@@ -95,6 +95,16 @@ export class BlockInteraction {
       this._resetPlacing();
       return;
     }
+    // Con una espada elegida no se mina ni se coloca: se ataca
+    const weapon = this.selectedWeapon();
+    if (weapon) {
+      this.highlight.setVisible(false);
+      this.ghost.setVisible(false);
+      this._resetMining();
+      this._resetPlacing();
+      if (pa.action === 'mine') this._updateAttack(pa, weapon);
+      return;
+    }
     const tx = Math.floor(pa.x / T);
     const ty = Math.floor(pa.y / T);
     const inReach = this.inReach(tx, ty);
@@ -193,6 +203,23 @@ export class BlockInteraction {
     }
     this.crack.setPosition(tx * T, ty * T).setVisible(true);
     return this.progress >= time;
+  }
+
+  /** Espada elegida en la barra: { icon, damage, knockback, speed, reach }, o null. */
+  selectedWeapon() {
+    const stack = this.inventory.selectedStack;
+    const def = stack && ITEMS[stack.id];
+    return def && def.weapon ? { icon: def.icon, ...def.weapon } : null;
+  }
+
+  /** Mantener el clic (o el botón de acción) con la espada: golpea hacia donde apunta. */
+  _updateAttack(pa, weapon) {
+    const p = this.player;
+    if (!p.seat) p.facing = pa.x >= p.centerX ? 1 : -1;
+    p.anim.swing(weapon.icon, 0, 0, null, 0, {
+      rate: weapon.speed,
+      onHit: () => this.scene.enemies.meleeHit(p, weapon),
+    });
   }
 
   /** Martillo elegido en la barra (quita paredes de fondo en vez de minar bloques), o null. */
@@ -447,7 +474,14 @@ export class BlockInteraction {
     if (!spot) return null;
 
     if (placer.kind === 'block') this.world.setTile(tx, ty, placer.block);
-    else if (placer.kind === 'wall') this.world.setWall(tx, ty, placer.wall);
+    else if (placer.kind === 'wall') {
+      this.world.setWall(tx, ty, placer.wall);
+      // La primera vez se explica para qué sirven (no frenan: se pasa por delante)
+      if (!BlockInteraction.wallHintShown) {
+        BlockInteraction.wallHintShown = true;
+        this.scene.events.emit('toast', 'Las paredes de fondo decoran. Para que frenen enemigos, usa bloques (tablones, piedra)');
+      }
+    }
     else this.furniture.place(spot.obj, spot.x0, spot.y0);
     this.inventory.removeFromSlot(this.inventory.selected, 1);
     this.player.anim.use(placer.def.icon);

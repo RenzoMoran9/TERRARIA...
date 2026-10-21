@@ -117,6 +117,15 @@ export class World extends Phaser.Events.EventEmitter {
     return true;
   }
 
+  /** ¿Hay en (tx, ty) una pared puesta por el jugador? (las de las casas) */
+  hasPlayerWall(tx, ty) {
+    if (tx < 0 || ty < 0 || tx >= WORLD_WIDTH || ty >= WORLD_HEIGHT) return false;
+    const changed = this.wallChunks[(ty >> CHUNK_SHIFT) * WORLD_CHUNKS_X + (tx >> CHUNK_SHIFT)];
+    if (changed === null) return false;
+    const v = changed[((ty & CHUNK_MASK) << CHUNK_SHIFT) | (tx & CHUNK_MASK)];
+    return v !== 0 && v !== WALL_REMOVED;
+  }
+
   /** ¿El jugador cambió alguna pared en este chunk? */
   hasWallChanges(cx, cy) {
     return this.wallChunks[cy * WORLD_CHUNKS_X + cx] !== null;

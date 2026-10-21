@@ -42,6 +42,7 @@ export class Player {
     this.pushing = false; // caminando contra una pared
     this.heldLight = 0; // luz de lo que lleva en la mano (antorcha), la usa Lighting
     this.seat = null; // sentado en una silla o acostado en una cama (ver Furniture)
+    this.invuln = 0; // segundos de invulnerabilidad después de un golpe de un enemigo
 
     // Sprite, animaciones y efectos
     this.anim = new PlayerAnimator(scene, this);
@@ -66,6 +67,7 @@ export class Player {
 
   /** controls: { moveX: -1..1, jump: boolean } */
   update(dt, controls) {
+    this.invuln = Math.max(0, this.invuln - dt);
     if (this.dead) {
       this.anim.update(dt);
       return;
@@ -258,6 +260,18 @@ export class Player {
   overlapsTile(tx, ty) {
     const T = TILE_SIZE;
     return this.x < (tx + 1) * T && this.x + this.w > tx * T && this.y < (ty + 1) * T && this.y + this.h > ty * T;
+  }
+
+  /** Golpe de un enemigo en fromX: daño, empujón hacia atrás y un momento de invulnerabilidad. */
+  hit(amount, fromX) {
+    if (this.dead || this.invuln > 0) return false;
+    this.invuln = P.HIT_INVULN;
+    this.damage(amount);
+    if (this.dead) return true;
+    this.vx = (Math.sign(this.centerX - fromX) || -this.facing) * P.KNOCKBACK;
+    this.vy = Math.min(this.vy, -320);
+    this.onGround = false;
+    return true;
   }
 
   damage(amount) {

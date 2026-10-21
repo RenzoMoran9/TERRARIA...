@@ -19,6 +19,7 @@ import { DayNight } from '../systems/DayNight.js';
 import { Lighting } from '../systems/Lighting.js';
 import { BlockInteraction } from '../systems/BlockInteraction.js';
 import { Furniture } from '../systems/Furniture.js';
+import { Enemies } from '../systems/Enemies.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import { textStyle } from '../ui/styles.js';
 
@@ -76,6 +77,7 @@ export class GameScene extends Phaser.Scene {
     this.lighting = new Lighting(this, this.world, this.dayNight, this.player);
     this.furniture = new Furniture(this, this.world, this.player);
     this.interaction = new BlockInteraction(this, this.world, this.player, this.inventory, this.furniture);
+    this.enemies = new Enemies(this, this.world, this.player, this.dayNight, this.inventory);
 
     // --- Partículas: polvo al correr/aterrizar y fragmentos al romper bloques ---
     this.makePixelTexture();
@@ -235,6 +237,7 @@ export class GameScene extends Phaser.Scene {
 
     this.player.update(dt, this.readControls());
     this.furniture.update(dt);
+    this.enemies.update(dt);
     if (this.player.dead) {
       this.respawnTimer -= dt;
       if (this.respawnTimer <= 0) this.respawn();
@@ -341,6 +344,18 @@ export class GameScene extends Phaser.Scene {
     const justPressed = pressed || (ts.action && !this._actionWasDown);
     this._actionWasDown = ts.action;
     if (!acting) this._holdStop = false;
+
+    // Con una espada: el botón ataca, mirando hacia el enemigo más cercano (si hay alguno a mano)
+    if (this.interaction.selectedWeapon()) {
+      const p = this.player;
+      const e = this.enemies.nearest(5 * T);
+      pa.x = e ? e.centerX : p.centerX + p.facing * T;
+      pa.y = p.centerY;
+      pa.action = acting ? 'mine' : null;
+      pa.smart = true;
+      pa.manual = false;
+      return pa;
+    }
 
     // 1) Bloque marcado a mano
     const mt = this.manualTarget;
@@ -467,6 +482,7 @@ export class GameScene extends Phaser.Scene {
       }
     }
     this.player.respawn(spot.x, spot.y);
+    this.enemies.clearNear(this.player.centerX, this.player.centerY, 30);
     this.events.emit('playerRespawned');
   }
 
@@ -545,6 +561,7 @@ export class GameScene extends Phaser.Scene {
     window.removeEventListener('pagehide', this._onPageHide);
     this.scale.off('resize', this.applyZoom, this);
     this.interaction.destroy();
+    this.enemies.destroy();
     this.player.anim.destroy();
     this.lighting.destroy();
     this.chunkManager.destroy();

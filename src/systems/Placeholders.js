@@ -72,6 +72,22 @@ function pickaxe(pc, head, light, dark) {
   pc.outline('#20160e');
 }
 
+// Espada: hoja en diagonal hacia arriba a la derecha, mango y guarda abajo a la izquierda
+function sword(pc, blade, mid, dark) {
+  for (let i = 0; i < 9; i++) {
+    pc.set(5 + i, 10 - i, blade);
+    pc.set(6 + i, 10 - i, mid);
+    pc.set(5 + i, 11 - i, dark);
+  }
+  pc.set(14, 1, '#ffffff');
+  pc.line(2, 9, 6, 13, '#8a6a2a'); // guarda
+  pc.line(3, 9, 7, 13, '#c9a64a');
+  pc.line(1, 14, 3, 12, '#5a3a1a'); // mango
+  pc.line(2, 14, 4, 12, '#7a4f22');
+  pc.set(1, 15, '#c9a64a');
+  pc.outline('#1a120c');
+}
+
 // Madera de los muebles y de la pared de madera
 const WOOD = { light: '#c99a58', mid: '#a3733a', dark: '#6e4a22', seam: '#8a5f2b', line: '#2b1a0c' };
 
@@ -115,8 +131,7 @@ const PLAYER_COLORS = {
   bootsShade: '#4a2d16',
 };
 // Dibuja una pose (ver player/animations.js) en el cuadro que empieza en (ox, oy)
-function drawPose(pc, ox, oy, P) {
-  const C = PLAYER_COLORS;
+function drawPose(pc, ox, oy, P, C = PLAYER_COLORS) {
   const bob = P.bob || 0;
   const lean = P.lean || 0;
   const lift = P.lift || 0;
@@ -555,6 +570,19 @@ const PIXEL = {
   wood_pickaxe(pc) {
     pickaxe(pc, '#b5843f', '#d9a865', '#8a5f2b');
   },
+  wood_sword(pc) {
+    sword(pc, '#c99a58', '#a3733a', '#6e4a22');
+  },
+  stone_sword(pc) {
+    sword(pc, '#c2c8cf', '#8c939c', '#5d636b');
+  },
+  gel(pc) {
+    pc.disc(8, 10, 5, '#4f9be8');
+    pc.disc(8, 9, 4, '#6fb6ff');
+    pc.rect(6, 6, 2, 2, '#d8ecff');
+    pc.set(10, 8, '#a8d4ff');
+    pc.outline('#1d3f6e');
+  },
   wood_hammer(pc) {
     // Mango en diagonal y cabeza atravesada arriba a la derecha
     for (let i = 0; i < 8; i++) {
@@ -615,6 +643,58 @@ const PIXEL = {
   },
   stone_pickaxe(pc) {
     pickaxe(pc, '#8c939c', '#c2c8cf', '#5d636b');
+  },
+
+  // ---------- enemigos ----------
+  slime(pc) {
+    // 3 cuadros de 16×12: quieto, aplastado, estirado (gris claro: el juego lo tiñe de verde o azul)
+    const body = (ox, w, h) => {
+      const cx = ox + 8;
+      for (let y = 12 - h; y < 12; y++) {
+        const t = (y - (12 - h)) / h;
+        const half = Math.round((w / 2) * Math.min(1, 0.55 + t * 1.2));
+        for (let x = cx - half; x < cx + half; x++) pc.set(x, y, t < 0.35 ? '#ffffff' : t > 0.85 ? '#b8b8b8' : '#e2e2e2');
+      }
+      pc.rect(cx - 3, 12 - h + 2, 2, 1, '#ffffff');
+      const ey = 12 - Math.ceil(h * 0.55);
+      pc.rect(cx - 3, ey, 1, 2, '#1a1a1a');
+      pc.rect(cx + 2, ey, 1, 2, '#1a1a1a');
+    };
+    body(0, 14, 9);
+    body(16, 16, 6);
+    body(32, 11, 12);
+    pc.outline('#202020');
+  },
+  zombie(pc) {
+    // 5 cuadros de 24×32 (como el jugador): caminar ×4 con los brazos hacia adelante y golpeado
+    const C = {
+      ...PLAYER_COLORS,
+      skin: '#86b06e',
+      skinShade: '#618a4e',
+      mouth: '#3d5a2c',
+      hair: '#2f3a22',
+      hairLight: '#44532f',
+      eyeWhite: '#e8e6a0',
+      eye: '#a01818',
+      shirt: '#5b6f86',
+      shirtShade: '#435468',
+      shirtLight: '#7489a2',
+      pants: '#4a3b2c',
+      pantsShade: '#33281d',
+      belt: '#2a2016',
+      buckle: '#6b5a3a',
+    };
+    const feet = [4, 1, -4, -1];
+    feet.forEach((f, i) =>
+      drawPose(pc, i * 24, 0, { name: 'z', lean: 1, bob: i % 2, frontLeg: { dx: f }, backLeg: { dx: -f }, front: [21, 15], back: [20, 17], eyes: 'wide', mouth: 'open' }, C),
+    );
+    drawPose(pc, 96, 0, { name: 'zh', lean: -2, headDx: -1, front: [18, 10], back: [5, 12], eyes: 'hurt', mouth: 'open' }, C);
+    // Ropa rota: algunos agujeros en la camisa
+    for (let i = 0; i < 5; i++) {
+      pc.set(i * 24 + 11, 18, C.skinShade);
+      pc.set(i * 24 + 13, 20, C.skinShade);
+    }
+    pc.outline('#141a10');
   },
 
   // ---------- jugador (hoja de 8 cuadros) ----------
@@ -727,6 +807,12 @@ const CTX = {
     circleBtn(ctx, w, h);
     const pc = new PixelCanvas(16, 16);
     PIXEL.stone_pickaxe(pc);
+    pc.draw(ctx, w / 2 - 16, h / 2 - 16, 2);
+  },
+  button_attack(ctx, w, h) {
+    circleBtn(ctx, w, h);
+    const pc = new PixelCanvas(16, 16);
+    PIXEL.wood_sword(pc);
     pc.draw(ctx, w / 2 - 16, h / 2 - 16, 2);
   },
   button_place(ctx, w, h) {

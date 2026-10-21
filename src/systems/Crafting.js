@@ -8,6 +8,10 @@ export const RECIPES = [
   { result: 'torch', count: 4, ingredients: [['wood', 1], ['coal', 1]], station: null },
   { result: 'wood_pickaxe', count: 1, ingredients: [['planks', 10]], station: 'workbench' },
   { result: 'stone_pickaxe', count: 1, ingredients: [['planks', 4], ['stone', 12]], station: 'workbench' },
+  { result: 'torch', count: 3, ingredients: [['wood', 1], ['gel', 1]], station: null },
+  // Combate
+  { result: 'wood_sword', count: 1, ingredients: [['planks', 7]], station: 'workbench' },
+  { result: 'stone_sword', count: 1, ingredients: [['planks', 3], ['stone', 10]], station: 'workbench' },
   // Casas
   { result: 'wood_hammer', count: 1, ingredients: [['planks', 8]], station: 'workbench' },
   { result: 'wood_wall', count: 4, ingredients: [['planks', 1]], station: 'workbench' },

@@ -147,5 +147,6 @@ export class UIScene extends Phaser.Scene {
     for (const [name, fn] of Object.entries(this._handlers)) this.gs.events.off(name, fn);
     this.hotbar.destroy();
     this.inventoryPanel.destroy();
+    this.touchControls.destroy();
   }
 }

@@ -65,6 +65,15 @@ export const ASSETS = {
   item_chair: { file: 'items/chair.png', width: 32, height: 32, placeholder: 'chair_item' },
   item_table: { file: 'items/table.png', width: 32, height: 32, placeholder: 'table_item' },
   item_bed: { file: 'items/bed.png', width: 32, height: 32, placeholder: 'bed_item' },
+  item_gel: { file: 'items/gel.png', width: 32, height: 32, placeholder: 'gel' },
+  item_wood_sword: { file: 'items/wood_sword.png', width: 32, height: 32, placeholder: 'wood_sword' },
+  item_stone_sword: { file: 'items/stone_sword.png', width: 32, height: 32, placeholder: 'stone_sword' },
+
+  // ---------- Enemigos (mirando a la derecha; los pies abajo al centro) ----------
+  // Slime: 3 cuadros de 32×24 (quieto, aplastado, estirado), en gris claro: el juego lo tiñe de verde o azul
+  enemy_slime: { file: 'enemies/slime.png', width: 96, height: 24, frameWidth: 32, frameHeight: 24, placeholder: 'slime' },
+  // Zombi: 5 cuadros de 48×64 (caminar ×4 y golpeado)
+  enemy_zombie: { file: 'enemies/zombie.png', width: 240, height: 64, frameWidth: 48, frameHeight: 64, placeholder: 'zombie' },
 
   // ---------- Jugador: 31 poses de 48×64, 8 por fila (ver player/animations.js), mirando a la derecha ----------
   player: { file: 'player/player.png', width: 384, height: 256, frameWidth: 48, frameHeight: 64, placeholder: 'player' },
@@ -92,6 +101,7 @@ export const ASSETS = {
   ui_button_jump: { file: 'ui/button_jump.png', width: 96, height: 96, placeholder: 'button_jump', smooth: true },
   ui_button_mine: { file: 'ui/button_mine.png', width: 80, height: 80, placeholder: 'button_mine', smooth: true },
   ui_button_place: { file: 'ui/button_place.png', width: 80, height: 80, placeholder: 'button_place', smooth: true },
+  ui_button_attack: { file: 'ui/button_attack.png', width: 80, height: 80, placeholder: 'button_attack', smooth: true },
   ui_button_swap: { file: 'ui/button_swap.png', width: 64, height: 64, placeholder: 'button_swap', smooth: true },
   ui_button_inventory: { file: 'ui/button_inventory.png', width: 64, height: 64, placeholder: 'button_inventory', smooth: true },
   ui_button_fullscreen: { file: 'ui/button_fullscreen.png', width: 48, height: 48, placeholder: 'button_fullscreen', smooth: true },

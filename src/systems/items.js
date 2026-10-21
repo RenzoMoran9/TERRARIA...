@@ -7,6 +7,7 @@ import { BLOCK, WALL } from '../world/blocks.js';
 // wall: pared de fondo que se coloca. object: mueble que se coloca (ver FURNITURE en blocks.js).
 // tool: pico (tier = qué bloques puede minar, speed = multiplicador de velocidad).
 // hammer: martillo (quita paredes de fondo; speed = multiplicador de velocidad).
+// weapon: arma (damage = daño, knockback = empujón, speed = golpes por segundo, reach = alcance en px).
 export const ITEMS = {
   dirt: { name: 'Tierra', icon: 'tile_dirt', places: BLOCK.DIRT },
   stone: { name: 'Piedra', icon: 'tile_stone', places: BLOCK.STONE },
@@ -27,6 +28,10 @@ export const ITEMS = {
   chair: { name: 'Silla', icon: 'item_chair', object: 'chair' },
   table: { name: 'Mesa', icon: 'item_table', object: 'table' },
   bed: { name: 'Cama', icon: 'item_bed', object: 'bed' },
+  // Combate
+  gel: { name: 'Gel', icon: 'item_gel' },
+  wood_sword: { name: 'Espada de madera', icon: 'item_wood_sword', maxStack: 1, weapon: { damage: 9, knockback: 260, speed: 2.4, reach: 54 } },
+  stone_sword: { name: 'Espada de piedra', icon: 'item_stone_sword', maxStack: 1, weapon: { damage: 15, knockback: 300, speed: 2.2, reach: 58 } },
 };
 
 /** ¿Este ítem se coloca en el mundo (bloque, pared o mueble)? */

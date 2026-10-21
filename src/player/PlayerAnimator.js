@@ -148,9 +148,9 @@ export class PlayerAnimator {
    * Mientras mina (cada frame): icon = imagen del pico (null = a mano),
    * (x, y) = centro del bloque, color = color de las chispas, speed = rapidez del pico.
    */
-  swing(icon, x, y, color, speed) {
+  swing(icon, x, y, color, speed, opts = null) {
     this.player.standUp();
-    this._swingReq = { icon, x, y, color, speed };
+    this._swingReq = { icon, x, y, color, speed, rate: opts?.rate, onHit: opts?.onHit };
     this.wake();
   }
 
@@ -197,11 +197,13 @@ export class PlayerAnimator {
     if (p.dead) this._updateDeath(dt);
     else this.frame = this._pickFrame(dt);
 
-    // Aparecer después de morir (fundido)
+    // Aparecer después de morir (fundido); después de un golpe, parpadea mientras es invulnerable
     if (this.spawnTime >= 0) {
       this.spawnTime += dt;
       this.sprite.setAlpha(Math.min(1, this.spawnTime / 0.5));
       if (this.spawnTime >= 0.5) this.spawnTime = -1;
+    } else if (!p.dead) {
+      this.sprite.setAlpha(p.invuln > 0 && Math.floor(this.time * 16) % 2 ? 0.35 : 1);
     }
 
     // Acostado en la cama: el personaje se dibuja girado 90°
@@ -333,11 +335,12 @@ export class PlayerAnimator {
     const m = this.mining;
     this.idleTime = 0;
     const before = this.swingPhase;
-    this.swingPhase += dt * (2 + m.speed * 0.4);
+    this.swingPhase += dt * (m.rate ?? 2 + m.speed * 0.4);
     const u = this.swingPhase % 1;
-    // Al pasar por el impacto: chispas del bloque y un pequeño sacudón
+    // Al pasar por el impacto: chispas del bloque (o golpe de la espada) y un pequeño sacudón
     if (Math.floor(before - 0.6) !== Math.floor(this.swingPhase - 0.6)) {
-      this.scene.spawnDebris(m.x, m.y, m.color, 3);
+      if (m.color != null) this.scene.spawnDebris(m.x, m.y, m.color, 3);
+      if (m.onHit) m.onHit();
       this.sx = 1.06;
       this.sy = 0.95;
     }

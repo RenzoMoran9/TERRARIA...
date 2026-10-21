@@ -55,6 +55,7 @@ La carpeta `dist/` se puede subir tal cual a cualquier hosting estático (GitHub
 | Paredes y muebles     | Elegirlos en la barra y **clic derecho** (se ve una vista previa) | Elegirlos en la barra y botón de acción (el recuadro muestra dónde quedan) |
 | Quitar paredes        | Elegir el **martillo** y mantener clic izquierdo | Elegir el martillo y mantener el botón de acción |
 | Usar puerta, silla o cama | **Clic derecho** sobre ella      | **Tocarla**                                    |
+| Atacar                | Elegir una **espada** y mantener clic izquierdo hacia el enemigo | Elegir una espada: el botón de acción pasa a **ATACAR** y se gira solo hacia el enemigo más cercano |
 | Apuntar sin marcar    | —                                   | Inclinar el joystick mientras se mantiene la acción (abajo = cavar hacia abajo) |
 | Cambiar modo          | —                                   | Botón de flechas (MINAR ↔ COLOCAR). Elegir un bloque en la barra pasa solo a COLOCAR; un pico, a MINAR |
 | Barra rápida          | Teclas `1`–`9` o rueda del ratón    | Tocar la casilla                               |
@@ -91,9 +92,17 @@ Las puertas se abren solas al caminar contra ellas y se cierran al alejarse. Par
   martillo), puertas de 3 bloques de alto, sillas para sentarse, mesas y camas. La silla y la cama miran hacia donde
   está el jugador al colocarlas. Los muebles se quitan enteros minando cualquier parte y se caen si se les quita el suelo.
   **Cama**: dormir en ella la vuelve el punto de reaparición; de noche, la noche pasa rápido hasta la mañana.
+- **Enemigos y combate**: **slimes** (saltan hacia ti; verdes de día, azules de noche y en cuevas) y **zombis**
+  (solo de noche; caminan hacia ti, suben escalones y saltan obstáculos de 2 bloques, pero **no abren puertas**).
+  Aparecen fuera de la pantalla y nunca donde hay paredes de fondo puestas por ti. Hacen daño al tocarte, te
+  empujan y quedas invulnerable un momento (parpadeas). Espadas de madera y de piedra; los slimes sueltan **gel**
+  (1 madera + 1 gel → 3 antorchas). Al reaparecer se van los enemigos cercanos.
+  **Para que una casa te proteja**: piso, techo y costados de **bloques** (tablones, piedra…) y una **puerta**.
+  Las paredes de fondo solo decoran (se pasa por delante) y evitan que aparezcan enemigos adentro.
 - **Inventario**: 36 casillas (9 de barra rápida), pilas de hasta 99.
 - **Crafteo**: Madera → Tablones → Mesa de trabajo; cerca de la mesa: Pico de madera y Pico de piedra (más rápido).
-  Antorchas: 1 madera + 1 carbón → 4 antorchas. Cerca de la mesa, para las casas: martillo de madera (8 tablones),
+  Antorchas: 1 madera + 1 carbón → 4 (o 1 madera + 1 gel → 3). Cerca de la mesa: espada de madera (7 tablones) y
+  de piedra (3 tablones + 10 piedra); para las casas: martillo de madera (8 tablones),
   paredes ×4 (1 tablón, 1 piedra o 1 tierra), puerta (6 tablones), silla (4), mesa (8) y cama (15 tablones + 5 madera).
   La lista de recetas se desplaza con la rueda del ratón, arrastrando con el dedo o con las flechas ▲▼.
 - **Día y noche**: ciclo de 10 minutos con amanecer y atardecer graduales. La luz se propaga por bloques:
@@ -122,7 +131,7 @@ Con `npm run dev` la página se recarga sola al agregar o cambiar una imagen. Pa
 Se recomienda **PNG con transparencia**. Si una imagen tiene otro tamaño se escala al tamaño de dibujo
 (los bloques siempre se dibujan a 32×32), así que también se pueden usar imágenes al doble de resolución.
 
-### Lista completa de imágenes (57)
+### Lista completa de imágenes (63)
 
 **Bloques.** Basta con dibujar un bloque "entero" de 32×32: el juego genera solo el contorno oscuro y las esquinas
 redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pasto tapado por otro bloque usa la imagen de la tierra.
@@ -165,6 +174,11 @@ redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pas
 | `items/chair.png`                    | 32 × 32     | Ícono de *Silla*                                                            |
 | `items/table.png`                    | 32 × 32     | Ícono de *Mesa*                                                             |
 | `items/bed.png`                      | 32 × 32     | Ícono de *Cama*                                                             |
+| `items/gel.png`                      | 32 × 32     | Ícono de *Gel*                                                              |
+| `items/wood_sword.png`               | 32 × 32     | Ícono de *Espada de madera* (mango abajo a la izquierda, punta arriba a la derecha: así se ve en la mano) |
+| `items/stone_sword.png`              | 32 × 32     | Ícono de *Espada de piedra* (misma orientación)                             |
+| `enemies/slime.png`                  | 96 × 24     | Slime: **3 cuadros de 32×24** (quieto, aplastado, estirado) en **gris claro**: el juego lo tiñe de verde o azul |
+| `enemies/zombie.png`                 | 240 × 64    | Zombi: **5 cuadros de 48×64** mirando a la derecha (caminar ×4 y golpeado), pies abajo al centro |
 | `player/player.png`                  | 384 × 256   | Jugador: **31 poses de 48×64**, 8 por fila, mirando a la derecha (los pies tocan el borde de abajo). Orden: quieto, respirar, parpadear, caminar ×8, saltar, caer, agitar brazos, aterrizar, golpe ×3 (levantar, bajar, impacto), usar, daño, festejo, empujar, mirar atrás, bostezo, cansado ×2, sentado/dormido ×2, saludo ×2, sentado en una silla (ver `src/player/animations.js`) |
 | `backgrounds/mountains.png`          | 960 × 320   | Montañas lejanas (se repite en horizontal: los bordes izquierdo y derecho deben empalmar) |
 | `backgrounds/hills.png`              | 960 × 240   | Colinas intermedias (repetible en horizontal)                               |
@@ -183,6 +197,7 @@ redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pas
 | `ui/button_jump.png`                 | 96 × 96     | Botón táctil de salto                                                       |
 | `ui/button_mine.png`                 | 80 × 80     | Botón táctil de acción en modo MINAR                                        |
 | `ui/button_place.png`                | 80 × 80     | Botón táctil de acción en modo COLOCAR                                      |
+| `ui/button_attack.png`               | 80 × 80     | Botón táctil de acción con una espada elegida (ATACAR)                      |
 | `ui/button_swap.png`                 | 64 × 64     | Botón táctil para cambiar entre MINAR y COLOCAR                             |
 | `ui/button_inventory.png`            | 64 × 64     | Botón táctil de inventario                                                  |
 | `ui/button_fullscreen.png`           | 48 × 48     | Botón táctil de pantalla completa                                           |

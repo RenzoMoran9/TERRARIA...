@@ -38,6 +38,8 @@ export const PLAYER = {
   REGEN_DELAY: 5, // segundos sin recibir daño antes de regenerar
   REGEN_PER_SECOND: 2,
   RESPAWN_SECONDS: 3,
+  HIT_INVULN: 0.8, // segundos sin recibir daño de enemigos después de un golpe (parpadea)
+  KNOCKBACK: 300, // empujón al recibir un golpe (px/s)
 };
 
 export const REACH_TILES = 5.5; // alcance para minar/colocar (≈5 bloques)
@@ -55,6 +57,7 @@ export const SAVE_VERSION = 1;
 export const DEPTH = {
   WALLS: 0,
   BLOCKS: 1,
+  ENEMY: 4,
   PLAYER: 5,
   TOOL: 6,
   PARTICLES: 7,

@@ -71,6 +71,14 @@ export class TouchControls {
     ]);
     this._updateModeVisual();
     this.setVisible(gameScene.isTouch);
+    // El ícono del botón cambia al elegir o perder una espada
+    gameScene.inventory.on('select', this._updateModeVisual, this);
+    gameScene.inventory.on('change', this._updateModeVisual, this);
+  }
+
+  destroy() {
+    this.gs.inventory.off('select', this._updateModeVisual, this);
+    this.gs.inventory.off('change', this._updateModeVisual, this);
   }
 
   _circleButton(key, onDown) {
@@ -100,12 +108,19 @@ export class TouchControls {
     this.setMode(isPlaceable(stack && ITEMS[stack.id]) ? 'place' : 'mine');
   }
 
+  /** Con una espada en la mano, el botón de acción ataca (y lo muestra). */
+  _weaponSelected() {
+    const stack = this.gs.inventory.selectedStack;
+    return !!(stack && ITEMS[stack.id].weapon);
+  }
+
   _updateModeVisual() {
     const mine = this.state.mode === 'mine';
+    const attack = this._weaponSelected();
     const size = this.actionBtn.displayWidth;
-    this.actionBtn.setTexture(mine ? 'ui_button_mine' : 'ui_button_place');
+    this.actionBtn.setTexture(attack ? 'ui_button_attack' : mine ? 'ui_button_mine' : 'ui_button_place');
     if (size) this.actionBtn.setDisplaySize(size, size);
-    this.modeLabel.setText(mine ? 'MINAR' : 'COLOCAR');
+    this.modeLabel.setText(attack ? 'ATACAR' : mine ? 'MINAR' : 'COLOCAR');
   }
 
   setVisible(visible) {
