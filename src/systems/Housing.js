@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { TILE_SIZE, DEPTH, WORLD_WIDTH, WORLD_HEIGHT, CHUNK_SIZE, WORLD_CHUNKS_X } from '../config.js';
+import { XP } from './Skills.js';
 import { BLOCK, IS_SOLID, IS_PLATFORM, LIGHT_EMIT, PART, WALL_DEFS } from '../world/blocks.js';
 
 const T = TILE_SIZE;
@@ -57,7 +58,10 @@ export class Housing {
     this._onWall = (tx, ty) => this.dirty.push([tx, ty]);
     world.on('tileChanged', this._onTile);
     world.on('wallChanged', this._onWall);
+    // Las casas que ya existían al cargar no se anuncian (ni dan experiencia) otra vez
+    this.loading = true;
     this._scanAll();
+    this.loading = false;
   }
 
   key(tx, ty) {
@@ -266,7 +270,9 @@ export class Housing {
     const id = `${room.x0},${room.y1}`;
     if (this.announced.has(id)) return;
     this.announced.add(id);
+    if (this.loading) return;
     this.scene.events.emit('toast', '¡Casa válida! Aquí podrá vivir un aldeano');
+    this.scene.gainXp?.(XP.house, (room.x0 + room.x1 + 1) * T * 0.5, room.y0 * T);
     this.scene.spawnSparkles?.((room.x0 + room.x1 + 1) * T * 0.5, (room.y0 + room.y1 + 1) * T * 0.5, 14, 0x9cff9c);
   }
 

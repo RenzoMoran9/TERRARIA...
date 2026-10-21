@@ -1,4 +1,5 @@
 import { TILE_SIZE, WORLD_WIDTH, WORLD_HEIGHT, REACH_TILES, DEPTH } from '../config.js';
+import { XP } from './Skills.js';
 import { BLOCK, BLOCK_DEFS, IS_SOLID, IS_PLANT, IS_TRUNK, WALL, WALL_DEFS, PART } from '../world/blocks.js';
 import { ITEMS, HAND } from './items.js';
 import { frameCount } from './Placeholders.js';
@@ -184,7 +185,7 @@ export class BlockInteraction {
       return;
     }
 
-    const time = def.hardness / tool.speed;
+    const time = def.hardness / (tool.speed * (this.scene.progress?.mineMultiplier ?? 1));
     if (this._advanceCrack(dt, tx, ty, time)) {
       // Antorchas, mesas y muebles: de a uno por pulsación
       if (this.breakBlock(tx, ty) && (ONE_PER_PRESS.has(id) || PART[id])) this.mineLock = true;
@@ -314,6 +315,7 @@ export class BlockInteraction {
     this.world.setTile(tx, ty, BLOCK.AIR);
     // Lo obtenido salta al suelo y se recoge al pasar cerca
     if (drop) this.scene.drops.spawn(drop, 1, (tx + 0.5) * T, (ty + 0.5) * T);
+    if (XP.ore[drop]) this.scene.gainXp?.(XP.ore[drop], (tx + 0.5) * T, ty * T); // minerales dan experiencia
     this.scene.spawnDebris((tx + 0.5) * T, (ty + 0.5) * T, BLOCK_DEFS[id].color);
     this._checkSupportAround(tx, ty);
     return true;
@@ -337,6 +339,7 @@ export class BlockInteraction {
       }
     }
     this.player.anim.cheer(0.8); // ¡árbol talado!
+    this.scene.gainXp?.(XP.tree, (tx + 0.5) * T, top * T);
     return true;
   }
 

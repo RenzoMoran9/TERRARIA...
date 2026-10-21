@@ -50,6 +50,8 @@ La carpeta `dist/` se puede subir tal cual a cualquier hosting estático (GitHub
 | Moverse               | `A` / `D` o flechas                 | Joystick (abajo a la izquierda)                |
 | Saltar                | `Espacio`, `W` o flecha arriba      | Botón grande con flecha, o joystick hacia arriba |
 | Bajar de una plataforma | `S` o flecha abajo                | Joystick hacia abajo                           |
+| Habilidades           | `K` (o el botón del inventario)     | Tocar tu nivel (arriba a la izquierda)         |
+| Poderes               | `Shift` correr · `Q` embestida · `F` bola de fuego · abajo en el aire: golpe sísmico | Joystick a fondo · botones ≫ y de fuego · joystick abajo en el aire |
 | Elegir el bloque      | Con el ratón                        | **Tocar un bloque lo marca** con el recuadro amarillo (no lo mina). Con el dedo apoyado, **el recuadro lo sigue**: deslízalo hasta el bloque exacto y suelta. Si tocas cerca (en el aire), el recuadro se ajusta al bloque más cercano. Sin marcar, el recuadro elige solo el bloque más cercano hacia donde miras |
 | Minar / talar         | Mantener **clic izquierdo**         | Mantener el **botón de acción** (pico): mina el bloque del recuadro y se detiene al terminar |
 | Colocar bloque        | **Clic derecho**                    | Botón de acción en modo COLOCAR (un toque = un bloque; manteniéndolo, sigue poniendo después de un momento) |
@@ -108,6 +110,26 @@ Las puertas se abren solas al caminar contra ellas y se cierran al alejarse. Par
   martillo), puertas de 3 bloques, sillas, mesas y camas. La silla y la cama miran hacia el jugador al colocarlas.
   Los muebles se quitan enteros y se caen si se les quita el suelo (también se apoyan sobre plataformas).
   **Cama**: dormir en ella la vuelve el punto de reaparición; de noche, la noche pasa rápido hasta la mañana.
+- **Experiencia, niveles y habilidades**: ganas **XP** venciendo enemigos (más por los fuertes y los de zonas
+  lejanas), minando minerales (carbón, hierro, cristal, piedra sombría), talando árboles, descubriendo zonas, cuando
+  una casa queda válida y al fabricar algo por primera vez. Cada **nivel** cura toda la vida y da **1 punto de
+  habilidad** (cartel "¡Subiste de nivel!"; el nivel y la barra de experiencia se ven bajo los corazones).
+  En **Habilidades** (tecla **K**, botón del inventario o tocar tu nivel en el celular) se gastan los puntos en
+  tres ramas; cada una pide un nivel mínimo y algunas necesitan la anterior:
+  | Habilidad | Rama | Desde nivel | Qué hace / cómo se usa |
+  | --- | --- | --- | --- |
+  | Correr | Movimiento | 2 | 60% más rápido. PC: mantener **Shift**; celular: joystick **a fondo** |
+  | Doble salto | Movimiento | 3 | Saltar otra vez en el aire |
+  | Embestida (2 ptos) | Movimiento | 5 | Te lanzas hacia adelante golpeando a quien atraviesas; no te pegan mientras dura. PC: **Q**; celular: botón ≫ |
+  | Piel dura (×3) | Combate | 2 | Cada golpe te quita 2 menos por nivel |
+  | Bola de fuego (2 ptos) | Combate | 4 | Explota y quema a los cercanos. PC: **F** (apunta al ratón); celular: botón de fuego (apunta sola) |
+  | Golpe sísmico (2 ptos) | Combate | 6 | En el aire, **abajo**: caes en picada y una onda golpea y lanza a todos alrededor (sin daño por caída) |
+  | Vida extra (×3) | Supervivencia | 2 | +20 de vida máxima por nivel |
+  | Regeneración (×2) | Supervivencia | 3 | Recuperas vida más rápido |
+  | Imán | Supervivencia | 2 | Los objetos vienen desde el doble de lejos |
+  | Minero veloz (×2) | Supervivencia | 3 | Minas y talas 30% más rápido por nivel |
+  Correr, la embestida, la bola de fuego y el golpe sísmico gastan **energía** (barra amarilla bajo la experiencia),
+  que se recarga sola. El daño de los poderes sube con tu nivel. Todo se guarda con la partida.
 - **Mundo con zonas** (cada vez más peligrosas cuanto más lejos del inicio): el **Bosque** en el centro; hacia un
   lado **Desierto** (dunas, cactus que pinchan y una **pirámide con un cofre del tesoro**), **Tierras Sombrías**
   (pasto violeta, abismos, piedra sombría) y **Tierras de Cristal** (torres de cristal que brillan); hacia el otro,
@@ -165,7 +187,7 @@ Las puertas se abren solas al caminar contra ellas y se cierran al alejarse. Par
 - **Vida**: barra de vida, daño por caídas de más de 12 bloques, regeneración lenta y reaparición en el punto de inicio.
 - **Guardado** en `localStorage`: mundo modificado, inventario, posición, vida y hora.
   Automático cada 60 s, al cerrar o minimizar la página, y con el botón *Guardar* del inventario.
-- **HUD**: corazones de vida, barra rápida y hora del día; FPS y otros datos en modo debug.
+- **HUD**: corazones de vida, nivel con barra de experiencia y de energía, barra rápida y hora del día; FPS y otros datos en modo debug.
 - **Gráficos**: pixel art con 3 variantes por bloque, bordes y esquinas redondeadas automáticos, pasto alto y flores,
   árboles con copa y ramas, personaje animado, cielo con degradado según la hora, sol, luna, estrellas y nubes,
   paisaje de fondo con paralaje (montañas, colinas y bosque), luz de color (antorchas cálidas, noche azulada,
@@ -186,7 +208,7 @@ Con `npm run dev` la página se recarga sola al agregar o cambiar una imagen. Pa
 Se recomienda **PNG con transparencia**. Si una imagen tiene otro tamaño se escala al tamaño de dibujo
 (los bloques siempre se dibujan a 32×32), así que también se pueden usar imágenes al doble de resolución.
 
-### Lista completa de imágenes (149)
+### Lista completa de imágenes (152)
 
 **Fachadas.** Desde afuera, cada casa muestra la imagen del bloque que corresponde a sus paredes
 (pared de madera → `tiles/planks.png`, de piedra → `tiles/stone_brick.png`, de tierra → `tiles/dirt.png`) y
@@ -333,6 +355,7 @@ redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pas
 | `backgrounds/moon.png`               | 48 × 48     | Luna                                                                        |
 | `backgrounds/stars.png`              | 256 × 256   | Estrellas sobre fondo transparente (repetible)                              |
 | `fx/glow.png`                        | 128 × 128   | Brillo de las antorchas (degradado radial sobre fondo transparente)         |
+| `fx/fireball.png`                    | 32 × 32     | Bola de fuego (se dibuja con brillo aditivo) |
 | `ui/slot.png`                        | 48 × 48     | Casilla de inventario                                                       |
 | `ui/slot_selected.png`               | 48 × 48     | Casilla seleccionada                                                        |
 | `ui/heart.png`                       | 24 × 24     | Corazón de vida (cada corazón = 20 de vida)                                 |
@@ -344,6 +367,8 @@ redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pas
 | `ui/button_place.png`                | 80 × 80     | Botón táctil de acción en modo COLOCAR                                      |
 | `ui/button_attack.png`               | 80 × 80     | Botón táctil de acción con una espada elegida (ATACAR)                      |
 | `ui/button_swap.png`                 | 64 × 64     | Botón táctil para cambiar entre MINAR y COLOCAR                             |
+| `ui/button_dash.png`                 | 64 × 64     | Botón táctil de la Embestida |
+| `ui/button_fire.png`                 | 64 × 64     | Botón táctil de la Bola de fuego |
 | `ui/button_inventory.png`            | 64 × 64     | Botón táctil de inventario                                                  |
 | `ui/button_fullscreen.png`           | 48 × 48     | Botón táctil de pantalla completa                                           |
 
@@ -365,7 +390,7 @@ src/
   scenes/              BootScene (carga), BackgroundScene (cielo y paisaje), MenuScene, GameScene (mundo) y UIScene (interfaz)
   world/               Ruido con semilla, bloques, generador, datos por chunks, renderizado de chunks y tileset
   player/              Jugador: física, colisiones, vida y daño por caída (Player), poses (animations) y animaciones y efectos (PlayerAnimator)
-  systems/             Inventario, ítems, crafteo, minar/colocar, muebles (Furniture), casas y fachadas (Housing), enemigos, zonas (Zones) y sus partículas (Ambience), día/noche, iluminación, guardado y placeholders (pixel art por código)
+  systems/             Inventario, ítems, crafteo, minar/colocar, muebles (Furniture), casas y fachadas (Housing), experiencia y habilidades (Skills, Abilities), enemigos, zonas (Zones) y sus partículas (Ambience), día/noche, iluminación, guardado y placeholders (pixel art por código)
   ui/                  HUD, barra rápida, inventario, controles táctiles, debug y avisos
 ```
 

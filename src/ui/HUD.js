@@ -1,6 +1,10 @@
 import { textStyle } from './styles.js';
 import { BIOME_INFO } from '../world/WorldGenerator.js';
 import { dangerStars } from '../systems/Zones.js';
+import { ENERGY_MAX } from '../systems/Skills.js';
+
+const BAR_W = 112;
+const ENERGY_SKILLS = ['sprint', 'dash', 'fireball', 'groundPound'];
 
 const HEARTS = 5; // 20 de vida por corazón (como Terraria)
 const HEART_SIZE = 24;
@@ -31,6 +35,22 @@ export class HUD {
 
     this.clockText = scene.add.text(0, 0, '', textStyle({ fontSize: '16px' })).setOrigin(1, 0).setDepth(10);
     this.celestial = scene.add.image(0, 0, 'bg_sun').setDisplaySize(22, 22).setDepth(10);
+    // Nivel y experiencia (debajo de los corazones), energía y puntos de habilidad para gastar
+    this.levelText = scene.add.text(0, 0, '', textStyle({ fontSize: '13px', color: '#9be7ff' })).setDepth(10);
+    this.xpBg = scene.add.rectangle(0, 0, BAR_W, 6, 0x0b1030, 0.85).setOrigin(0, 0.5).setStrokeStyle(1, 0x000000, 0.8).setDepth(10);
+    this.xpBar = scene.add.rectangle(0, 0, BAR_W, 6, 0x58b8ff).setOrigin(0, 0.5).setDepth(10);
+    this.enBg = scene.add.rectangle(0, 0, BAR_W, 5, 0x0b1030, 0.85).setOrigin(0, 0.5).setStrokeStyle(1, 0x000000, 0.8).setDepth(10);
+    this.enBar = scene.add.rectangle(0, 0, BAR_W, 5, 0xffd84a).setOrigin(0, 0.5).setDepth(10);
+    this.pointsText = scene.add
+      .text(0, 0, '', textStyle({ fontSize: '13px', color: '#ffe28a', backgroundColor: 'rgba(60,40,0,0.75)' }))
+      .setPadding(5, 2, 5, 2)
+      .setDepth(10)
+      .setInteractive({ useHandCursor: true });
+    this.pointsText.on('pointerdown', () => scene.toggleSkills(true));
+    this.levelText.setInteractive({ useHandCursor: true }).on('pointerdown', () => scene.toggleSkills(true));
+    this.lastLevel = '';
+    this.levelY = 54;
+
     // Zona actual (debajo del reloj)
     this.zoneText = scene.add.text(0, 0, '', textStyle({ fontSize: '13px', color: '#d8e4ff' })).setOrigin(1, 0).setDepth(10);
     this.lastZone = '';
@@ -46,11 +66,51 @@ export class HUD {
       h.full.setPosition(x, 32);
     });
     this.clockText.setPosition(width - 12, 12);
+    this.layoutLevel(this.levelY);
     this.zoneText.setPosition(width - 12, 34);
     this.lastClock = '';
   }
 
+  /** Fila de nivel / experiencia / energía (baja si la barra rápida ocupa una segunda fila). */
+  layoutLevel(y) {
+    this.levelY = y;
+    this.levelText.setPosition(10, y - 8);
+    this.xpBg.setPosition(56, y);
+    this.xpBar.setPosition(56, y);
+    this.enBg.setPosition(56, y + 9);
+    this.enBar.setPosition(56, y + 9);
+    this.pointsText.setPosition(10, y + 16);
+  }
+
+  updateLevel() {
+    const pr = this.gs.progress;
+    const p = this.gs.player;
+    if (!pr) return;
+    const key = `${pr.level}-${pr.xp}-${pr.points}`;
+    if (key !== this.lastLevel) {
+      this.lastLevel = key;
+      this.levelText.setText(`Nv ${pr.level}`);
+      this.xpBar.setSize(Math.max(1, BAR_W * Math.min(1, pr.xp / pr.xpNeeded)), 6);
+      this.pointsText.setText(pr.points > 0 ? `★ ${pr.points} punto${pr.points > 1 ? 's' : ''} de habilidad` : '');
+      this.pointsText.setVisible(pr.points > 0);
+    }
+    // La barra de energía aparece al aprender un poder que la usa
+    const showEnergy = ENERGY_SKILLS.some((id) => pr.has(id));
+    this.enBg.setVisible(showEnergy);
+    this.enBar.setVisible(showEnergy);
+    if (showEnergy) {
+      const w = Math.max(1, Math.round(BAR_W * (p.energy / ENERGY_MAX)));
+      if (w !== this.enW) {
+        this.enW = w;
+        this.enBar.setSize(w, 5);
+      }
+      this.enBar.setFillStyle(p.energy < 20 ? 0xff8a4a : 0xffd84a);
+    }
+    if (pr.points > 0) this.pointsText.setAlpha(0.75 + Math.sin(this.scene.time.now * 0.006) * 0.25);
+  }
+
   update() {
+    this.updateLevel();
     const p = this.gs.player;
     const hp = Math.max(0, Math.round(p.health));
     if (hp !== this.lastHp) {

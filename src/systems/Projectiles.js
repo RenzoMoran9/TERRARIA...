@@ -1,10 +1,12 @@
+import Phaser from 'phaser';
 import { TILE_SIZE, DEPTH } from '../config.js';
 
 const T = TILE_SIZE;
 const ICON_ANGLE = -Math.PI / 4; // los íconos de armas apuntan arriba a la derecha
 const BOOMERANG_OUT = 0.42; // segundos de ida del bumerán antes de volver
 /** Gravedad de cada proyectil (las flechas y los cuchillos caen un poco) */
-export const PROJECTILE_GRAVITY = { arrow: 180, knife: 220, boomerang: 0 };
+export const PROJECTILE_GRAVITY = { arrow: 180, knife: 220, boomerang: 0, fireball: 0 };
+const FIREBALL_RADIUS = 2.2 * T; // la explosión quema a los que estén cerca
 
 /**
  * Proyectiles del jugador: flechas (caen un poco y se clavan en los bloques),
@@ -21,8 +23,9 @@ export class Projectiles {
 
   /** kind: 'arrow' | 'knife' | 'boomerang'. angle en radianes (0 = derecha). */
   fire(kind, icon, x, y, angle, speed, damage, knockback) {
-    const sprite = this.scene.add.image(x, y, icon).setDepth(DEPTH.PLAYER + 0.5);
+    const sprite = this.scene.add.image(x, y, icon).setDepth(kind === 'fireball' ? DEPTH.LIGHT + 0.5 : DEPTH.PLAYER + 0.5);
     sprite.setDisplaySize(kind === 'boomerang' ? 22 : 24, kind === 'boomerang' ? 22 : 24);
+    if (kind === 'fireball') sprite.setDisplaySize(30, 30).setBlendMode(Phaser.BlendModes.ADD);
     const p = {
       kind,
       sprite,
@@ -58,7 +61,13 @@ export class Projectiles {
         continue;
       }
       if (p.kind === 'boomerang') this._boomerang(p, dt);
-      else {
+      else if (p.kind === 'fireball') {
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.sprite.rotation += dt * 12;
+        if (Math.random() < 0.5) this.scene.spawnSparkles(p.x, p.y, 1, 0xff9a30);
+        if (this.world.isSolid(Math.floor(p.x / T), Math.floor(p.y / T)) || p.life > 2.2) this._explode(p);
+      } else {
         p.vy += p.gravity * dt;
         p.x += p.vx * dt;
         p.y += p.vy * dt;
@@ -107,11 +116,29 @@ export class Projectiles {
       p.hit.add(e);
       e.hit(p.damage, p.knockback, p.x - Math.sign(p.vx || 1) * 20);
       if (p.kind === 'boomerang') p.returning = true;
-      else {
+      else if (p.kind === 'fireball') {
+        this._explode(p);
+        return;
+      } else {
         p.dead = true;
         return;
       }
     }
+  }
+
+  /** La bola de fuego explota: quema a todos los enemigos cerca. */
+  _explode(p) {
+    if (p.dead) return;
+    p.dead = true;
+    for (const e of this.enemies.list) {
+      if (e.dead || p.hit.has(e)) continue;
+      if (Math.hypot(e.centerX - p.x, e.centerY - p.y) > FIREBALL_RADIUS) continue;
+      p.hit.add(e);
+      e.hit(p.damage, p.knockback, p.x);
+    }
+    this.scene.spawnSparkles(p.x, p.y, 18, 0xff8a30);
+    this.scene.spawnDebris(p.x, p.y, 0xffc040, 8);
+    this.scene.showShockwave?.(p.x, p.y, FIREBALL_RADIUS, 0xff8a30);
   }
 
   destroy() {

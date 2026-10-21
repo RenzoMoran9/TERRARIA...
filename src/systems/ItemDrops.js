@@ -66,9 +66,10 @@ export class ItemDrops {
       const dy = py - d.y;
       const dist = Math.hypot(dx, dy);
       const canTake = !p.dead && d.age > PICK_DELAY && this.inventory.canAdd(d.id, 1);
-      if (canTake && dist < MAGNET) {
+      const magnet = MAGNET * (this.scene.progress?.magnetMultiplier ?? 1); // habilidad Imán: el doble
+      if (canTake && dist < magnet) {
         // Vuela hacia el jugador (atraviesa los bloques, como en Terraria)
-        const speed = 220 + (1 - dist / MAGNET) * 380;
+        const speed = 220 + (1 - dist / magnet) * 380;
         d.vx = (dx / (dist || 1)) * speed;
         d.vy = (dy / (dist || 1)) * speed;
         d.x += d.vx * dt;

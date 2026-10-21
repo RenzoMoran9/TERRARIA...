@@ -53,6 +53,15 @@ export class TouchControls {
     this.modeBtn = this._circleButton('ui_button_swap', () => this.toggleMode());
     this.modeLabel = scene.add.text(0, 0, '', textStyle({ fontSize: '12px' })).setOrigin(0.5, 0.5);
     this.invBtn = this._circleButton('ui_button_inventory', () => scene.toggleInventory());
+    // Poderes (aparecen al aprenderlos): embestida y bola de fuego
+    this.dashBtn = this._circleButton('ui_button_dash', () => {
+      this.state.dash = true;
+    });
+    this.fireBtn = this._circleButton('ui_button_fire', (pointer) => {
+      this.firePointer = pointer;
+    });
+    this.dashBtn.on('pointerup', () => (this.state.dash = false));
+    this.dashBtn.on('pointerout', () => (this.state.dash = false));
     this.fsBtn = scene.add.image(0, 0, 'ui_button_fullscreen').setInteractive();
     this.fsBtn.on('pointerup', () => {
       if (scene.scale.isFullscreen) scene.scale.stopFullscreen();
@@ -68,6 +77,8 @@ export class TouchControls {
       this.modeLabel,
       this.invBtn,
       this.fsBtn,
+      this.dashBtn,
+      this.fireBtn,
     ]);
     this._updateModeVisual();
     this.setVisible(gameScene.isTouch);
@@ -135,7 +146,11 @@ export class TouchControls {
     this.actionPointer = null;
     this.joyJump = false;
     this.joyDown = false;
+    this.firePointer = null;
     this.state.down = false;
+    this.state.run = false;
+    this.state.dash = false;
+    this.state.fire = false;
     this.state.moveX = 0;
     this.state.jump = false;
     this.state.action = false;
@@ -164,6 +179,9 @@ export class TouchControls {
     this.modeBtn.setPosition(ax, jy - 48 * s - 14 - 28 * s).setDisplaySize(56 * s, 56 * s);
     this.modeLabel.setPosition(ax - 28 * s - 36, this.modeBtn.y);
     this.invBtn.setPosition(jx, jy - 48 * s - 14 - 32 * s).setDisplaySize(64 * s, 64 * s);
+    // Poderes: encima del inventario y del cambio de modo
+    this.fireBtn.setPosition(jx, this.invBtn.y - 32 * s - 12 - 30 * s).setDisplaySize(60 * s, 60 * s);
+    this.dashBtn.setPosition(ax, this.modeBtn.y - 28 * s - 12 - 30 * s).setDisplaySize(60 * s, 60 * s);
     this.fsBtn.setPosition(width - 30, fullscreenY).setDisplaySize(40, 40);
   }
 
@@ -174,6 +192,12 @@ export class TouchControls {
     // Botón de acción: activo mientras el dedo siga apoyado
     if (this.actionPointer && !this.actionPointer.isDown) this.actionPointer = null;
     st.action = !!this.actionPointer;
+    // Poderes aprendidos: muestran su botón
+    const p = this.gs.player;
+    this.dashBtn.setVisible(p.hasSkill('dash'));
+    this.fireBtn.setVisible(p.hasSkill('fireball'));
+    if (this.firePointer && !this.firePointer.isDown) this.firePointer = null;
+    st.fire = !!this.firePointer;
 
     // Joystick: mover y (mientras se usa la acción) apuntar
     const jp = this.joyPointer;
@@ -185,6 +209,7 @@ export class TouchControls {
         this.joyJump = false;
         this.joyDown = false;
         st.moveX = 0;
+        st.run = false;
         this.thumb.setPosition(this.bx, this.by);
       } else {
         let dx = jp.x - this.bx;
@@ -198,6 +223,8 @@ export class TouchControls {
         const nx = dx / this.radius;
         const ax = Math.abs(nx);
         st.moveX = ax < DEADZONE ? 0 : Math.sign(nx) * Math.min(1, (ax - DEADZONE) / 0.55);
+        // Joystick a fondo hacia un costado: corre (si aprendió Correr)
+        st.run = ax > 0.9;
         if (Math.hypot(dx, dy) / this.radius > AIM_DEADZONE) {
           st.aimX = dx;
           st.aimY = dy;

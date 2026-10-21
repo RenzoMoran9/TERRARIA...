@@ -179,6 +179,7 @@ export const ASSETS = {
   bg_stars: { file: 'backgrounds/stars.png', width: 256, height: 256, placeholder: 'stars' },
 
   // ---------- Efectos ----------
+  fx_fireball: { file: 'fx/fireball.png', width: 32, height: 32, placeholder: 'fireball' },
   fx_glow: { file: 'fx/glow.png', width: 128, height: 128, placeholder: 'glow', smooth: true },
 
   // ---------- Interfaz ----------
@@ -193,6 +194,8 @@ export const ASSETS = {
   ui_button_mine: { file: 'ui/button_mine.png', width: 80, height: 80, placeholder: 'button_mine', smooth: true },
   ui_button_place: { file: 'ui/button_place.png', width: 80, height: 80, placeholder: 'button_place', smooth: true },
   ui_button_attack: { file: 'ui/button_attack.png', width: 80, height: 80, placeholder: 'button_attack', smooth: true },
+  ui_button_dash: { file: 'ui/button_dash.png', width: 64, height: 64, placeholder: 'button_dash', smooth: true },
+  ui_button_fire: { file: 'ui/button_fire.png', width: 64, height: 64, placeholder: 'button_fire', smooth: true },
   ui_button_swap: { file: 'ui/button_swap.png', width: 64, height: 64, placeholder: 'button_swap', smooth: true },
   ui_button_inventory: { file: 'ui/button_inventory.png', width: 64, height: 64, placeholder: 'button_inventory', smooth: true },
   ui_button_fullscreen: { file: 'ui/button_fullscreen.png', width: 48, height: 48, placeholder: 'button_fullscreen', smooth: true },

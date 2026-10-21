@@ -25,6 +25,8 @@ import { ItemDrops } from '../systems/ItemDrops.js';
 import { Zones } from '../systems/Zones.js';
 import { Ambience } from '../systems/Ambience.js';
 import { Housing } from '../systems/Housing.js';
+import { Progression, XP } from '../systems/Skills.js';
+import { Abilities } from '../systems/Abilities.js';
 import { cloneSlots } from '../systems/Inventory.js';
 import { ITEMS, getMaxStack } from '../systems/items.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
@@ -77,7 +79,20 @@ export class GameScene extends Phaser.Scene {
     // Partidas viejas (jugador más bajo): si quedó dentro de un bloque, subirlo hasta un lugar libre
     for (let i = 0; i < 12 && this.player.collides(this.player.x, this.player.y); i++) this.player.y -= T;
     this.player.peakY = this.player.y;
-    if (save?.player?.health) this.player.health = Phaser.Math.Clamp(save.player.health, 1, PLAYER.MAX_HEALTH);
+    // Experiencia, nivel y habilidades
+    this.progress = new Progression(save?.progress);
+    this.player.progress = this.progress;
+    this.player.refreshStats();
+    this.player.health = this.player.maxHealth;
+    if (save?.player?.health) this.player.health = Phaser.Math.Clamp(save.player.health, 1, this.player.maxHealth);
+    this.progress.on('skills', () => this.player.refreshStats());
+    this.progress.on('levelUp', (level) => {
+      const p = this.player;
+      if (!p.dead) p.health = p.maxHealth; // subir de nivel cura
+      this.spawnSparkles(p.centerX, p.centerY, 24, 0xffe08a);
+      p.anim.cheer(1.2);
+      this.events.emit('levelUp', level);
+    });
     this.respawnTimer = 0;
     this.bedSpawn = save?.bed ?? null; // cama donde se reaparece: { tx, ty } (esquina de la cama)
 
@@ -88,6 +103,7 @@ export class GameScene extends Phaser.Scene {
     this.interaction = new BlockInteraction(this, this.world, this.player, this.inventory, this.furniture);
     this.enemies = new Enemies(this, this.world, this.player, this.dayNight, this.inventory);
     this.projectiles = new Projectiles(this, this.world, this.enemies, this.player);
+    this.abilities = new Abilities(this, this.player, this.enemies, this.projectiles, this.progress);
     this.drops = new ItemDrops(this, this.world, this.player, this.inventory);
     if (save) this.drops.restore(save.drops);
     // Zonas del mundo (cuáles ya se descubrieron) y partículas del clima de cada una
@@ -95,6 +111,7 @@ export class GameScene extends Phaser.Scene {
     this.ambience = new Ambience(this, this.world, this.zones, this.dayNight);
     // Casas: cuartos cerrados, fachada vista desde afuera y la consulta "Revisar casa"
     this.housing = new Housing(this, this.world, this.player);
+    this.events.on('zoneDiscovered', () => this.gainXp(XP.zone, this.player.centerX, this.player.y - 20));
     // Cofres: contenido de cada uno, por la posición de su esquina ("x,y" → casillas)
     this.chests = new Map();
     for (const [key, slots] of Object.entries(save?.chests || {})) {
@@ -169,7 +186,7 @@ export class GameScene extends Phaser.Scene {
     this._actionWasDown = false;
     this.isTouch = window.matchMedia?.('(pointer: coarse)').matches || false;
     this.uiBlocking = false; // true con el inventario abierto
-    this._controls = { moveX: 0, jump: false, down: false };
+    this._controls = { moveX: 0, jump: false, down: false, run: false, dash: false };
     this._pointerAction = { x: 0, y: 0, action: null, smart: false, manual: false };
     this._tmpVec = new Phaser.Math.Vector2();
 
@@ -192,6 +209,9 @@ export class GameScene extends Phaser.Scene {
       right: 'RIGHT',
       up: 'UP',
       down: 'DOWN',
+      shift: 'SHIFT',
+      q: 'Q',
+      f: 'F',
       a: 'A',
       d: 'D',
       w: 'W',
@@ -267,6 +287,11 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.player.update(dt, this.readControls());
+    this.abilities.update(dt);
+    // Bola de fuego: F (apunta al ratón) o el botón táctil (apunta al enemigo más cercano)
+    if ((this.keys.f.isDown || this.touchState.fire) && !this.uiBlocking && this.player.hasSkill('fireball')) {
+      this.abilities.fireball(this.fireAngle());
+    }
     this.furniture.update(dt);
     this.enemies.update(dt);
     this.projectiles.update(dt);
@@ -315,6 +340,8 @@ export class GameScene extends Phaser.Scene {
     c.moveX = mx !== 0 ? mx : this.touchState.moveX;
     c.jump = k.space.isDown || k.w.isDown || k.up.isDown || this.touchState.jump;
     c.down = k.s.isDown || k.down.isDown || !!this.touchState.down;
+    c.run = k.shift.isDown || !!this.touchState.run;
+    c.dash = (k.q.isDown || !!this.touchState.dash) && !this.uiBlocking;
     return c;
   }
 
@@ -616,6 +643,7 @@ export class GameScene extends Phaser.Scene {
     const playerData = p.dead
       ? { x: this.spawn.x, y: this.spawn.y, health: PLAYER.MAX_HEALTH }
       : { x: pos.x, y: pos.y, health: Math.max(1, Math.round(p.health)) };
+    if (p.dead) playerData.health = p.maxHealth;
     return {
       version: SAVE_VERSION,
       seed: this.world.seed,
@@ -630,11 +658,46 @@ export class GameScene extends Phaser.Scene {
       walls: this.world.serializeWalls(),
       drops: this.drops.serialize(),
       zones: this.zones.serialize(),
+      progress: this.progress.serialize(),
       // Solo los cofres con algo adentro
       chests: Object.fromEntries(
         [...this.chests].filter(([, slots]) => slots.some(Boolean)).map(([k, slots]) => [k, cloneSlots(slots).map((s) => (s ? [s.id, s.count] : null))]),
       ),
     };
+  }
+
+  /** Hacia dónde sale la bola de fuego: al ratón en la PC; en el celular, al enemigo más cercano. */
+  fireAngle() {
+    const p = this.player;
+    const oy = p.y + 22;
+    if (!this.isTouch) {
+      const ptr = this.input.activePointer;
+      this.cameras.main.getWorldPoint(ptr.x, ptr.y, this._tmpVec);
+      return Math.atan2(this._tmpVec.y - oy, this._tmpVec.x - p.centerX);
+    }
+    const e = this.enemies.nearest(14 * T);
+    if (e) return Math.atan2(e.centerY - oy, e.centerX - p.centerX);
+    return p.facing > 0 ? 0 : Math.PI;
+  }
+
+  /** Suma experiencia y muestra "+N XP" donde ocurrió. */
+  gainXp(amount, x, y) {
+    if (!amount || this.player.dead) return;
+    this.progress.addXp(amount);
+    this.showFloatingText(x, y, `+${amount} XP`, '#9be7ff', 13);
+  }
+
+  /** Fabricar algo por primera vez da experiencia. */
+  onCrafted(itemId) {
+    if (this.progress.crafted.has(itemId)) return;
+    this.progress.crafted.add(itemId);
+    this.gainXp(XP.craftNew, this.player.centerX, this.player.y - 20);
+  }
+
+  /** Onda expansiva (golpe sísmico, explosión de la bola de fuego). */
+  showShockwave(x, y, radius, color = 0xffe08a) {
+    const ring = this.add.circle(x, y, radius, color, 0).setStrokeStyle(4, color, 0.9).setDepth(DEPTH.PARTICLES).setScale(0.15);
+    this.tweens.add({ targets: ring, scale: 1, alpha: 0, duration: 320, ease: 'Cubic.Out', onComplete: () => ring.destroy() });
   }
 
   /** "Revisar casa": revisa el cuarto donde está el jugador y muestra qué le falta. */

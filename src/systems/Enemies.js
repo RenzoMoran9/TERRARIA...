@@ -428,6 +428,8 @@ class Enemy {
       this.scene.spawnDust(this.centerX, this.y + this.h, 10);
       this.scene.spawnDebris(this.centerX, this.centerY, this.blood, 10);
       this.manager.giveDrops(this);
+      // Experiencia: más por los enemigos fuertes (y los de las zonas lejanas)
+      this.scene.gainXp?.(Math.max(3, Math.round(this.maxHp * 0.5 + this.damage * 0.3)), this.centerX, this.y - 8);
     }
     this.destroy();
   }

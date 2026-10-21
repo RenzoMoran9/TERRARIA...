@@ -22,9 +22,15 @@ export class ZoneBanner {
 
   show(biome, discovered, total) {
     const info = BIOME_INFO[biome];
-    this.name.setText(info.name);
-    this.info.setText(`Peligro ${dangerStars(info.danger)}   ·   Zonas ${discovered}/${total}`);
-    this.desc.setText(ZONE_DESC[biome]);
+    this.showCustom('¡Zona descubierta!', info.name, `Peligro ${dangerStars(info.danger)}   ·   Zonas ${discovered}/${total}`, ZONE_DESC[biome]);
+  }
+
+  /** Cartel con cualquier texto (también para "¡Subiste de nivel!"). */
+  showCustom(head, name, info, desc) {
+    this.head.setText(head);
+    this.name.setText(name);
+    this.info.setText(info);
+    this.desc.setText(desc);
     this.head.setY(10);
     this.name.setY(32);
     this.info.setY(74);

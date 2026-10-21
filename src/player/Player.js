@@ -1,6 +1,17 @@
 import { TILE_SIZE, PLAYER as P } from '../config.js';
 import { PlayerAnimator } from './PlayerAnimator.js';
 import { HURTS, BLOCK } from '../world/blocks.js';
+import { ENERGY_MAX } from '../systems/Skills.js';
+
+const SPRINT_MULT = 1.6; // correr: 60% más rápido
+const SPRINT_COST = 22; // energía por segundo corriendo
+const DASH_SPEED = 760;
+const DASH_TIME = 0.2;
+const DASH_COST = 30;
+const POUND_SPEED = 1250;
+const POUND_COST = 25;
+const ENERGY_REGEN = 28; // por segundo
+const ENERGY_DELAY = 0.7; // segundos sin gastar antes de recargar
 
 const EPS = 0.001;
 const MAX_STEP = 8; // el movimiento se divide en pasos de ≤8 px para no atravesar bloques
@@ -46,12 +57,46 @@ export class Player {
     this.invuln = 0; // segundos de invulnerabilidad después de un golpe de un enemigo
     this.dropTimer = 0; // bajando por una plataforma (mientras tanto las plataformas no frenan)
 
+    // Habilidades (ver systems/Skills.js): la escena asigna this.progress
+    this.progress = null;
+    this.energy = ENERGY_MAX;
+    this.energyIdle = 0; // segundos sin gastar energía
+    this.running = false;
+    this.usedDoubleJump = false;
+    this.dashTime = 0;
+    this.dashCooldown = 0;
+    this.dashHits = new Set();
+    this.pounding = false;
+    this.prevDown = false;
+    this.prevDash = false;
+
     // Sprite, animaciones y efectos
     this.anim = new PlayerAnimator(scene, this);
   }
 
   get sprite() {
     return this.anim.sprite;
+  }
+
+  /** ¿Aprendió esta habilidad? */
+  hasSkill(id) {
+    return !!this.progress && this.progress.has(id);
+  }
+
+  /** Gasta energía si alcanza. */
+  useEnergy(amount) {
+    if (this.energy < amount) return false;
+    this.energy -= amount;
+    this.energyIdle = 0;
+    return true;
+  }
+
+  /** Vida máxima con los bonos de las habilidades (se llama al aprender una). */
+  refreshStats() {
+    const max = P.MAX_HEALTH + (this.progress ? this.progress.maxHealthBonus : 0);
+    if (max > this.maxHealth) this.health += max - this.maxHealth;
+    this.maxHealth = max;
+    this.health = Math.min(this.health, this.maxHealth);
   }
 
   /** ¿Se lo ve? (vivo, o todavía desvaneciéndose al morir): mientras tanto lleva su luz tenue */
@@ -71,6 +116,14 @@ export class Player {
   update(dt, controls) {
     this.invuln = Math.max(0, this.invuln - dt);
     this.dropTimer = Math.max(0, this.dropTimer - dt);
+    this.dashCooldown = Math.max(0, this.dashCooldown - dt);
+    // La energía se recarga sola después de un momento sin gastarla
+    this.energyIdle += dt;
+    if (this.energyIdle > ENERGY_DELAY) this.energy = Math.min(ENERGY_MAX, this.energy + ENERGY_REGEN * dt);
+    const downPressed = !!controls.down && !this.prevDown;
+    this.prevDown = !!controls.down;
+    const dashPressed = !!controls.dash && !this.prevDash;
+    this.prevDash = !!controls.dash;
     if (this.dead) {
       this.anim.update(dt);
       return;
@@ -92,10 +145,43 @@ export class Player {
       }
     }
 
+    // --- Embestida: se lanza hacia adelante sin gravedad ---
+    if (dashPressed && this.hasSkill('dash') && this.dashCooldown <= 0 && this.dashTime <= 0 && this.useEnergy(DASH_COST)) {
+      if (controls.moveX !== 0) this.facing = controls.moveX > 0 ? 1 : -1;
+      this.dashTime = DASH_TIME;
+      this.dashCooldown = 0.55;
+      this.dashHits.clear();
+      this.pounding = false;
+      this.invuln = Math.max(this.invuln, DASH_TIME + 0.1);
+      this.scene.spawnDust(this.centerX, this.y + this.h, 8);
+      this.anim.jump();
+    }
+    if (this.dashTime > 0) {
+      this.dashTime -= dt;
+      this.vx = this.facing * DASH_SPEED;
+      this.vy = 0;
+      this.moveX(this.vx * dt, true);
+      this.scene.abilities?.dashContact(this);
+      if (Math.random() < 0.6) this.scene.spawnSparkles(this.centerX - this.facing * 10, this.centerY, 1, 0x9be7ff);
+      if (this.dashTime <= 0) this.vx = this.facing * P.SPEED;
+      this.regen(dt);
+      this.anim.update(dt);
+      return;
+    }
+
+    // --- Correr (mantener Shift / joystick a fondo): más rápido mientras alcance la energía ---
+    this.running = !!controls.run && controls.moveX !== 0 && this.hasSkill('sprint') && this.energy > 1;
+    if (this.running) {
+      this.energy = Math.max(0, this.energy - SPRINT_COST * dt);
+      this.energyIdle = 0;
+      if (this.onGround && Math.random() < dt * 10) this.scene.spawnDust(this.centerX - this.facing * 8, this.y + this.h, 1);
+    }
+    const speed = P.SPEED * (this.running ? SPRINT_MULT : 1);
+
     // --- Movimiento horizontal con aceleración ---
     if (controls.moveX !== 0) {
-      const accel = this.onGround ? P.GROUND_ACCEL : P.AIR_ACCEL;
-      this.vx = approach(this.vx, controls.moveX * P.SPEED, accel * dt);
+      const accel = (this.onGround ? P.GROUND_ACCEL : P.AIR_ACCEL) * (this.running ? 1.3 : 1);
+      this.vx = approach(this.vx, controls.moveX * speed, accel * dt);
       const facing = controls.moveX > 0 ? 1 : -1;
       if (facing !== this.facing) this.anim.turn(Math.abs(this.vx));
       this.facing = facing;
@@ -109,12 +195,23 @@ export class Player {
     this.prevJump = controls.jump;
     this.jumpBuffer = jumpPressed ? P.JUMP_BUFFER : this.jumpBuffer - dt;
     this.coyote = this.onGround ? P.COYOTE_TIME : this.coyote - dt;
+    if (this.onGround) this.usedDoubleJump = false;
     if (this.jumpBuffer > 0 && this.coyote > 0) {
       this.vy = P.JUMP_VELOCITY;
       this.jumpBuffer = 0;
       this.coyote = 0;
       this.jumping = true;
       this.anim.jump();
+    } else if (jumpPressed && !this.onGround && this.coyote <= 0 && !this.usedDoubleJump && this.hasSkill('doubleJump')) {
+      // Doble salto: un segundo impulso en el aire, con una nubecita
+      this.usedDoubleJump = true;
+      this.vy = P.JUMP_VELOCITY * 0.92;
+      this.jumpBuffer = 0;
+      this.jumping = true;
+      this.pounding = false;
+      this.peakY = this.y;
+      this.anim.jump();
+      this.scene.spawnDust(this.centerX, this.y + this.h, 10);
     }
     // Soltar el botón antes corta el salto (saltos cortos)
     if (this.jumping && !controls.jump && this.vy < 0) {
@@ -128,10 +225,16 @@ export class Player {
       this.dropTimer = 0.22;
       this.onGround = false;
       this.y += 2;
+    } else if (downPressed && !this.onGround && !this.pounding && this.hasSkill('groundPound') && this.useEnergy(POUND_COST)) {
+      // Golpe sísmico: cae en picada; al tocar el suelo, una onda golpea alrededor
+      this.pounding = true;
+      this.jumping = false;
+      this.vx = 0;
+      this.vy = POUND_SPEED;
     }
 
     // --- Gravedad ---
-    this.vy = Math.min(this.vy + P.GRAVITY * dt, P.MAX_FALL);
+    this.vy = this.pounding ? POUND_SPEED : Math.min(this.vy + P.GRAVITY * dt, P.MAX_FALL);
 
     // --- Mover y resolver colisiones (primero X, luego Y) ---
     const wasOnGround = this.onGround;
@@ -143,7 +246,13 @@ export class Player {
     if (!this.onGround) {
       if (wasOnGround || this.y < this.peakY) this.peakY = this.y;
     } else if (!wasOnGround) {
-      const fallTiles = (this.y - this.peakY) / TILE_SIZE;
+      let fallTiles = (this.y - this.peakY) / TILE_SIZE;
+      if (this.pounding) {
+        // El golpe sísmico no hace daño por caída: la onda golpea alrededor
+        this.pounding = false;
+        this.scene.abilities?.poundImpact(this, fallTiles);
+        fallTiles = 3;
+      }
       this.anim.land(fallTiles);
       if (fallTiles > 1.5) this.scene.spawnDust(this.centerX, this.y + this.h, Math.min(12, 4 + Math.round(fallTiles)));
       if (fallTiles > P.SAFE_FALL_TILES) {
@@ -187,8 +296,9 @@ export class Player {
   /** Regeneración lenta de vida (después de un rato sin recibir daño). */
   regen(dt) {
     this.timeSinceDamage += dt;
-    if (!this.dead && this.timeSinceDamage > P.REGEN_DELAY && this.health < this.maxHealth) {
-      this.health = Math.min(this.maxHealth, this.health + P.REGEN_PER_SECOND * dt);
+    const mult = this.progress ? this.progress.regenMultiplier : 1;
+    if (!this.dead && this.timeSinceDamage > P.REGEN_DELAY / mult && this.health < this.maxHealth) {
+      this.health = Math.min(this.maxHealth, this.health + P.REGEN_PER_SECOND * mult * dt);
     }
   }
 
@@ -332,7 +442,8 @@ export class Player {
   hit(amount, fromX) {
     if (this.dead || this.invuln > 0) return false;
     this.invuln = P.HIT_INVULN;
-    this.damage(amount);
+    // Defensa (Piel dura): cada golpe quita menos, como mínimo 1
+    this.damage(Math.max(1, amount - (this.progress ? this.progress.defense : 0)));
     if (this.dead) return true;
     this.vx = (Math.sign(this.centerX - fromX) || -this.facing) * P.KNOCKBACK;
     this.vy = Math.min(this.vy, -320);
@@ -368,6 +479,9 @@ export class Player {
     this.vy = 0;
     this.health = this.maxHealth;
     this.dead = false;
+    this.energy = ENERGY_MAX;
+    this.pounding = false;
+    this.dashTime = 0;
     this.onGround = false;
     this.peakY = y;
     this.timeSinceDamage = 99;

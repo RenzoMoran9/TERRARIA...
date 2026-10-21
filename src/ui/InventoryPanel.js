@@ -54,6 +54,9 @@ export class InventoryPanel {
       .setInteractive(); // absorbe los clics dentro del panel
     this.container.add(bg);
     this.container.add(scene.add.text(PAD, PAD - 2, 'Inventario', textStyle({ fontSize: '18px' })));
+    // Habilidades (también con la tecla K)
+    this.skillsBtn = createButton(scene, PAD + GRID_W - 70, PAD + 8, 140, 26, '★ Habilidades', () => scene.toggleSkills(true), { fontSize: '14px' });
+    this.container.add(this.skillsBtn);
     this.chest = null; // casillas del cofre abierto (o null: modo crafteo)
     const craftStart = this.container.list.length;
     this.container.add(scene.add.text(CRAFT_X, PAD - 2, 'Crafteo', textStyle({ fontSize: '18px' })));
@@ -319,7 +322,10 @@ export class InventoryPanel {
       this.feedbackUntil = this.scene.time.now + 1500; // hora real (no depende de los FPS)
     }
     if (!result.ok) this.holdPointer = null;
-    else this.gs.player.anim.cheer(); // el personaje festeja lo que fabricó
+    else {
+      this.gs.player.anim.cheer(); // el personaje festeja lo que fabricó
+      this.gs.onCrafted(recipe.result); // la primera vez da experiencia
+    }
     this.refreshCrafting(true);
     return result.ok;
   }

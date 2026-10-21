@@ -8,6 +8,7 @@ import { DebugOverlay } from '../ui/DebugOverlay.js';
 import { Toast } from '../ui/Toast.js';
 import { ZoneBanner } from '../ui/ZoneBanner.js';
 import { HouseReport } from '../ui/HouseReport.js';
+import { SkillsPanel } from '../ui/SkillsPanel.js';
 import { textStyle } from '../ui/styles.js';
 
 /**
@@ -33,6 +34,7 @@ export class UIScene extends Phaser.Scene {
     this.toast = new Toast(this);
     this.zoneBanner = new ZoneBanner(this);
     this.houseReport = new HouseReport(this);
+    this.skillsPanel = new SkillsPanel(this, gs);
 
     this.deathText = this.add
       .text(0, 0, '', textStyle({ fontSize: '30px', strokeThickness: 5, color: '#ff6b6b', align: 'center' }))
@@ -44,9 +46,13 @@ export class UIScene extends Phaser.Scene {
     const kb = this.input.keyboard;
     kb.addCapture(['F3']);
     kb.on('keydown-E', () => this.toggleInventory());
-    kb.on('keydown-ESC', () => this.toggleInventory(false));
+    kb.on('keydown-ESC', () => {
+      this.toggleInventory(false);
+      this.toggleSkills(false);
+    });
     kb.on('keydown-F3', () => this.debug.toggle());
     kb.on('keydown-H', () => this.checkHouse());
+    kb.on('keydown-K', () => this.toggleSkills());
     kb.on('keydown', (event) => {
       const n = Number(event.key);
       if (n >= 1 && n <= 9) gs.inventory.select(n - 1);
@@ -68,6 +74,13 @@ export class UIScene extends Phaser.Scene {
     this._handlers = {
       toast: (msg) => this.toast.show(msg),
       houseReport: (result) => this.houseReport.show(result),
+      levelUp: (level) =>
+        this.zoneBanner.showCustom(
+          '¡Subiste de nivel!',
+          `Nivel ${level}`,
+          `+1 punto de habilidad · Tienes ${gs.progress.points}`,
+          this.gs.isTouch ? 'Toca tu nivel (arriba a la izquierda) para elegir una habilidad' : 'Aprieta K para elegir una habilidad',
+        ),
       zoneDiscovered: (biome) => this.zoneBanner.show(biome, gs.zones.discovered.size, gs.zones.total),
       playerDied: () => {
         this.toggleInventory(false);
@@ -96,6 +109,19 @@ export class UIScene extends Phaser.Scene {
     }
   }
 
+  /** Abre o cierra el panel de habilidades. */
+  toggleSkills(force) {
+    const open = force ?? !this.skillsPanel.isOpen;
+    if (open === this.skillsPanel.isOpen) return;
+    if (open && this.gs.player.dead) return;
+    if (open) {
+      this.toggleInventory(false);
+      this.zoneBanner.container.setVisible(false); // el cartel de "¡Subiste de nivel!" taparía el panel
+      this.skillsPanel.open();
+    } else this.skillsPanel.close();
+    this.gs.uiBlocking = open || this.inventoryPanel.isOpen;
+  }
+
   /** Revisar la casa donde está el jugador (botón del inventario o tecla H). */
   checkHouse() {
     if (this.gs.player.dead) return;
@@ -113,6 +139,7 @@ export class UIScene extends Phaser.Scene {
     const open = force ?? !this.inventoryPanel.isOpen;
     if (open === this.inventoryPanel.isOpen) return;
     if (open && this.gs.player.dead) return;
+    if (open) this.skillsPanel.close();
     if (open) this.inventoryPanel.open();
     else this.inventoryPanel.close();
     this.gs.uiBlocking = open;
@@ -144,6 +171,8 @@ export class UIScene extends Phaser.Scene {
     this.houseReport.layout(W / 2, hotbarBottom + 12, W);
     this.layoutToast();
     this.inventoryPanel.layout(W, H);
+    this.skillsPanel.layout(W, H);
+    this.hud.layoutLevel(y === 42 ? hotbarBottom + 14 : 54);
     this.touchControls.layout(W, H, y === 42 ? hotbarBottom + 28 : 62);
     this.deathText.setPosition(W / 2, H / 2);
   }
@@ -174,6 +203,7 @@ export class UIScene extends Phaser.Scene {
     for (const [name, fn] of Object.entries(this._handlers)) this.gs.events.off(name, fn);
     this.hotbar.destroy();
     this.inventoryPanel.destroy();
+    this.skillsPanel.destroy();
     this.touchControls.destroy();
   }
 }

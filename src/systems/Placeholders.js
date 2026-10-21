@@ -1760,6 +1760,47 @@ const CTX = {
     PIXEL.grass(pc, 0);
     pc.draw(ctx, w / 2 - 16, h / 2 - 16, 2);
   },
+  button_dash(ctx, w, h) {
+    // Embestida: tres flechas de velocidad hacia la derecha
+    circleBtn(ctx, w, h);
+    ctx.fillStyle = 'rgba(160,230,255,0.95)';
+    for (let k = 0; k < 2; k++) {
+      const x = w * (0.3 + k * 0.2);
+      ctx.beginPath();
+      ctx.moveTo(x, h * 0.3);
+      ctx.lineTo(x + w * 0.2, h * 0.5);
+      ctx.lineTo(x, h * 0.7);
+      ctx.lineTo(x + w * 0.08, h * 0.5);
+      ctx.closePath();
+      ctx.fill();
+    }
+  },
+  button_fire(ctx, w, h) {
+    // Bola de fuego
+    circleBtn(ctx, w, h);
+    const g = ctx.createRadialGradient(w * 0.5, h * 0.55, 2, w * 0.5, h * 0.55, w * 0.24);
+    g.addColorStop(0, '#fff6c0');
+    g.addColorStop(0.45, '#ffb030');
+    g.addColorStop(1, '#e0400f');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(w * 0.5, h * 0.56, w * 0.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(w * 0.32, h * 0.52);
+    ctx.quadraticCurveTo(w * 0.36, h * 0.24, w * 0.5, h * 0.2);
+    ctx.quadraticCurveTo(w * 0.62, h * 0.3, w * 0.68, h * 0.5);
+    ctx.fill();
+  },
+  fireball(ctx, w, h) {
+    const g = ctx.createRadialGradient(w / 2, h / 2, 1, w / 2, h / 2, w / 2);
+    g.addColorStop(0, 'rgba(255,250,210,1)');
+    g.addColorStop(0.3, 'rgba(255,190,60,1)');
+    g.addColorStop(0.65, 'rgba(240,80,20,0.85)');
+    g.addColorStop(1, 'rgba(200,40,10,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+  },
   button_swap(ctx, w, h) {
     // Dos flechas opuestas (cambiar entre minar y colocar)
     circleBtn(ctx, w, h);
