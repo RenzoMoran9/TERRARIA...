@@ -76,6 +76,10 @@ export class InventoryPanel {
     this.container.add(
       createButton(scene, PAD + 125 + 75, FOOT_Y, 150, BUTTON_H, 'Menú principal', () => this.gs.backToMenu(), { fontSize: '15px' }),
     );
+    // Como la consulta "?" de Terraria: dice si el cuarto donde estás es una casa válida
+    this.container.add(
+      createButton(scene, PAD + 290 + 70, FOOT_Y, 140, BUTTON_H, 'Revisar casa', () => scene.checkHouse(), { fontSize: '15px' }),
+    );
 
     // Ítem que se lleva en el cursor
     this.heldIcon = scene.add.image(0, 0, 'ui_slot').setDepth(50).setVisible(false);

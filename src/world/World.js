@@ -8,7 +8,7 @@ import {
   CHUNK_SHIFT,
   CHUNK_MASK,
 } from '../config.js';
-import { BLOCK, IS_SOLID, WALL } from './blocks.js';
+import { BLOCK, IS_SOLID, IS_PLATFORM, WALL } from './blocks.js';
 import { WorldGenerator } from './WorldGenerator.js';
 
 const CHUNK_AREA = CHUNK_SIZE * CHUNK_SIZE;
@@ -92,6 +92,17 @@ export class World extends Phaser.Events.EventEmitter {
 
   isSolid(tx, ty) {
     return IS_SOLID[this.getTile(tx, ty)] === 1;
+  }
+
+  /** ¿Es una plataforma? (se pisa desde arriba y se atraviesa desde abajo) */
+  isPlatform(tx, ty) {
+    return IS_PLATFORM[this.getTile(tx, ty)] === 1;
+  }
+
+  /** ¿Se puede apoyar algo encima? (bloque sólido o plataforma) */
+  isFloor(tx, ty) {
+    const id = this.getTile(tx, ty);
+    return IS_SOLID[id] === 1 || IS_PLATFORM[id] === 1;
   }
 
   /** Pared de fondo en una posición (WALL.NONE si no hay). */

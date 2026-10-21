@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { TILE_SIZE, WORLD_WIDTH, DEPTH } from '../config.js';
-import { IS_SOLID, LIGHT_EMIT } from '../world/blocks.js';
+import { IS_SOLID, IS_TRANSPARENT, LIGHT_EMIT } from '../world/blocks.js';
 import { getViewRect } from './view.js';
 
 const MARGIN = 12; // tiles extra fuera de pantalla (para que la luz de antorchas cercanas entre bien)
@@ -118,7 +118,7 @@ export class Lighting {
         const id = world.getTile(tx, ty);
         S[idx] = tx >= 0 && tx < WORLD_WIDTH && ty < skyTop[tx] ? 1 : 0;
         B[idx] = LIGHT_EMIT[id];
-        D[idx] = IS_SOLID[id] ? SOLID_DECAY : AIR_DECAY;
+        D[idx] = IS_SOLID[id] && !IS_TRANSPARENT[id] ? SOLID_DECAY : AIR_DECAY;
       }
     }
 

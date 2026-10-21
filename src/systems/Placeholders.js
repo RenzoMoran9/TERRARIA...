@@ -709,6 +709,25 @@ const FRONT = {
   },
 };
 
+// Tejas: hileras de escamas redondeadas, cada hilera corrida media teja
+function drawShingles(pc, v, [dark, mid, base, light]) {
+  for (let y = 0; y < 16; y++) {
+    const row = y >> 2;
+    const off = row % 2 ? 2 : 0;
+    const r = y & 3;
+    for (let x = 0; x < 16; x++) {
+      const u = (x + off) % 4;
+      let c = base;
+      if (r === 3 && (u === 0 || u === 3)) c = dark; // borde redondeado de abajo
+      else if (r === 3) c = mid;
+      else if (u === 0) c = mid;
+      else if (r === 0) c = light;
+      if (c === base && hash(x, y, 330 + v) < 0.1) c = mid;
+      pc.set(x, y, c);
+    }
+  }
+}
+
 // ---------------------------------------------------------------- pintores en pixel art
 const PIXEL = {
   dirt(pc, v) {
@@ -994,6 +1013,69 @@ const PIXEL = {
   },
   wall_wood(pc, v) {
     drawWoodWall(pc, 0, 0, 16, 16, v);
+  },
+
+  wood_platform(pc, v) {
+    // Tabla arriba (lo que se pisa) con dos ménsulas; abajo transparente
+    for (let x = 0; x < 16; x++) {
+      const seam = x === 4 + v * 3 || x === 11;
+      pc.set(x, 0, '#d6a868');
+      pc.set(x, 1, seam ? '#6e4a22' : '#b5843f');
+      pc.set(x, 2, seam ? '#6e4a22' : hash(x, 2, 300 + v) < 0.2 ? '#9a6a35' : '#a3733a');
+      pc.set(x, 3, '#6e4a22');
+    }
+    for (const bx of [2, 13]) {
+      pc.rect(bx, 4, 1, 3, '#7a5228');
+      pc.set(bx + (bx < 8 ? 1 : -1), 4, '#7a5228');
+    }
+  },
+  glass(pc, v) {
+    // Vidrio claro con reflejos en diagonal (deja ver lo de atrás)
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) pc.set(x, y, 'rgba(196,232,248,0.42)');
+    for (let k = 0; k < 6; k++) {
+      pc.set(3 + k + v, 10 - k, 'rgba(255,255,255,0.85)');
+      pc.set(4 + k + v, 10 - k, 'rgba(255,255,255,0.5)');
+    }
+    pc.set(11, 12, 'rgba(255,255,255,0.7)');
+    pc.set(12, 11, 'rgba(255,255,255,0.7)');
+  },
+  red_shingles(pc, v) {
+    drawShingles(pc, v, ['#7a2a24', '#a33c33', '#c04a3e', '#dc705c']);
+  },
+  wood_shingles(pc, v) {
+    drawShingles(pc, v, ['#4a3018', '#6b4a26', '#82592e', '#a37440']);
+  },
+  wall_glass(pc) {
+    // Ventana vista desde adentro: marco de madera y vidrio por donde se ve el paisaje
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) pc.set(x, y, 'rgba(170,215,240,0.25)');
+    pc.rect(0, 0, 16, 1, '#6e4a22');
+    pc.rect(0, 15, 16, 1, '#6e4a22');
+    pc.rect(0, 0, 1, 16, '#6e4a22');
+    pc.rect(15, 0, 1, 16, '#6e4a22');
+    pc.rect(7, 0, 2, 16, '#7a5228');
+    pc.rect(0, 7, 16, 2, '#7a5228');
+    pc.set(3, 4, 'rgba(255,255,255,0.7)');
+    pc.set(4, 3, 'rgba(255,255,255,0.7)');
+    pc.set(11, 12, 'rgba(255,255,255,0.6)');
+  },
+  facade_window(pc) {
+    // Ventana vista desde afuera: marco, cruz y vidrio oscuro con reflejo
+    pc.rect(0, 0, 16, 16, '#5e3e1c');
+    pc.rect(1, 1, 14, 14, '#24405a');
+    for (let k = 0; k < 5; k++) {
+      pc.set(2 + k, 6 - k, '#7fb6d8');
+      pc.set(9 + k, 13 - k, '#5f96b8');
+    }
+    pc.rect(7, 1, 2, 14, '#7a5228');
+    pc.rect(1, 7, 14, 2, '#7a5228');
+    pc.rect(0, 15, 16, 1, '#3e2810');
+    pc.rect(0, 14, 16, 1, '#a3733a'); // alféizar
+  },
+  glass_wall_item(pc) {
+    PIXEL.wall_glass(pc);
+    for (let y = 1; y < 15; y++) for (let x = 1; x < 15; x++) if (x !== 7 && x !== 8 && y !== 7 && y !== 8) pc.set(x, y, '#9fd0e8');
+    pc.set(3, 4, '#ffffff');
+    pc.set(4, 3, '#ffffff');
   },
 
   // ---------- muebles (objetos de varios bloques: 16 px de arte por bloque) ----------

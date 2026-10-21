@@ -20,12 +20,18 @@ const USES = {
   workbench: 'Estación de crafteo: hay que estar cerca para muchas recetas',
   stone_brick: 'Bloque sólido y resistente para construir',
   door: 'Se abre sola al pasar. Los zombis no pueden abrirla',
-  chair: 'Para sentarse',
-  table: 'Mueble decorativo para la casa',
+  chair: 'Para sentarse: toda casa necesita una silla o una cama',
+  table: 'Superficie: toda casa necesita una (mesa o mesa de trabajo)',
   bed: 'Punto de reaparición. De noche, dormir hace pasar la noche rápido',
   furnace: 'Estación: funde hierro y hace ladrillos. Ilumina',
   anvil: 'Estación: herramientas y armas de hierro',
   chest: 'Guarda hasta 30 pilas de objetos',
+  wood_platform: 'Se pisa desde arriba y se atraviesa saltando desde abajo; para bajar, aprieta abajo. Sirve de escalera y de entrada a una casa',
+  glass: 'Bloque sólido transparente: deja pasar la luz',
+  glass_wall: 'Pared de fondo con forma de ventana: desde adentro se ve el paisaje; desde afuera, una ventana',
+  red_shingles: 'Bloque sólido para techos',
+  wood_shingles: 'Bloque sólido para techos',
+  sand: 'Bloque. En el Horno se funde en vidrio',
 };
 
 const TIERS = { 1: 'piedra y carbón', 2: 'piedra, carbón y hierro', 3: 'todos los minerales conocidos' };
@@ -69,8 +75,9 @@ export function describeItem(id) {
     lines.push('Munición para arcos');
     lines.push(`Daño extra: +${d.ammo.damage}`);
   } else if (d.wall !== undefined) {
-    lines.push('Pared de fondo (se pasa por delante)');
-    lines.push('Decora y evita que aparezcan enemigos adentro');
+    lines.push('Pared de fondo: va DETRÁS del personaje (se pasa por delante)');
+    lines.push('Rellena el interior de las casas: desde afuera se ve como el frente de la casa');
+    lines.push('Evita que aparezcan enemigos adentro');
   } else if (d.object !== undefined) {
     lines.push('Mueble');
   } else if (d.places !== undefined) {

@@ -385,9 +385,10 @@ export class BlockInteraction {
   hasSupport(x, y, id) {
     const w = this.world;
     if (id === BLOCK.TORCH) {
-      return w.isSolid(x, y + 1) || w.isSolid(x - 1, y) || w.isSolid(x + 1, y) || w.getWall(x, y) !== WALL.NONE;
+      return w.isFloor(x, y + 1) || w.isSolid(x - 1, y) || w.isSolid(x + 1, y) || w.getWall(x, y) !== WALL.NONE;
     }
-    if (id === BLOCK.WORKBENCH || IS_PLANT[id]) return w.isSolid(x, y + 1);
+    if (id === BLOCK.WORKBENCH) return w.isFloor(x, y + 1);
+    if (IS_PLANT[id]) return w.isSolid(x, y + 1);
     // Bloques normales: necesitan algo al lado o una pared detrás
     return (
       w.getTile(x, y + 1) !== BLOCK.AIR ||

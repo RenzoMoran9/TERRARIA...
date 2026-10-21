@@ -55,9 +55,9 @@ export class Furniture {
     return this.supported(obj, x0, y0);
   }
 
-  /** Toda la base apoyada sobre bloques sólidos. */
+  /** Toda la base apoyada sobre bloques sólidos o plataformas. */
   supported(obj, x0, y0) {
-    for (let dx = 0; dx < obj.w; dx++) if (!this.world.isSolid(x0 + dx, y0 + obj.h)) return false;
+    for (let dx = 0; dx < obj.w; dx++) if (!this.world.isFloor(x0 + dx, y0 + obj.h)) return false;
     return true;
   }
 

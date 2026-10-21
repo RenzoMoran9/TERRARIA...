@@ -168,21 +168,39 @@ BLOCK_DEFS[BLOCK.PLANT].plant = true;
 BLOCK_DEFS[BLOCK.LOG].trunk = true;
 
 // ---------------------------------------------------------------------------
+// Construcción (como en Terraria). platform = se pisa desde arriba, se atraviesa saltando
+// desde abajo o de costado y se baja por ella apretando abajo; sirve de entrada a una casa.
+// transparent = deja pasar la luz aunque sea sólido (vidrio).
+// ---------------------------------------------------------------------------
+const BUILD_BLOCKS = [
+  ['WOOD_PLATFORM', { name: 'Plataforma de madera', texture: 'tile_wood_platform', platform: true, solid: false, hardness: 0.3, tier: 0, drop: 'wood_platform', color: 0xb5843f }],
+  ['GLASS', { name: 'Vidrio', texture: 'tile_glass', framed: true, solid: true, transparent: true, hardness: 0.4, tier: 0, drop: 'glass', color: 0xbfe6f5 }],
+  ['RED_SHINGLES', { name: 'Tejas rojas', texture: 'tile_red_shingles', framed: true, solid: true, hardness: 1.0, tier: 0, drop: 'red_shingles', color: 0xb5443a }],
+  ['WOOD_SHINGLES', { name: 'Tejas de madera', texture: 'tile_wood_shingles', framed: true, solid: true, hardness: 0.8, tier: 0, drop: 'wood_shingles', color: 0x7a5530 }],
+];
+for (const [key, def] of BUILD_BLOCKS) {
+  BLOCK[key] = BLOCK_DEFS.length;
+  BLOCK_DEFS.push({ id: BLOCK[key], light: 0, ...def });
+}
+
+// ---------------------------------------------------------------------------
 // Paredes de fondo. Las naturales las calcula el generador; las que pone o quita el
 // jugador se guardan aparte (ver World). Ids fijos: se guardan en las partidas.
 // ---------------------------------------------------------------------------
-export const WALL = Object.freeze({ NONE: 0, DIRT: 1, STONE: 2, WOOD: 3, SANDSTONE: 4, ICE: 5, MUD: 6, SHADOW: 7, ASH: 8 });
+export const WALL = Object.freeze({ NONE: 0, DIRT: 1, STONE: 2, WOOD: 3, SANDSTONE: 4, ICE: 5, MUD: 6, SHADOW: 7, ASH: 8, GLASS: 9 });
 // item = lo que suelta con el martillo (las paredes naturales de los biomas no sueltan nada)
+// facade = cómo se ve desde afuera de una casa (ver Housing): textura del frente y si es ventana
 export const WALL_DEFS = [
   null,
-  { name: 'Pared de tierra', texture: 'wall_dirt', item: 'dirt_wall', color: 0x4c301a },
-  { name: 'Pared de piedra', texture: 'wall_stone', item: 'stone_wall', color: 0x3f454e },
-  { name: 'Pared de madera', texture: 'wall_wood', item: 'wood_wall', color: 0x6b4a26 },
+  { name: 'Pared de fondo de tierra', texture: 'wall_dirt', item: 'dirt_wall', color: 0x4c301a, facade: 'tile_dirt' },
+  { name: 'Pared de fondo de piedra', texture: 'wall_stone', item: 'stone_wall', color: 0x3f454e, facade: 'tile_stone_brick' },
+  { name: 'Pared de fondo de madera', texture: 'wall_wood', item: 'wood_wall', color: 0x6b4a26, facade: 'tile_planks' },
   { name: 'Pared de arenisca', texture: 'wall_sandstone', item: null, color: 0x8a6a3e },
   { name: 'Pared de hielo', texture: 'wall_ice', item: null, color: 0x5f8eaa },
   { name: 'Pared de lodo', texture: 'wall_mud', item: null, color: 0x3a281c },
   { name: 'Pared sombría', texture: 'wall_shadow', item: null, color: 0x2e2440 },
   { name: 'Pared de ceniza', texture: 'wall_ash', item: null, color: 0x2e2a2a },
+  { name: 'Ventana de vidrio', texture: 'wall_glass', item: 'glass_wall', color: 0x9fd0e8, facade: 'facade_window', window: true },
 ];
 
 // Tablas de consulta rápida (se usan miles de veces por frame)
@@ -192,7 +210,11 @@ export const IS_TRUNK = new Uint8Array(256); // troncos y cactus (se talan enter
 export const HURTS = new Uint8Array(256); // daño al tocarlo (lava, cactus)
 export const LIGHT_EMIT = new Float32Array(256);
 export const IS_FRAMED = new Uint8Array(256);
+export const IS_PLATFORM = new Uint8Array(256); // plataformas (se pisan desde arriba)
+export const IS_TRANSPARENT = new Uint8Array(256); // sólidos que dejan pasar la luz (vidrio)
 for (const def of BLOCK_DEFS) {
+  IS_PLATFORM[def.id] = def.platform ? 1 : 0;
+  IS_TRANSPARENT[def.id] = def.transparent ? 1 : 0;
   IS_SOLID[def.id] = def.solid ? 1 : 0;
   LIGHT_EMIT[def.id] = def.light;
   IS_FRAMED[def.id] = def.framed ? 1 : 0;

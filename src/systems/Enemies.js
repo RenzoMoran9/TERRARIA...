@@ -255,6 +255,22 @@ class Enemy {
       const step = dy > 0 ? Math.min(dy, MAX_STEP) : Math.max(dy, -MAX_STEP);
       dy -= step;
       const ny = this.y + step;
+      // Los que caminan se paran sobre las plataformas (los voladores las atraviesan)
+      if (step > 0 && !this.def.flyer) {
+        const row = Math.floor((ny + this.h - EPS) / T);
+        if (this.y + this.h <= row * T + EPS) {
+          let platform = false;
+          for (let tx = Math.floor(this.x / T); tx <= Math.floor((this.x + this.w - EPS) / T); tx++) {
+            if (this.world.isPlatform(tx, row)) platform = true;
+          }
+          if (platform) {
+            this.y = row * T - this.h;
+            this.onGround = true;
+            this.vy = 0;
+            break;
+          }
+        }
+      }
       if (!this.collides(this.x, ny)) {
         this.y = ny;
         continue;

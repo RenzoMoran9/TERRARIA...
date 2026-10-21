@@ -63,9 +63,17 @@ export const ASSETS = {
   tile_plant_volcano2: { file: 'tiles/plant_volcano2.png', width: 32, height: 32, placeholder: 'plant_volcano2' },
 
   // ---------- Paredes de fondo (32×32) ----------
+  // Construcción: plataforma (solo la tabla de arriba, el resto transparente), vidrio y tejas
+  tile_wood_platform: { file: 'tiles/wood_platform.png', width: 32, height: 32, placeholder: 'wood_platform' },
+  tile_glass: { file: 'tiles/glass.png', width: 32, height: 32, placeholder: 'glass' },
+  tile_red_shingles: { file: 'tiles/red_shingles.png', width: 32, height: 32, placeholder: 'red_shingles' },
+  tile_wood_shingles: { file: 'tiles/wood_shingles.png', width: 32, height: 32, placeholder: 'wood_shingles' },
   wall_dirt: { file: 'walls/dirt_wall.png', width: 32, height: 32, placeholder: 'wall_dirt' },
   wall_stone: { file: 'walls/stone_wall.png', width: 32, height: 32, placeholder: 'wall_stone' },
   wall_wood: { file: 'walls/wood_wall.png', width: 32, height: 32, placeholder: 'wall_wood' },
+  // Ventana vista desde adentro (semitransparente: se ve el paisaje) y desde afuera (fachada de la casa)
+  wall_glass: { file: 'walls/glass_wall.png', width: 32, height: 32, placeholder: 'wall_glass' },
+  facade_window: { file: 'walls/window_outside.png', width: 32, height: 32, placeholder: 'facade_window' },
   wall_sandstone: { file: 'walls/sandstone_wall.png', width: 32, height: 32, placeholder: 'wall_sandstone' },
   wall_ice: { file: 'walls/ice_wall.png', width: 32, height: 32, placeholder: 'wall_ice' },
   wall_mud: { file: 'walls/mud_wall.png', width: 32, height: 32, placeholder: 'wall_mud' },
@@ -98,6 +106,7 @@ export const ASSETS = {
   item_wood_pickaxe: { file: 'items/wood_pickaxe.png', width: 32, height: 32, placeholder: 'wood_pickaxe' },
   item_stone_pickaxe: { file: 'items/stone_pickaxe.png', width: 32, height: 32, placeholder: 'stone_pickaxe' },
   item_wood_hammer: { file: 'items/wood_hammer.png', width: 32, height: 32, placeholder: 'wood_hammer' },
+  item_glass_wall: { file: 'items/glass_wall.png', width: 32, height: 32, placeholder: 'glass_wall_item' },
   item_wood_wall: { file: 'items/wood_wall.png', width: 32, height: 32, placeholder: 'wood_wall_item' },
   item_stone_wall: { file: 'items/stone_wall.png', width: 32, height: 32, placeholder: 'stone_wall_item' },
   item_dirt_wall: { file: 'items/dirt_wall.png', width: 32, height: 32, placeholder: 'dirt_wall_item' },

@@ -49,6 +49,7 @@ La carpeta `dist/` se puede subir tal cual a cualquier hosting estático (GitHub
 | --------------------- | ----------------------------------- | ---------------------------------------------- |
 | Moverse               | `A` / `D` o flechas                 | Joystick (abajo a la izquierda)                |
 | Saltar                | `Espacio`, `W` o flecha arriba      | Botón grande con flecha, o joystick hacia arriba |
+| Bajar de una plataforma | `S` o flecha abajo                | Joystick hacia abajo                           |
 | Elegir el bloque      | Con el ratón                        | **Tocar un bloque lo marca** con el recuadro amarillo (no lo mina). Con el dedo apoyado, **el recuadro lo sigue**: deslízalo hasta el bloque exacto y suelta. Si tocas cerca (en el aire), el recuadro se ajusta al bloque más cercano. Sin marcar, el recuadro elige solo el bloque más cercano hacia donde miras |
 | Minar / talar         | Mantener **clic izquierdo**         | Mantener el **botón de acción** (pico): mina el bloque del recuadro y se detiene al terminar |
 | Colocar bloque        | **Clic derecho**                    | Botón de acción en modo COLOCAR (un toque = un bloque; manteniéndolo, sigue poniendo después de un momento) |
@@ -60,6 +61,7 @@ La carpeta `dist/` se puede subir tal cual a cualquier hosting estático (GitHub
 | Cambiar modo          | —                                   | Botón de flechas (MINAR ↔ COLOCAR). Elegir un bloque en la barra pasa solo a COLOCAR; un pico, a MINAR |
 | Barra rápida          | Teclas `1`–`9` o rueda del ratón    | Tocar la casilla                               |
 | Inventario y crafteo  | `E` (cerrar: `E` o `Esc`)           | Botón de cuadritos                             |
+| Revisar casa          | `H` (o el botón del inventario)     | Botón *Revisar casa* del inventario            |
 | Modo debug (FPS)      | `F3`                                | Tocar el reloj                                 |
 | Pantalla completa     | —                                   | Botón de esquinas (arriba a la derecha)        |
 
@@ -88,9 +90,23 @@ Las puertas se abren solas al caminar contra ellas y se cierran al alejarse. Par
   y se sienta a dormir con "zzz"; al morir cae de espaldas y se desvanece, y reaparece con brillos saludando.
 - **Minar y construir**: el tiempo depende de la dureza del bloque y del mejor pico del inventario. Alcance de unos 5 bloques.
   Talar el tronco derriba el árbol entero. La piedra y el carbón requieren pico de madera; el hierro, pico de piedra.
-- **Casas**: paredes de fondo de madera, piedra y tierra (se ponen junto a otra pared o a un bloque y se quitan con el
-  martillo), puertas de 3 bloques de alto, sillas para sentarse, mesas y camas. La silla y la cama miran hacia donde
-  está el jugador al colocarlas. Los muebles se quitan enteros minando cualquier parte y se caen si se les quita el suelo.
+- **Casas (como en Terraria)**: una casa es un cuarto encerrado por un **marco** de bloques sólidos (piso, techo
+  y costados) con una **puerta** o **plataforma** para entrar, y relleno por dentro con **paredes de fondo**.
+  Las paredes de fondo van *detrás* del personaje (por eso se pasa por delante, igual que en Terraria): lo que
+  frena a los enemigos es el marco de bloques y la puerta (los zombis **no abren puertas**).
+  **Vista exterior / interior**: desde afuera, cada casa se ve con su **fachada** (el frente de madera, ladrillo o
+  tierra según sus paredes, con **ventanas** donde pusiste paredes de vidrio); al entrar por la puerta la fachada
+  se desvanece y se ve el interior con los muebles. Las casas pueden compartir paredes, pisos y techos (edificios).
+  **Casa válida** (para los aldeanos que vendrán): 60 a 750 bloques contando el marco, paredes de fondo puestas por
+  ti (se permiten huecos chicos), una **luz**, algo para **sentarse** (silla o cama), una **superficie** (mesa o
+  mesa de trabajo) y una **entrada**; no vale en las Tierras Sombrías. El botón **Revisar casa** del inventario
+  (tecla **H** en la PC) revisa el cuarto donde estás, lo marca en verde o rojo y dice qué le falta.
+  Construcción: **plataformas de madera** (1 madera → 2, a mano: se pisan, se atraviesan saltando desde abajo y se
+  baja apretando abajo / joystick hacia abajo; sirven de escaleras, puentes y entrada), **vidrio** (arena en el
+  Horno), **ventanas de vidrio** (1 vidrio → 4), **tejas de madera** (1 tablón → 2) y **tejas rojas** (2 tierra +
+  1 piedra en el Horno → 2) para los techos; paredes de fondo de madera, piedra y tierra (se quitan con el
+  martillo), puertas de 3 bloques, sillas, mesas y camas. La silla y la cama miran hacia el jugador al colocarlas.
+  Los muebles se quitan enteros y se caen si se les quita el suelo (también se apoyan sobre plataformas).
   **Cama**: dormir en ella la vuelve el punto de reaparición; de noche, la noche pasa rápido hasta la mañana.
 - **Mundo con zonas** (cada vez más peligrosas cuanto más lejos del inicio): el **Bosque** en el centro; hacia un
   lado **Desierto** (dunas, cactus que pinchan y una **pirámide con un cofre del tesoro**), **Tierras Sombrías**
@@ -110,8 +126,6 @@ Las puertas se abren solas al caminar contra ellas y se cierran al alejarse. Par
   Aparecen fuera de la pantalla y nunca donde hay paredes de fondo puestas por ti. Hacen daño al tocarte, te
   empujan y quedas invulnerable un momento (parpadeas). Espadas de madera y de piedra; los slimes sueltan **gel**
   (1 madera + 1 gel → 3 antorchas). Al reaparecer se van los enemigos cercanos.
-  **Para que una casa te proteja**: piso, techo y costados de **bloques** (tablones, piedra…) y una **puerta**.
-  Las paredes de fondo solo decoran (se pasa por delante) y evitan que aparezcan enemigos adentro.
 - **Armas de todo tipo** (en la PC se apunta con el ratón; en el celular el botón ATACAR apunta solo al enemigo
   más cercano):
   | Arma | Tipo | Receta |
@@ -172,7 +186,11 @@ Con `npm run dev` la página se recarga sola al agregar o cambiar una imagen. Pa
 Se recomienda **PNG con transparencia**. Si una imagen tiene otro tamaño se escala al tamaño de dibujo
 (los bloques siempre se dibujan a 32×32), así que también se pueden usar imágenes al doble de resolución.
 
-### Lista completa de imágenes (142)
+### Lista completa de imágenes (149)
+
+**Fachadas.** Desde afuera, cada casa muestra la imagen del bloque que corresponde a sus paredes
+(pared de madera → `tiles/planks.png`, de piedra → `tiles/stone_brick.png`, de tierra → `tiles/dirt.png`) y
+`walls/window_outside.png` en las ventanas.
 
 **Bloques.** Basta con dibujar un bloque "entero" de 32×32: el juego genera solo el contorno oscuro y las esquinas
 redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pasto tapado por otro bloque usa la imagen de la tierra.
@@ -194,6 +212,10 @@ redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pas
 | `tiles/plant_flower_red.png`         | 32 × 32     | Flor roja decorativa (transparente)                                         |
 | `tiles/plant_flower_yellow.png`      | 32 × 32     | Flor amarilla decorativa (transparente)                                     |
 | `tiles/stone_brick.png`              | 32 × 32     | Ladrillo de piedra (también ícono del ítem)                                 |
+| `tiles/wood_platform.png`            | 32 × 32     | Plataforma de madera: la tabla arriba (lo que se pisa), el resto transparente (también ícono) |
+| `tiles/glass.png`                    | 32 × 32     | Bloque de vidrio (semitransparente) |
+| `tiles/red_shingles.png`             | 32 × 32     | Tejas rojas (techos) |
+| `tiles/wood_shingles.png`            | 32 × 32     | Tejas de madera (techos) |
 | `tiles/sand.png`                     | 32 × 32     | Arena (Desierto; también ícono) |
 | `tiles/sandstone.png`                | 32 × 32     | Arenisca (piedra del Desierto y de la pirámide) |
 | `tiles/snow.png`                     | 32 × 32     | Nieve (Tundra) |
@@ -224,6 +246,8 @@ redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pas
 | `walls/dirt_wall.png`                | 32 × 32     | Pared de fondo de tierra (más oscura que el bloque)                         |
 | `walls/stone_wall.png`               | 32 × 32     | Pared de fondo de piedra (más oscura que el bloque)                         |
 | `walls/wood_wall.png`                | 32 × 32     | Pared de fondo de madera (más oscura que los tablones)                      |
+| `walls/glass_wall.png`               | 32 × 32     | Ventana vista desde adentro (semitransparente: se ve el paisaje detrás) |
+| `walls/window_outside.png`           | 32 × 32     | Ventana vista desde afuera, en la fachada de las casas |
 | `walls/sandstone_wall.png`           | 32 × 32     | Pared de arenisca (dentro de la pirámide y cuevas del Desierto) |
 | `walls/ice_wall.png`                 | 32 × 32     | Pared de hielo (cuevas de la Tundra) |
 | `walls/mud_wall.png`                 | 32 × 32     | Pared de barro (cuevas de la Selva) |
@@ -250,6 +274,7 @@ redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pas
 | `items/wood_wall.png`                | 32 × 32     | Ícono de *Pared de madera*                                                  |
 | `items/stone_wall.png`               | 32 × 32     | Ícono de *Pared de piedra*                                                  |
 | `items/dirt_wall.png`                | 32 × 32     | Ícono de *Pared de tierra*                                                  |
+| `items/glass_wall.png`               | 32 × 32     | Ícono de *Ventana de vidrio* |
 | `items/door.png`                     | 32 × 32     | Ícono de *Puerta*                                                           |
 | `items/chair.png`                    | 32 × 32     | Ícono de *Silla*                                                            |
 | `items/table.png`                    | 32 × 32     | Ícono de *Mesa*                                                             |
@@ -340,7 +365,7 @@ src/
   scenes/              BootScene (carga), BackgroundScene (cielo y paisaje), MenuScene, GameScene (mundo) y UIScene (interfaz)
   world/               Ruido con semilla, bloques, generador, datos por chunks, renderizado de chunks y tileset
   player/              Jugador: física, colisiones, vida y daño por caída (Player), poses (animations) y animaciones y efectos (PlayerAnimator)
-  systems/             Inventario, ítems, crafteo, minar/colocar, muebles (Furniture), enemigos, zonas (Zones) y sus partículas (Ambience), día/noche, iluminación, guardado y placeholders (pixel art por código)
+  systems/             Inventario, ítems, crafteo, minar/colocar, muebles (Furniture), casas y fachadas (Housing), enemigos, zonas (Zones) y sus partículas (Ambience), día/noche, iluminación, guardado y placeholders (pixel art por código)
   ui/                  HUD, barra rápida, inventario, controles táctiles, debug y avisos
 ```
 

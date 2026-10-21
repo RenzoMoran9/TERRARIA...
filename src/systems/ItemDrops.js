@@ -104,7 +104,9 @@ export class ItemDrops {
     else d.vx = 0;
     const ny = d.y + d.vy * dt;
     const tx = Math.floor(d.x / T);
-    if (d.vy >= 0 && this.world.isSolid(tx, Math.floor(ny / T))) {
+    const row = Math.floor(ny / T);
+    const platform = this.world.isPlatform(tx, row) && d.y <= row * T + 0.01; // cae sobre una plataforma
+    if (d.vy >= 0 && (this.world.isSolid(tx, row) || platform)) {
       d.y = Math.floor(ny / T) * T;
       d.vy = 0;
       d.vx *= 0.6;

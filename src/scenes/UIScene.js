@@ -7,6 +7,7 @@ import { TouchControls } from '../ui/TouchControls.js';
 import { DebugOverlay } from '../ui/DebugOverlay.js';
 import { Toast } from '../ui/Toast.js';
 import { ZoneBanner } from '../ui/ZoneBanner.js';
+import { HouseReport } from '../ui/HouseReport.js';
 import { textStyle } from '../ui/styles.js';
 
 /**
@@ -31,6 +32,7 @@ export class UIScene extends Phaser.Scene {
     this.touchControls = new TouchControls(this, gs);
     this.toast = new Toast(this);
     this.zoneBanner = new ZoneBanner(this);
+    this.houseReport = new HouseReport(this);
 
     this.deathText = this.add
       .text(0, 0, '', textStyle({ fontSize: '30px', strokeThickness: 5, color: '#ff6b6b', align: 'center' }))
@@ -44,6 +46,7 @@ export class UIScene extends Phaser.Scene {
     kb.on('keydown-E', () => this.toggleInventory());
     kb.on('keydown-ESC', () => this.toggleInventory(false));
     kb.on('keydown-F3', () => this.debug.toggle());
+    kb.on('keydown-H', () => this.checkHouse());
     kb.on('keydown', (event) => {
       const n = Number(event.key);
       if (n >= 1 && n <= 9) gs.inventory.select(n - 1);
@@ -64,6 +67,7 @@ export class UIScene extends Phaser.Scene {
     // --- Eventos del juego ---
     this._handlers = {
       toast: (msg) => this.toast.show(msg),
+      houseReport: (result) => this.houseReport.show(result),
       zoneDiscovered: (biome) => this.zoneBanner.show(biome, gs.zones.discovered.size, gs.zones.total),
       playerDied: () => {
         this.toggleInventory(false);
@@ -90,6 +94,13 @@ export class UIScene extends Phaser.Scene {
     if (gs.isTouch && this.scale.height > this.scale.width) {
       this.toast.show('Gira el teléfono (horizontal) para jugar mejor');
     }
+  }
+
+  /** Revisar la casa donde está el jugador (botón del inventario o tecla H). */
+  checkHouse() {
+    if (this.gs.player.dead) return;
+    this.toggleInventory(false);
+    this.gs.checkHouse();
   }
 
   /** Tocar una casilla de la barra: la selecciona y, en el celular, ajusta el modo (colocar/minar). */
@@ -130,6 +141,7 @@ export class UIScene extends Phaser.Scene {
     this.debug.layout(10, Math.max(54, y === 42 ? hotbarBottom + 8 : 54));
     this.toastY = hotbarBottom + 26;
     this.zoneBanner.layout(W / 2, Math.max(hotbarBottom + 60, H * 0.2));
+    this.houseReport.layout(W / 2, hotbarBottom + 12, W);
     this.layoutToast();
     this.inventoryPanel.layout(W, H);
     this.touchControls.layout(W, H, y === 42 ? hotbarBottom + 28 : 62);

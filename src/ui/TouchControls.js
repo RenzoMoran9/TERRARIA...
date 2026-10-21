@@ -134,6 +134,8 @@ export class TouchControls {
     this.jumpPointer = null;
     this.actionPointer = null;
     this.joyJump = false;
+    this.joyDown = false;
+    this.state.down = false;
     this.state.moveX = 0;
     this.state.jump = false;
     this.state.action = false;
@@ -181,6 +183,7 @@ export class TouchControls {
       if (!jp.isDown) {
         this.joyPointer = null;
         this.joyJump = false;
+        this.joyDown = false;
         st.moveX = 0;
         this.thumb.setPosition(this.bx, this.by);
       } else {
@@ -201,11 +204,14 @@ export class TouchControls {
         }
         // Con la acción apretada, empujar hacia arriba apunta arriba en vez de saltar
         this.joyJump = !st.action && dy / this.radius < -0.65;
+        // Empujar hacia abajo (sin la acción) baja por las plataformas
+        this.joyDown = !st.action && dy / this.radius > 0.65;
       }
     }
 
     // Botón de salto: activo mientras el dedo siga apoyado
     if (this.jumpPointer && !this.jumpPointer.isDown) this.jumpPointer = null;
     st.jump = !!this.jumpPointer || this.joyJump;
+    st.down = !!this.joyDown;
   }
 }

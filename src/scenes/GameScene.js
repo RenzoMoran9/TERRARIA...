@@ -24,6 +24,7 @@ import { Projectiles } from '../systems/Projectiles.js';
 import { ItemDrops } from '../systems/ItemDrops.js';
 import { Zones } from '../systems/Zones.js';
 import { Ambience } from '../systems/Ambience.js';
+import { Housing } from '../systems/Housing.js';
 import { cloneSlots } from '../systems/Inventory.js';
 import { ITEMS, getMaxStack } from '../systems/items.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
@@ -92,6 +93,8 @@ export class GameScene extends Phaser.Scene {
     // Zonas del mundo (cuáles ya se descubrieron) y partículas del clima de cada una
     this.zones = new Zones(this, this.world.generator, Array.isArray(save?.zones) ? save.zones : []);
     this.ambience = new Ambience(this, this.world, this.zones, this.dayNight);
+    // Casas: cuartos cerrados, fachada vista desde afuera y la consulta "Revisar casa"
+    this.housing = new Housing(this, this.world, this.player);
     // Cofres: contenido de cada uno, por la posición de su esquina ("x,y" → casillas)
     this.chests = new Map();
     for (const [key, slots] of Object.entries(save?.chests || {})) {
@@ -166,7 +169,7 @@ export class GameScene extends Phaser.Scene {
     this._actionWasDown = false;
     this.isTouch = window.matchMedia?.('(pointer: coarse)').matches || false;
     this.uiBlocking = false; // true con el inventario abierto
-    this._controls = { moveX: 0, jump: false };
+    this._controls = { moveX: 0, jump: false, down: false };
     this._pointerAction = { x: 0, y: 0, action: null, smart: false, manual: false };
     this._tmpVec = new Phaser.Math.Vector2();
 
@@ -188,9 +191,11 @@ export class GameScene extends Phaser.Scene {
       left: 'LEFT',
       right: 'RIGHT',
       up: 'UP',
+      down: 'DOWN',
       a: 'A',
       d: 'D',
       w: 'W',
+      s: 'S',
       space: 'SPACE',
     });
     this.worldPointer = null; // puntero que empezó a pulsar sobre el mundo
@@ -290,6 +295,7 @@ export class GameScene extends Phaser.Scene {
     this.interaction.update(dt, this.getPointerAction());
     this.lighting.update(dt, cam);
     this.zones.update(dt, cam, this.player);
+    this.housing.update(dt);
     this.ambience.update(dt);
 
     this.autosaveTimer += dt;
@@ -308,6 +314,7 @@ export class GameScene extends Phaser.Scene {
     if (k.right.isDown || k.d.isDown) mx += 1;
     c.moveX = mx !== 0 ? mx : this.touchState.moveX;
     c.jump = k.space.isDown || k.w.isDown || k.up.isDown || this.touchState.jump;
+    c.down = k.s.isDown || k.down.isDown || !!this.touchState.down;
     return c;
   }
 
@@ -630,6 +637,20 @@ export class GameScene extends Phaser.Scene {
     };
   }
 
+  /** "Revisar casa": revisa el cuarto donde está el jugador y muestra qué le falta. */
+  checkHouse() {
+    const p = this.player;
+    const tx = Math.floor(p.centerX / T);
+    let result = this.housing.check(tx, Math.floor(p.centerY / T));
+    if (!result.room) result = this.housing.check(tx, Math.floor((p.y + 4) / T));
+    if (!result.room) {
+      result.checks.push({ ok: false, text: 'Párate dentro de la casa y vuelve a revisar' });
+    }
+    this.housing.showRoom(result);
+    this.events.emit('houseReport', result);
+    return result;
+  }
+
   saveGame(showToast) {
     const ok = SaveSystem.save(this.buildSaveData());
     if (showToast) this.events.emit('toast', ok ? 'Partida guardada' : 'No se pudo guardar');
@@ -651,6 +672,7 @@ export class GameScene extends Phaser.Scene {
     this.projectiles.destroy();
     this.drops.destroy();
     this.ambience.destroy();
+    this.housing.destroy();
     this.player.anim.destroy();
     this.lighting.destroy();
     this.chunkManager.destroy();

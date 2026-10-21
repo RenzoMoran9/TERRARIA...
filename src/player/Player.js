@@ -44,6 +44,7 @@ export class Player {
     this.heldLight = 0; // luz de lo que lleva en la mano (antorcha), la usa Lighting
     this.seat = null; // sentado en una silla o acostado en una cama (ver Furniture)
     this.invuln = 0; // segundos de invulnerabilidad después de un golpe de un enemigo
+    this.dropTimer = 0; // bajando por una plataforma (mientras tanto las plataformas no frenan)
 
     // Sprite, animaciones y efectos
     this.anim = new PlayerAnimator(scene, this);
@@ -66,9 +67,10 @@ export class Player {
     return this.y + this.h / 2;
   }
 
-  /** controls: { moveX: -1..1, jump: boolean } */
+  /** controls: { moveX: -1..1, jump: boolean, down: boolean } */
   update(dt, controls) {
     this.invuln = Math.max(0, this.invuln - dt);
+    this.dropTimer = Math.max(0, this.dropTimer - dt);
     if (this.dead) {
       this.anim.update(dt);
       return;
@@ -120,6 +122,13 @@ export class Player {
       this.jumping = false;
     }
     if (this.vy >= 0) this.jumping = false;
+
+    // --- Bajar por una plataforma (abajo, como en Terraria) ---
+    if (controls.down && this.onGround && this.onPlatform()) {
+      this.dropTimer = 0.22;
+      this.onGround = false;
+      this.y += 2;
+    }
 
     // --- Gravedad ---
     this.vy = Math.min(this.vy + P.GRAVITY * dt, P.MAX_FALL);
@@ -259,6 +268,30 @@ export class Player {
     }
   }
 
+  /** ¿Está parado sobre una plataforma (y no sobre un bloque sólido)? */
+  onPlatform() {
+    const T = TILE_SIZE;
+    const ty = Math.floor((this.y + this.h + 1) / T);
+    let platform = false;
+    for (let tx = Math.floor(this.x / T); tx <= Math.floor((this.x + this.w - EPS) / T); tx++) {
+      if (this.world.isSolid(tx, ty)) return false;
+      if (this.world.isPlatform(tx, ty)) platform = true;
+    }
+    return platform;
+  }
+
+  /** Al bajar, ¿los pies cruzan el borde de arriba de una plataforma? Devuelve la fila o -1. */
+  platformBelow(y, ny) {
+    if (this.dropTimer > 0) return -1;
+    const T = TILE_SIZE;
+    const row = Math.floor((ny + this.h - EPS) / T);
+    if (y + this.h > row * T + EPS) return -1; // ya estaba más abajo del borde
+    for (let tx = Math.floor(this.x / T); tx <= Math.floor((this.x + this.w - EPS) / T); tx++) {
+      if (this.world.isPlatform(tx, row)) return row;
+    }
+    return -1;
+  }
+
   moveY(dy) {
     const T = TILE_SIZE;
     this.onGround = false;
@@ -266,6 +299,13 @@ export class Player {
       const step = dy > 0 ? Math.min(dy, MAX_STEP) : Math.max(dy, -MAX_STEP);
       dy -= step;
       const ny = this.y + step;
+      const row = step > 0 ? this.platformBelow(this.y, ny) : -1;
+      if (row >= 0) {
+        this.y = row * T - this.h;
+        this.onGround = true;
+        this.vy = 0;
+        break;
+      }
       if (!this.collides(this.x, ny)) {
         this.y = ny;
         continue;
