@@ -630,6 +630,8 @@ export const audio = new AudioEngine();
 
 // El primer toque o tecla habilita el sonido (requisito de los navegadores)
 if (typeof window !== 'undefined') {
+  window.__audio = audio; // para depurar desde la consola (como window.__game)
   const unlock = () => audio.unlock();
-  for (const ev of ['pointerdown', 'keydown', 'touchend']) window.addEventListener(ev, unlock, { passive: true });
+  // (al tocar la pantalla, el navegador recién lo permite al levantar el dedo)
+  for (const ev of ['pointerup', 'mousedown', 'keydown', 'touchend']) window.addEventListener(ev, unlock, { passive: true });
 }

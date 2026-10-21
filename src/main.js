@@ -29,7 +29,7 @@ const config = {
     powerPreference: 'high-performance',
   },
   fps: { target: 60 },
-  audio: { noAudio: true }, // la Fase 1 no tiene sonido
+  audio: { noAudio: true }, // el sonido y la música los hace systems/Audio.js (WebAudio propio)
   // El orden importa: el fondo se dibuja primero (debajo), la interfaz al final (encima)
   scene: [BootScene, BackgroundScene, MenuScene, GameScene, UIScene],
 };
