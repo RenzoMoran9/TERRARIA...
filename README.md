@@ -123,6 +123,9 @@ Las puertas se abren solas al caminar contra ellas y se cierran al alejarse. Par
   botones *Guardar todo* (la mochila, sin la barra rápida) y *Sacar todo*. Un cofre con cosas no se puede romper;
   si se le quita el suelo, se cae y suelta lo que tenía. Se cierra solo si te alejas.
 - **Inventario**: 36 casillas (9 de barra rápida), pilas de hasta 99.
+  **Información de los ítems**: mantener apretada una casilla (celular) o pasar el ratón (PC) muestra qué es y sus
+  datos: daño, velocidad, daño por segundo, alcance y empuje de las armas; poder y velocidad de los picos; para qué
+  sirve cada material o mueble. Funciona en la barra rápida, el inventario, los cofres y la lista de recetas.
 - **Crafteo**: Madera → Tablones → Mesa de trabajo; cerca de la mesa: Pico de madera y Pico de piedra (más rápido).
   Antorchas: 1 madera + 1 carbón → 4 (o 1 madera + 1 gel → 3). Cerca de la mesa: espada de madera (7 tablones) y
   de piedra (3 tablones + 10 piedra); para las casas: martillo de madera (8 tablones),

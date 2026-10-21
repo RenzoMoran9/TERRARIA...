@@ -19,7 +19,8 @@ export class Hotbar {
     for (let i = 0; i < HOTBAR_SIZE; i++) {
       const x = i * (SLOT + GAP);
       const bg = scene.add.image(x, 0, 'ui_slot').setOrigin(0).setDisplaySize(SLOT, SLOT).setInteractive();
-      bg.on('pointerdown', () => scene.onHotbarTap(i));
+      // Toque: elegir la casilla. Mantener apretado (o pasar el ratón): información del ítem
+      scene.tooltip.attach(bg, () => inventory.slots[i]?.id, () => scene.onHotbarTap(i));
       const icon = scene.add.image(x + SLOT / 2, SLOT / 2, 'ui_slot').setVisible(false);
       const count = scene.add.text(x + SLOT - 3, SLOT - 1, '', textStyle({ fontSize: '13px' })).setOrigin(1, 1);
       const num = scene.add.text(x + 4, 2, String(i + 1), textStyle({ fontSize: '10px', strokeThickness: 2, color: '#d0d0e0' }));

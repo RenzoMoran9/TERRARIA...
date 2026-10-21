@@ -95,11 +95,15 @@ export class InventoryPanel {
       // La primera fila (barra rápida) va separada del resto
       const y = GRID_Y + row * (SLOT + GAP) + (row > 0 ? 8 : 0);
       const bg = scene.add.image(x, y, 'ui_slot').setOrigin(0).setDisplaySize(SLOT, SLOT).setInteractive();
-      bg.on('pointerdown', (pointer) => {
-        // Con un cofre abierto, tocar una casilla pasa esa pila al cofre
-        if (this.chest && !this.inv.held) this.moveToChest(i);
-        else this.inv.clickSlot(i, pointer.rightButtonDown());
-      });
+      scene.tooltip.attach(
+        bg,
+        () => this.inv.slots[i]?.id,
+        (pointer) => {
+          // Con un cofre abierto, tocar una casilla pasa esa pila al cofre
+          if (this.chest && !this.inv.held) this.moveToChest(i);
+          else this.inv.clickSlot(i, pointer.rightButtonDown());
+        },
+      );
       const icon = scene.add.image(x + SLOT / 2, y + SLOT / 2, 'ui_slot').setVisible(false);
       const count = scene.add.text(x + SLOT - 3, y + SLOT - 1, '', textStyle({ fontSize: '13px' })).setOrigin(1, 1);
       this.container.add([bg, icon, count]);
@@ -132,6 +136,8 @@ export class InventoryPanel {
         this.drag = null;
         if (d && d.pointer === pointer && !d.moved) this.selectRecipe(this.scroll + k);
       });
+      // Mantener apretada una receta (o pasar el ratón): información de lo que fabrica
+      scene.tooltip.attach(bg, () => RECIPES[this.scroll + k]?.result, null);
       const icon = scene.add.image(CRAFT_X + 16, y + ROW_H / 2, 'ui_slot').setDisplaySize(24, 24);
       const name = scene.add.text(CRAFT_X + 32, y + 1, '', textStyle({ fontSize: '13px' }));
       const ingredients = scene.add.text(CRAFT_X + 32, y + 16, '', textStyle({ fontSize: '10px', strokeThickness: 2, color: '#d8d8d8' }));
@@ -195,7 +201,7 @@ export class InventoryPanel {
       const x = CRAFT_X + (i % 6) * (CS + CG) + 4;
       const y = 52 + Math.floor(i / 6) * (CS + CG);
       const bg = scene.add.image(x, y, 'ui_slot').setOrigin(0).setDisplaySize(CS, CS).setInteractive();
-      bg.on('pointerdown', () => this.moveFromChest(i));
+      scene.tooltip.attach(bg, () => this.chest?.[i]?.id, () => this.moveFromChest(i));
       const icon = scene.add.image(x + CS / 2, y + CS / 2, 'ui_slot').setVisible(false);
       const count = scene.add.text(x + CS - 3, y + CS - 1, '', textStyle({ fontSize: '12px' })).setOrigin(1, 1);
       this.chestObjects.push(bg, icon, count);
@@ -334,6 +340,7 @@ export class InventoryPanel {
   }
 
   close() {
+    this.scene.tooltip.hide();
     this._leaveChestMode();
     this.isOpen = false;
     this.holdPointer = null;
@@ -455,7 +462,10 @@ export class InventoryPanel {
       if (!d.pointer.isDown) this.drag = null;
       else {
         const dy = (d.pointer.y - d.startY) / this.scale;
-        if (Math.abs(dy) > 8) d.moved = true;
+        if (Math.abs(dy) > 8) {
+          d.moved = true;
+          this.scene.tooltip.cancel(); // arrastrando la lista: no es "mantener apretado"
+        }
         if (d.moved) this.scrollTo(d.startScroll - dy / (ROW_H + ROW_GAP));
       }
     }

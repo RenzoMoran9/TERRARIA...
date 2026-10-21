@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { HUD, HUD_SIDE_SPACE } from '../ui/HUD.js';
+import { ItemTooltip } from '../ui/ItemTooltip.js';
 import { Hotbar, HOTBAR_WIDTH, HOTBAR_HEIGHT } from '../ui/Hotbar.js';
 import { InventoryPanel } from '../ui/InventoryPanel.js';
 import { TouchControls } from '../ui/TouchControls.js';
@@ -22,6 +23,8 @@ export class UIScene extends Phaser.Scene {
 
     this.debug = new DebugOverlay(this, gs);
     this.hud = new HUD(this, gs);
+    // Información de los ítems al mantener apretada una casilla (o al pasar el ratón)
+    this.tooltip = new ItemTooltip(this);
     this.hotbar = new Hotbar(this, gs.inventory);
     this.inventoryPanel = new InventoryPanel(this, gs);
     this.touchControls = new TouchControls(this, gs);
