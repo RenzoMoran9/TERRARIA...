@@ -300,6 +300,13 @@ class Enemy {
     const dx = player.centerX - this.centerX;
     const near = !player.dead && Math.abs(dx) < 40 * T && Math.abs(player.centerY - this.centerY) < 20 * T;
     const wasOnGround = this.onGround;
+    // De vez en cuando se los oye: gruñidos de zombi, chillidos de los voladores
+    this.voiceTimer = (this.voiceTimer ?? 2 + Math.random() * 6) - dt;
+    if (this.voiceTimer <= 0) {
+      this.voiceTimer = 4 + Math.random() * 6;
+      const voice = this.def.flyer ? 'flyer' : this.type === 'zombie' ? 'zombie' : null;
+      if (near && voice) audio.play(voice, { x: this.centerX, y: this.centerY });
+    }
     if (this.def.flyer) {
       this._fly(dt, player, near);
       this.sync();
@@ -329,6 +336,7 @@ class Enemy {
     this.vx = dir * (90 + Math.random() * 70);
     this.vy = big ? -620 : -430;
     this.facing = dir;
+    if (near) audio.play('slimeHop', { x: this.centerX, y: this.centerY });
   }
 
   /**

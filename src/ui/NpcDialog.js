@@ -199,14 +199,14 @@ export class NpcDialog {
       }
       gs.coins -= e.price;
       gs.inventory.add(e.id, e.n);
-      audio.play('pickup');
+      audio.play('coin');
       this.say(`Compraste ${ITEMS[e.id].name}${e.n > 1 ? ` ×${e.n}` : ''}. ¡Gracias!`);
     } else if (this.mode === 'sell') {
       const s = gs.inventory.slots[e.slot];
       if (!s) return;
       gs.inventory.removeFromSlot(e.slot, 1);
       gs.coins += e.price;
-      audio.play('pickup');
+      audio.play('coin');
       this.say(`Vendiste 1 ${ITEMS[e.id].name} por ${formatCoins(e.price)}.`);
     }
     this.refresh();

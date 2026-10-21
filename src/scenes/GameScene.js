@@ -660,7 +660,7 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.centerOn(p.centerX, p.centerY);
     this.spawnSparkles(p.centerX, p.centerY, 24, 0x9be7ff);
     this.enemies.clearNear(p.centerX, p.centerY, 30);
-    audio.play('zone');
+    audio.play('teleport');
     this.events.emit('toast', spot.bed ? 'De vuelta en tu cama' : 'De vuelta al inicio (duerme en una cama para que sea tu casa)');
   }
 
@@ -801,7 +801,7 @@ export class GameScene extends Phaser.Scene {
       this.potionSickness = 45;
       this.showFloatingText(p.centerX, p.y - 8, `+${Math.round(p.health - before)}`, '#7dff8a', 16);
       this.spawnSparkles(p.centerX, p.centerY, 12, 0xff6a8a);
-      audio.play('learn');
+      audio.play('drink');
     } else if (use.recall) {
       this.recallHome();
       if (use.keep) return true; // el espejo mágico no se gasta

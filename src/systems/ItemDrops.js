@@ -136,7 +136,7 @@ export class ItemDrops {
       // Monedas: a la bolsa de monedas (no ocupan lugar en el inventario)
       this.scene.addCoins(ITEMS[d.id].coin * d.count, this.player.centerX, this.player.y - 6);
       d.dead = true;
-      audio.play('pickup', { vol: 1.2 });
+      audio.play('coin');
       return;
     }
     audio.play('pickup');

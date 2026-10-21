@@ -261,15 +261,20 @@ Las puertas se abren solas al caminar contra ellas y se cierran al alejarse. Par
   de piedra (3 tablones + 10 piedra); para las casas: martillo de madera (8 tablones),
   paredes ×4 (1 tablón, 1 piedra o 1 tierra), puerta (6 tablones), silla (4), mesa (8) y cama (15 tablones + 5 madera).
   La lista de recetas se desplaza con la rueda del ratón, arrastrando con el dedo o con las flechas ▲▼.
-- **Sonido y música** (hechos por código con WebAudio, sin archivos): efectos al minar (distinto en tierra,
-  piedra y madera), romper, colocar, talar, recoger, pasos, saltar, aterrizar, golpes de espada, impactos, enemigos
-  que mueren, daño, arcos, cuchillos, bola de fuego y explosiones, embestida, golpe sísmico, lava, puertas, cofres,
-  crafteo, subir de nivel, zona descubierta y casa válida. Los sonidos lejanos se oyen más bajo.
-  **Música generativa** que cambia con suavidad según dónde estás: menú, bosque de día y de noche, cuevas,
-  desierto (escala árabe con tambores de mano), tundra (campanas), selva (marimba y percusión), Tierras Sombrías,
-  Tierras de Cristal y volcán (tambores graves); se compone sola con variaciones. Botón **Sonido** en el menú y en
-  el inventario: todo → sin música → apagado (se recuerda). El sonido empieza con el primer toque o tecla
+- **Sonido y música**: **sonidos reales** (generados con IA de efectos de sonido, en `src/sounds/`) para minar
+  (distinto en tierra, piedra y madera, con variantes), romper, colocar, talar, recoger, monedas, pasos, saltar,
+  aterrizar (más fuerte cuanto más alto), espadas, impactos, arcos, cuchillos, bola de fuego, explosiones,
+  embestida, golpe sísmico, lava, puertas, cofres, crafteo, beber pociones, el espejo mágico, subir de nivel,
+  zona descubierta y casa válida. Los **monstruos se oyen**: gruñidos de zombis, slimes que rebotan, chillidos de
+  los voladores. Cada sonido varía un poco de tono para no repetirse, y los lejanos suenan más bajo.
+  **Ambiente de cada zona** que se funde al cambiar: pájaros en el bosque de día, grillos y búho de noche, viento
+  en el desierto y la tundra, selva, Tierras Sombrías, cristales, volcán, goteo en las cuevas, cuevas de hongos,
+  viento en las islas y lava en el inframundo.
+  **Música generativa** (hecha por código) que cambia con suavidad según dónde estás. Botón **Sonido** en el menú y
+  en el inventario: todo → sin música → apagado (se recuerda). El sonido empieza con el primer toque o tecla
   (los navegadores no permiten sonar antes).
+  **Cambiar un sonido**: reemplaza el archivo `src/sounds/nombre_0.mp3` (o agrega `nombre_1.mp3`, `nombre_2.mp3`…
+  como variantes que se eligen al azar). Si falta el archivo de un efecto, el juego lo sintetiza.
 - **Día y noche**: ciclo de 10 minutos con amanecer y atardecer graduales. La luz se propaga por bloques:
   bajo tierra está oscuro y las antorchas iluminan alrededor.
 - **Vida**: barra de vida, daño por caídas de más de 12 bloques, regeneración lenta y reaparición en el punto de inicio.

@@ -1,6 +1,9 @@
 // =====================================================================
-//  Sonido y música hechos por código (WebAudio): no hace falta ningún archivo.
-//  - Efectos: sintetizados al momento (osciladores + ruido filtrado).
+//  Sonido y música (WebAudio).
+//  - Efectos: sonidos reales en src/sounds (nombre_0.mp3, nombre_1.mp3… = variantes que
+//    se eligen al azar). Si falta el archivo de un efecto, se sintetiza al momento
+//    (osciladores + ruido filtrado), así que reemplazar o quitar archivos nunca rompe nada.
+//  - Ambiente: un sonido de fondo que se repite según la zona (pájaros, viento, lava…).
 //  - Música: se compone sola según el ánimo (zona, día/noche, cuevas) con una
 //    progresión de acordes, un bajo, un colchón suave y una melodía.
 //  El navegador solo deja sonar audio después de que el jugador toca o aprieta algo:
@@ -13,6 +16,15 @@ const SETTINGS_KEY = 'terra2d-audio';
 const MASTER = 0.9;
 const SFX_VOL = 0.55;
 const MUSIC_VOL = 0.2;
+const AMBIENCE_VOL = 0.4;
+
+// Sonidos reales: { 'step_0': url, ... } (Vite los empaqueta; en la versión de una sola página van adentro)
+const SAMPLE_URLS = import.meta.glob('../sounds/*.mp3', { eager: true, query: '?url', import: 'default' });
+// Volumen de cada sonido real (1 = normal): los que suenan muy seguido van más bajos
+const SAMPLE_VOL = {
+  step: 0.3, dig_soft: 0.55, dig_stone: 0.5, dig_wood: 0.55, swing: 0.5, pickup: 0.45, coin: 0.5, xp: 0.35, click: 0.45,
+  place: 0.8, jump: 0.45, zombie: 0.5, slimeHop: 0.4, flyer: 0.45, drink: 0.8, teleport: 0.8, land: 0.55, hit: 0.75, hurt: 0.8, open: 0.5, lava: 0.7, levelUp: 0.8, zone: 0.75, house: 0.8,
+};
 
 const midiHz = (m) => 440 * 2 ** ((m - 69) / 12);
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -59,6 +71,9 @@ class AudioEngine {
       // sin almacenamiento: valores por defecto
     }
     this.listener = null; // objeto con centerX/centerY (el jugador): los sonidos lejanos suenan más bajo
+    this.samples = {}; // nombre → [AudioBuffer] (variantes)
+    this.ambience = null; // { name, src, gain } que suena ahora
+    this.wantedAmbience = null;
     this.last = {}; // último momento de cada efecto (para no amontonar el mismo sonido)
     this.mood = null;
     this.wantedMood = 'menu';
@@ -84,6 +99,10 @@ class AudioEngine {
       this.sfxBus = c.createGain();
       this.sfxBus.gain.value = this.settings.sfx ? SFX_VOL : 0;
       this.sfxBus.connect(this.master);
+      this.ambBus = c.createGain();
+      this.ambBus.gain.value = this.settings.sfx ? AMBIENCE_VOL : 0;
+      this.ambBus.connect(this.master);
+      this._loadSamples();
       this.musicBus = c.createGain();
       this.musicBus.gain.value = this.settings.music ? MUSIC_VOL : 0;
       this.musicBus.connect(this.master);
@@ -143,6 +162,7 @@ class AudioEngine {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
     this.sfxBus.gain.setTargetAtTime(this.settings.sfx ? SFX_VOL : 0, t, 0.05);
+    this.ambBus.gain.setTargetAtTime(this.settings.sfx ? AMBIENCE_VOL : 0, t, 0.2);
     this.musicBus.gain.setTargetAtTime(this.settings.music ? MUSIC_VOL : 0, t, 0.2);
   }
 
@@ -159,6 +179,67 @@ class AudioEngine {
     g.gain.value = v;
     g.connect(this.sfxBus);
     return g;
+  }
+
+  /** Carga y decodifica los sonidos reales (en segundo plano: mientras tanto suenan los sintetizados). */
+  _loadSamples() {
+    for (const [path, url] of Object.entries(SAMPLE_URLS)) {
+      const m = path.match(/([A-Za-z_]+?)_(\d+)\.mp3$/);
+      if (!m) continue;
+      const name = m[1];
+      fetch(url)
+        .then((r) => r.arrayBuffer())
+        .then((data) => this.ctx.decodeAudioData(data))
+        .then((buf) => {
+          (this.samples[name] ||= []).push(buf);
+          if (name === this.wantedAmbience) this._switchAmbience();
+        })
+        .catch((e) => console.warn('[sonido] No se pudo cargar', path, e));
+    }
+  }
+
+  /** Toca un sonido real (una variante al azar, con un poquito de cambio de tono). */
+  _playSample(name, out, opts) {
+    const list = this.samples[name];
+    const src = this.ctx.createBufferSource();
+    src.buffer = list[Math.floor(Math.random() * list.length)];
+    src.playbackRate.value = opts.rate ?? rand(0.94, 1.06);
+    src.connect(out);
+    src.start();
+  }
+
+  // ------------------------------------------------------------ ambiente
+
+  /** Sonido de fondo de la zona (se cambia con un fundido). null = silencio. */
+  setAmbience(name) {
+    if (this.wantedAmbience === name) return;
+    this.wantedAmbience = name;
+    if (this.ready) this._switchAmbience();
+  }
+
+  _switchAmbience() {
+    const c = this.ctx;
+    const name = this.wantedAmbience;
+    const cur = this.ambience;
+    if (cur && cur.name === name) return;
+    const buf = name && this.samples[name]?.[0];
+    if (!buf && name) return; // todavía se está cargando: se cambia cuando llegue
+    const t = c.currentTime;
+    if (cur) {
+      cur.gain.gain.setTargetAtTime(0, t, 0.6);
+      cur.src.stop(t + 3);
+    }
+    this.ambience = null;
+    if (!buf) return;
+    const src = c.createBufferSource();
+    src.buffer = buf;
+    src.loop = true;
+    const gain = c.createGain();
+    gain.gain.value = 0;
+    gain.gain.setTargetAtTime(1, t, 0.8);
+    src.connect(gain).connect(this.ambBus);
+    src.start(t, Math.random() * buf.duration);
+    this.ambience = { name, src, gain };
   }
 
   /** Tono con envolvente: f0 → f1 (Hz) en dur segundos. */
@@ -215,6 +296,11 @@ class AudioEngine {
     const now = this.ctx.currentTime;
     if (now - (this.last[name] ?? -1) < (fx.gap ?? 0.03)) return; // evita amontonar el mismo sonido
     this.last[name] = now;
+    if (this.samples[name]) {
+      const fall = opts.fall !== undefined ? Math.min(1.2, 0.4 + opts.fall / 8) : 1; // aterrizajes: más fuerte cuanto más alto
+      this._playSample(name, this._out((SAMPLE_VOL[name] ?? 1) * (opts.vol ?? 1) * fall, opts.x, opts.y), opts);
+      return;
+    }
     const out = this._out((fx.vol ?? 1) * (opts.vol ?? 1), opts.x, opts.y);
     fx.fn(this, out, opts);
   }
@@ -224,6 +310,8 @@ class AudioEngine {
   /** Elige el ánimo de la música (se cambia con un fundido). */
   setMood(mood) {
     this.wantedMood = MOODS[mood] ? mood : 'day';
+    // El ambiente acompaña a la música: pájaros de día, grillos de noche, viento en la nieve…
+    this.setAmbience(mood === 'menu' ? 'amb_day' : `amb_${this.wantedMood}`);
   }
 
   _schedule() {
@@ -490,6 +578,12 @@ const SFX = {
       a.noise(o, { f0: 2000, f1: 600, dur: 0.18, vol: 0.2 });
     },
   },
+  coin: { gap: 0.05, fn: (a, o) => [0, 0.06].forEach((d) => a.tone(o, { type: 'square', f0: 1800, f1: 2400, dur: 0.06, vol: 0.12, delay: d })) },
+  zombie: { gap: 1.2, fn: (a, o) => a.tone(o, { type: 'sawtooth', f0: 110, f1: 80, dur: 0.6, vol: 0.12, attack: 0.1 }) },
+  slimeHop: { gap: 0.25, fn: (a, o) => a.tone(o, { type: 'sine', f0: 180, f1: 420, dur: 0.12, vol: 0.2 }) },
+  flyer: { gap: 1, fn: (a, o) => a.tone(o, { type: 'square', f0: 2400, f1: 1600, dur: 0.12, vol: 0.06 }) },
+  drink: { gap: 0.3, fn: (a, o) => [0, 0.18].forEach((d) => a.tone(o, { type: 'sine', f0: 320, f1: 200, dur: 0.12, vol: 0.25, delay: d })) },
+  teleport: { gap: 0.3, fn: (a, o) => a.tone(o, { type: 'sine', f0: 400, f1: 1600, dur: 0.5, vol: 0.25 }) },
   land: {
     gap: 0.1,
     fn: (a, o, { fall = 1 }) => {
