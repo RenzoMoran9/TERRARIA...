@@ -13,11 +13,13 @@ const GRID_Y = 42;
 const GRID_W = HOTBAR_SIZE * (SLOT + GAP) - GAP;
 const CRAFT_X = PAD + GRID_W + PAD;
 const CRAFT_W = 270;
-const ROW_H = 34;
-const ROW_GAP = 4;
+const ROW_H = 30;
+const ROW_GAP = 3;
 const ROWS_Y = 56;
+const VISIBLE_ROWS = 6; // recetas visibles a la vez (la lista se desplaza)
+const LIST_W = CRAFT_W - 22; // a la derecha va la barra para desplazar
 const PANEL_W = CRAFT_X + CRAFT_W + PAD;
-const PANEL_H = 330;
+const PANEL_H = 350;
 const BUTTON_H = 36;
 const FOOT_Y = PANEL_H - PAD - BUTTON_H / 2; // centro de la fila de botones de abajo
 const REPEAT_DELAY = 450; // ms antes de repetir al mantener "Craftear"
@@ -99,28 +101,46 @@ export class InventoryPanel {
     this.stationText = scene.add.text(CRAFT_X, 34, '', textStyle({ fontSize: '12px', color: '#c8c8d8' }));
     this.container.add(this.stationText);
 
-    // Lista de recetas: tocar una la SELECCIONA (no la fabrica)
-    this.rows = RECIPES.map((recipe, i) => {
-      const y = ROWS_Y + i * (ROW_H + ROW_GAP);
+    // Lista de recetas (se desplaza): tocar una la SELECCIONA (no la fabrica).
+    // Hay VISIBLE_ROWS filas fijas que muestran las recetas desde this.scroll.
+    this.scroll = 0;
+    this.drag = null; // arrastre del dedo/ratón sobre la lista
+    this.rows = [];
+    for (let k = 0; k < VISIBLE_ROWS; k++) {
+      const y = ROWS_Y + k * (ROW_H + ROW_GAP);
       const bg = scene.add
-        .rectangle(CRAFT_X, y, CRAFT_W, ROW_H, COLORS.notCraftable, 0.9)
+        .rectangle(CRAFT_X, y, LIST_W, ROW_H, COLORS.notCraftable, 0.9)
         .setOrigin(0)
         .setStrokeStyle(1, 0xffffff, 0.25)
         .setInteractive({ useHandCursor: true });
-      bg.on('pointerdown', () => this.selectRecipe(i));
-      const item = ITEMS[recipe.result];
-      const icon = scene.add.image(CRAFT_X + 18, y + ROW_H / 2, item.icon).setDisplaySize(26, 26);
-      const name = scene.add.text(CRAFT_X + 36, y + 2, `${item.name} ×${recipe.count}`, textStyle({ fontSize: '14px' }));
-      const ingredients = scene.add.text(CRAFT_X + 36, y + 18, describeIngredients(recipe), textStyle({ fontSize: '11px', strokeThickness: 2, color: '#d8d8d8' }));
-      const tag = scene.add
-        .text(CRAFT_X + CRAFT_W - 6, y + 3, recipe.station ? 'Mesa' : '', textStyle({ fontSize: '10px', strokeThickness: 2, color: '#ffd54f' }))
-        .setOrigin(1, 0);
+      bg.on('pointerdown', (pointer) => {
+        this.drag = { pointer, startY: pointer.y, startScroll: this.scroll, moved: false };
+      });
+      bg.on('pointerup', (pointer) => {
+        const d = this.drag;
+        this.drag = null;
+        if (d && d.pointer === pointer && !d.moved) this.selectRecipe(this.scroll + k);
+      });
+      const icon = scene.add.image(CRAFT_X + 16, y + ROW_H / 2, 'ui_slot').setDisplaySize(24, 24);
+      const name = scene.add.text(CRAFT_X + 32, y + 1, '', textStyle({ fontSize: '13px' }));
+      const ingredients = scene.add.text(CRAFT_X + 32, y + 16, '', textStyle({ fontSize: '10px', strokeThickness: 2, color: '#d8d8d8' }));
+      const tag = scene.add.text(CRAFT_X + LIST_W - 5, y + 2, '', textStyle({ fontSize: '10px', strokeThickness: 2, color: '#ffd54f' })).setOrigin(1, 0);
       this.container.add([bg, icon, name, ingredients, tag]);
-      return { recipe, bg, icon, name, ingredients, craftable: null };
-    });
+      this.rows.push({ bg, icon, name, ingredients, tag, index: -1, craftable: null });
+    }
+    // Barra para desplazar: ▲, ▼ y la posición actual
+    const listH = VISIBLE_ROWS * (ROW_H + ROW_GAP) - ROW_GAP;
+    const sx = CRAFT_X + CRAFT_W - 9;
+    this.container.add(scene.add.rectangle(sx, ROWS_Y + listH / 2, 8, listH - 52, 0x000000, 0.35));
+    this.scrollThumb = scene.add.rectangle(sx, ROWS_Y, 8, 20, 0xffd84a, 0.9);
+    this.container.add(this.scrollThumb);
+    this.container.add(createButton(scene, sx, ROWS_Y + 11, 18, 22, '▲', () => this.scrollBy(-1), { fontSize: '11px' }));
+    this.container.add(createButton(scene, sx, ROWS_Y + listH - 11, 18, 22, '▼', () => this.scrollBy(1), { fontSize: '11px' }));
+    this.listTop = ROWS_Y;
+    this.listH = listH;
 
     // Detalle de la receta elegida: qué se necesita y cuánto tienes
-    const detailY = ROWS_Y + RECIPES.length * (ROW_H + ROW_GAP) + 2;
+    const detailY = ROWS_Y + listH + 4;
     this.detailText = scene.add.text(CRAFT_X, detailY, '', textStyle({ fontSize: '12px', strokeThickness: 2, wordWrap: { width: CRAFT_W } }));
     this.container.add(this.detailText);
 
@@ -148,8 +168,22 @@ export class InventoryPanel {
     this.craftBtnBg.on('pointerout', release);
   }
 
+  /** Desplaza la lista de recetas (positivo = hacia abajo). */
+  scrollBy(rows) {
+    this.scrollTo(this.scroll + rows);
+  }
+
+  scrollTo(first) {
+    const max = Math.max(0, RECIPES.length - VISIBLE_ROWS);
+    const s = Math.max(0, Math.min(max, Math.round(first)));
+    if (s === this.scroll) return;
+    this.scroll = s;
+    this.refreshCrafting(true);
+  }
+
   /** Elige una receta de la lista (se marca y se muestra su detalle). */
   selectRecipe(index) {
+    if (index < 0 || index >= RECIPES.length) return;
     this.selectedRecipe = index;
     this.feedback = null; // al elegir otra receta se muestra lo que necesita
     this.refreshCrafting(true);
@@ -238,8 +272,25 @@ export class InventoryPanel {
       );
     }
     let changed = force || stationChanged;
-    this.rows.forEach((row, i) => {
-      const ok = canCraft(this.inv, row.recipe, stations);
+    this.rows.forEach((row, k) => {
+      const i = this.scroll + k;
+      const recipe = RECIPES[i];
+      if (row.index !== i) {
+        // Esta fila ahora muestra otra receta
+        row.index = i;
+        row.craftable = null;
+        const visible = !!recipe;
+        for (const o of [row.bg, row.icon, row.name, row.ingredients, row.tag]) o.setVisible(visible);
+        if (visible) {
+          const item = ITEMS[recipe.result];
+          row.icon.setTexture(item.icon).setDisplaySize(24, 24);
+          row.name.setText(`${item.name} ×${recipe.count}`);
+          row.ingredients.setText(describeIngredients(recipe));
+          row.tag.setText(recipe.station ? 'Mesa' : '');
+        }
+      }
+      if (!recipe) return;
+      const ok = canCraft(this.inv, recipe, stations);
       if (force || ok !== row.craftable) {
         changed = true;
         row.craftable = ok;
@@ -250,6 +301,10 @@ export class InventoryPanel {
       const selected = i === this.selectedRecipe;
       row.bg.setStrokeStyle(selected ? 3 : 1, selected ? 0xffd84a : 0xffffff, selected ? 1 : 0.25);
     });
+    // Posición en la barra de desplazamiento
+    const max = Math.max(1, RECIPES.length - VISIBLE_ROWS);
+    const track = this.listH - 52 - 20;
+    this.scrollThumb.setY(this.listTop + 26 + 10 + (track * this.scroll) / max);
     if (changed) this._refreshDetail(stations);
   }
 
@@ -281,6 +336,16 @@ export class InventoryPanel {
       const p = this.scene.input.activePointer;
       this.heldIcon.setPosition(p.x, p.y);
       this.heldCount.setPosition(p.x + this.heldIconSize / 2 + 2, p.y + this.heldIconSize / 2 + 2);
+    }
+    // Arrastrar la lista de recetas con el dedo (o el ratón) la desplaza
+    const d = this.drag;
+    if (d) {
+      if (!d.pointer.isDown) this.drag = null;
+      else {
+        const dy = (d.pointer.y - d.startY) / this.scale;
+        if (Math.abs(dy) > 8) d.moved = true;
+        if (d.moved) this.scrollTo(d.startScroll - dy / (ROW_H + ROW_GAP));
+      }
     }
     // Mantener apretado "Craftear" fabrica varias veces seguidas
     if (this.holdPointer) {

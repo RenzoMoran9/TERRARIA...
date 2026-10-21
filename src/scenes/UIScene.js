@@ -45,7 +45,12 @@ export class UIScene extends Phaser.Scene {
     });
     // Rueda del ratón: cambia de casilla en la barra rápida
     this.input.on('wheel', (pointer, over, dx, dy) => {
-      if (this.inventoryPanel.isOpen || dy === 0) return;
+      if (dy === 0) return;
+      // Con el inventario abierto, la rueda desplaza la lista de recetas
+      if (this.inventoryPanel.isOpen) {
+        this.inventoryPanel.scrollBy(dy > 0 ? 1 : -1);
+        return;
+      }
       gs.inventory.select(gs.inventory.selected + (dy > 0 ? 1 : -1));
     });
     // Detectar si se está usando táctil o ratón (cambia los controles en vivo)

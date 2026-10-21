@@ -128,8 +128,17 @@ export class PlayerAnimator {
     this.scene.spawnSparkles(p.centerX, p.y + 6, 10);
   }
 
+  /** Se levantó de la silla o de la cama (de la cama, bostezando). */
+  standUp(seat) {
+    this.sx = 0.9;
+    this.sy = 1.1;
+    this.sprite.setAngle(0);
+    if (seat.kind === 'bed') this.play('yawn', 1.4);
+  }
+
   /** Coloca un bloque: estira el brazo y se ve el bloque en la mano un instante. */
   use(icon) {
+    this.player.standUp(); // para usar algo hay que estar de pie
     this.useIcon = icon;
     this.play('use', 0.2);
     this.wake();
@@ -140,6 +149,7 @@ export class PlayerAnimator {
    * (x, y) = centro del bloque, color = color de las chispas, speed = rapidez del pico.
    */
   swing(icon, x, y, color, speed) {
+    this.player.standUp();
     this._swingReq = { icon, x, y, color, speed };
     this.wake();
   }
@@ -194,6 +204,9 @@ export class PlayerAnimator {
       if (this.spawnTime >= 0.5) this.spawnTime = -1;
     }
 
+    // Acostado en la cama: el personaje se dibuja girado 90°
+    if (!p.dead) this.sprite.setAngle(p.seat && p.seat.kind === 'bed' ? p.seat.angle : 0);
+
     const f = this.frames > this.frame ? this.frame : 0; // hoja propia con menos cuadros: se usa el primero
     this.sprite.setFrame(f, false, false);
     const fw = this.sprite.frame.width;
@@ -214,6 +227,18 @@ export class PlayerAnimator {
     // Festejo y saludo se cortan al empezar a correr
     if (a && (a.name === 'cheer' || a.name === 'wave') && speed > 60) this.action = null;
 
+    // Sentado en la silla, o durmiendo en la cama con "zzz"
+    if (p.seat) {
+      this.idleTime = 0;
+      if (p.seat.kind === 'chair') return FRAME.seat;
+      this.fxTimer -= dt;
+      if (this.fxTimer <= 0) {
+        this.fxTimer = 1.1;
+        const big = Math.floor(this.time / 1.1) % 2 === 0;
+        this.scene.showFloatingText(p.seat.head[0], p.seat.head[1] - 10, big ? 'Z' : 'z', '#cfe3ff', big ? 16 : 12);
+      }
+      return FRAME.blink;
+    }
     if (this._is('hurt')) return FRAME.hurt;
     if (this.mining) return this._swingFrame(dt);
     if (this._is('use')) return FRAME.use;
@@ -228,6 +253,7 @@ export class PlayerAnimator {
       return FRAME.cheer;
     }
     if (this._is('wave')) return Math.floor(this.action.t / 0.2) % 2 ? FRAME.wave2 : FRAME.wave1;
+    if (this._is('yawn')) return FRAME.yawn;
 
     // En el aire: subiendo, bajando o cayendo de muy alto (agita los brazos)
     if (!p.onGround) {
@@ -353,7 +379,7 @@ export class PlayerAnimator {
     const f = p.facing;
     let icon = null;
     let torch = false;
-    if (!p.dead) {
+    if (!p.dead && !(p.seat && p.seat.kind === 'bed')) {
       if (this.mining) icon = this.mining.icon;
       else if (this._is('use')) icon = this.useIcon;
       else if (this.scene.inventory?.selectedStack?.id === 'torch') {

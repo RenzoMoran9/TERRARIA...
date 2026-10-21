@@ -8,10 +8,12 @@ import {
   CHUNK_SHIFT,
   CHUNK_MASK,
 } from '../config.js';
-import { BLOCK, IS_SOLID } from './blocks.js';
+import { BLOCK, IS_SOLID, WALL } from './blocks.js';
 import { WorldGenerator } from './WorldGenerator.js';
 
 const CHUNK_AREA = CHUNK_SIZE * CHUNK_SIZE;
+// Paredes cambiadas por el jugador: 0 = la natural (del generador), WALL_REMOVED = sin pared, otro = id de pared
+const WALL_REMOVED = 255;
 
 // Compresión RLE (pares valor/repeticiones) + base64 para guardar chunks modificados
 function encodeChunk(data) {
@@ -46,7 +48,8 @@ function decodeChunk(text) {
  * - Los chunks se generan bajo demanda (solo cuando alguien los consulta).
  * - Los chunks sin modificar se pueden liberar y volver a generar igual.
  * - Solo los chunks modificados por el jugador se guardan.
- * Emite 'tileChanged' (tx, ty, nuevoId, idAnterior) al cambiar un bloque.
+ * Emite 'tileChanged' (tx, ty, nuevoId, idAnterior) al cambiar un bloque
+ * y 'wallChanged' (tx, ty, nuevaPared, paredAnterior) al poner o quitar una pared.
  */
 export class World extends Phaser.Events.EventEmitter {
   constructor(seed) {
@@ -57,6 +60,8 @@ export class World extends Phaser.Events.EventEmitter {
     this.height = WORLD_HEIGHT;
     this.chunks = new Array(WORLD_CHUNKS_X * WORLD_CHUNKS_Y).fill(null);
     this.modified = new Set();
+    // Paredes puestas o quitadas por el jugador (por chunk, solo donde hubo cambios; nunca se liberan)
+    this.wallChunks = new Array(WORLD_CHUNKS_X * WORLD_CHUNKS_Y).fill(null);
 
     // Por columna: primera fila sólida desde arriba (sobre ella hay luz de cielo)
     this.skyTop = new Int16Array(WORLD_WIDTH);
@@ -89,8 +94,32 @@ export class World extends Phaser.Events.EventEmitter {
     return IS_SOLID[this.getTile(tx, ty)] === 1;
   }
 
+  /** Pared de fondo en una posición (WALL.NONE si no hay). */
   getWall(tx, ty) {
+    if (tx < 0 || ty < 0 || tx >= WORLD_WIDTH || ty >= WORLD_HEIGHT) return WALL.NONE;
+    const changed = this.wallChunks[(ty >> CHUNK_SHIFT) * WORLD_CHUNKS_X + (tx >> CHUNK_SHIFT)];
+    if (changed !== null) {
+      const v = changed[((ty & CHUNK_MASK) << CHUNK_SHIFT) | (tx & CHUNK_MASK)];
+      if (v !== 0) return v === WALL_REMOVED ? WALL.NONE : v;
+    }
     return this.generator.wallAt(tx, ty);
+  }
+
+  /** Pone o quita (WALL.NONE) una pared. Devuelve true si cambió algo. */
+  setWall(tx, ty, wall) {
+    if (tx < 0 || ty < 0 || tx >= WORLD_WIDTH || ty >= WORLD_HEIGHT) return false;
+    const old = this.getWall(tx, ty);
+    if (old === wall) return false;
+    const key = (ty >> CHUNK_SHIFT) * WORLD_CHUNKS_X + (tx >> CHUNK_SHIFT);
+    if (this.wallChunks[key] === null) this.wallChunks[key] = new Uint8Array(CHUNK_AREA);
+    this.wallChunks[key][((ty & CHUNK_MASK) << CHUNK_SHIFT) | (tx & CHUNK_MASK)] = wall === WALL.NONE ? WALL_REMOVED : wall;
+    this.emit('wallChanged', tx, ty, wall, old);
+    return true;
+  }
+
+  /** ¿El jugador cambió alguna pared en este chunk? */
+  hasWallChanges(cx, cy) {
+    return this.wallChunks[cy * WORLD_CHUNKS_X + cx] !== null;
   }
 
   /** Cambia un bloque. Devuelve true si cambió algo. */
@@ -147,6 +176,29 @@ export class World extends Phaser.Events.EventEmitter {
       if (chunk) out[key] = encodeChunk(chunk);
     }
     return out;
+  }
+
+  /** Paredes cambiadas por el jugador, comprimidas, para el guardado. */
+  serializeWalls() {
+    const out = {};
+    this.wallChunks.forEach((data, key) => {
+      if (data) out[key] = encodeChunk(data);
+    });
+    return out;
+  }
+
+  restoreWalls(saved) {
+    for (const [k, text] of Object.entries(saved || {})) {
+      const key = Number(k);
+      if (!Number.isInteger(key) || key < 0 || key >= this.wallChunks.length) continue;
+      let data = null;
+      try {
+        data = decodeChunk(text);
+      } catch (e) {
+        data = null;
+      }
+      if (data) this.wallChunks[key] = data;
+    }
   }
 
   /** Restaura los chunks modificados de una partida guardada. */

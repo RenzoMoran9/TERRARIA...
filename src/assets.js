@@ -36,6 +36,15 @@ export const ASSETS = {
   // ---------- Paredes de fondo (32×32) ----------
   wall_dirt: { file: 'walls/dirt_wall.png', width: 32, height: 32, placeholder: 'wall_dirt' },
   wall_stone: { file: 'walls/stone_wall.png', width: 32, height: 32, placeholder: 'wall_stone' },
+  wall_wood: { file: 'walls/wood_wall.png', width: 32, height: 32, placeholder: 'wall_wood' },
+
+  // ---------- Muebles (objeto entero; cada bloque = 32×32 de la imagen) ----------
+  // La silla y la cama miran a la derecha (al ponerlas mirando a la izquierda se dibujan espejadas)
+  obj_door_closed: { file: 'furniture/door_closed.png', width: 32, height: 96, placeholder: 'door_closed' },
+  obj_door_open: { file: 'furniture/door_open.png', width: 32, height: 96, placeholder: 'door_open' },
+  obj_chair: { file: 'furniture/chair.png', width: 32, height: 64, placeholder: 'chair' },
+  obj_table: { file: 'furniture/table.png', width: 96, height: 64, placeholder: 'table' },
+  obj_bed: { file: 'furniture/bed.png', width: 128, height: 64, placeholder: 'bed' },
 
   // ---------- Árboles ----------
   // Copa: 3 variantes de 144×128 una al lado de la otra
@@ -48,8 +57,16 @@ export const ASSETS = {
   item_coal: { file: 'items/coal.png', width: 32, height: 32, placeholder: 'coal' },
   item_wood_pickaxe: { file: 'items/wood_pickaxe.png', width: 32, height: 32, placeholder: 'wood_pickaxe' },
   item_stone_pickaxe: { file: 'items/stone_pickaxe.png', width: 32, height: 32, placeholder: 'stone_pickaxe' },
+  item_wood_hammer: { file: 'items/wood_hammer.png', width: 32, height: 32, placeholder: 'wood_hammer' },
+  item_wood_wall: { file: 'items/wood_wall.png', width: 32, height: 32, placeholder: 'wood_wall_item' },
+  item_stone_wall: { file: 'items/stone_wall.png', width: 32, height: 32, placeholder: 'stone_wall_item' },
+  item_dirt_wall: { file: 'items/dirt_wall.png', width: 32, height: 32, placeholder: 'dirt_wall_item' },
+  item_door: { file: 'items/door.png', width: 32, height: 32, placeholder: 'door_item' },
+  item_chair: { file: 'items/chair.png', width: 32, height: 32, placeholder: 'chair_item' },
+  item_table: { file: 'items/table.png', width: 32, height: 32, placeholder: 'table_item' },
+  item_bed: { file: 'items/bed.png', width: 32, height: 32, placeholder: 'bed_item' },
 
-  // ---------- Jugador: 30 poses de 48×64, 8 por fila (ver player/animations.js), mirando a la derecha ----------
+  // ---------- Jugador: 31 poses de 48×64, 8 por fila (ver player/animations.js), mirando a la derecha ----------
   player: { file: 'player/player.png', width: 384, height: 256, frameWidth: 48, frameHeight: 64, placeholder: 'player' },
 
   // ---------- Fondo y cielo ----------

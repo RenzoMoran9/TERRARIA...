@@ -8,6 +8,15 @@ export const RECIPES = [
   { result: 'torch', count: 4, ingredients: [['wood', 1], ['coal', 1]], station: null },
   { result: 'wood_pickaxe', count: 1, ingredients: [['planks', 10]], station: 'workbench' },
   { result: 'stone_pickaxe', count: 1, ingredients: [['planks', 4], ['stone', 12]], station: 'workbench' },
+  // Casas
+  { result: 'wood_hammer', count: 1, ingredients: [['planks', 8]], station: 'workbench' },
+  { result: 'wood_wall', count: 4, ingredients: [['planks', 1]], station: 'workbench' },
+  { result: 'stone_wall', count: 4, ingredients: [['stone', 1]], station: 'workbench' },
+  { result: 'dirt_wall', count: 4, ingredients: [['dirt', 1]], station: 'workbench' },
+  { result: 'door', count: 1, ingredients: [['planks', 6]], station: 'workbench' },
+  { result: 'chair', count: 1, ingredients: [['planks', 4]], station: 'workbench' },
+  { result: 'table', count: 1, ingredients: [['planks', 8]], station: 'workbench' },
+  { result: 'bed', count: 1, ingredients: [['planks', 15], ['wood', 5]], station: 'workbench' },
 ];
 
 export const STATION_NAMES = { workbench: 'Mesa de trabajo' };

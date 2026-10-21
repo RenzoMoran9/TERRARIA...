@@ -1,6 +1,6 @@
 import { TILE_SIZE } from '../config.js';
 import { ASSETS } from '../assets.js';
-import { MATERIALS, VARIANTS, MASK_COUNT } from './blocks.js';
+import { MATERIALS, VARIANTS, MASK_COUNT, TILESET_CELLS } from './blocks.js';
 import { paintPlaceholder } from '../systems/Placeholders.js';
 
 const T = TILE_SIZE;
@@ -14,15 +14,17 @@ const OUTLINE = 'rgba(14,9,6,0.6)';
 const SHINE = 'rgba(255,255,255,0.10)';
 
 /**
- * Arma la textura 'tileset' con todos los bloques y paredes.
- * - Una fila por material y variante; 16 columnas = combinaciones de vecinos.
+ * Arma la textura 'tileset' con todos los bloques, partes de muebles y paredes.
+ * - Las celdas de cada material van seguidas (ver tileIndex en blocks.js), 16 por fila.
+ * - Bloques con bordes: una celda por variante y combinación de vecinos.
  * - Donde un bloque toca aire se dibuja un contorno oscuro y las esquinas se
  *   redondean (como Terraria). Esto se genera solo, también para imágenes propias:
  *   basta con dibujar UN bloque de 32×32.
+ * - Muebles: cada parte es el recorte de 32×32 que le toca de la imagen del objeto entero.
  * - 1 px de borde extruido (margin 1, spacing 2) evita líneas entre bloques con zoom no entero.
  */
 export function buildTileset(scene) {
-  const rows = MATERIALS.length * VARIANTS;
+  const rows = Math.ceil(TILESET_CELLS / MASK_COUNT);
   const canvas = document.createElement('canvas');
   canvas.width = MASK_COUNT * S;
   canvas.height = rows * S;
@@ -44,21 +46,35 @@ export function buildTileset(scene) {
     return src;
   };
 
-  MATERIALS.forEach((mat, m) => {
+  let cell = 0;
+  const next = () => {
+    const c = cell++;
+    return [(c % MASK_COUNT) * S + 1, Math.floor(c / MASK_COUNT) * S + 1];
+  };
+  for (const mat of MATERIALS) {
+    if (mat.crop) {
+      // Parte de un mueble
+      const [dx, dy] = next();
+      const src = source(mat.crop.key, 0);
+      if (src) {
+        drawCrop(ctx, dx, dy, src, mat.crop);
+        extrude(ctx, canvas, dx, dy);
+      }
+      continue;
+    }
     for (let v = 0; v < VARIANTS; v++) {
       const src = source(mat.textures[Math.min(v, mat.textures.length - 1)], v);
-      if (!src) continue;
       const covered = source(mat.covered, v);
-      const grassColor = mat.grassy ? samplePixel(src, 16, 3) : null;
+      const grassColor = mat.grassy && src ? samplePixel(src, 16, 3) : null;
       const masks = mat.framed ? MASK_COUNT : 1;
       for (let mask = 0; mask < masks; mask++) {
-        const dx = mask * S + 1;
-        const dy = (m * VARIANTS + v) * S + 1;
+        const [dx, dy] = next();
+        if (!src) continue;
         drawFramedTile(ctx, dx, dy, src, covered, mat.framed ? mask : 15, grassColor);
         extrude(ctx, canvas, dx, dy);
       }
     }
-  });
+  }
 
   if (scene.textures.exists('tileset')) scene.textures.remove('tileset');
   scene.textures.addCanvas('tileset', canvas);
@@ -104,6 +120,18 @@ function drawFramedTile(ctx, dx, dy, src, covered, mask, grassColor) {
   if (!top && !right) corner(dx + T, dy, -1, 1);
   if (!bottom && !left) corner(dx, dy + T, 1, -1);
   if (!bottom && !right) corner(dx + T, dy + T, -1, -1);
+}
+
+// Recorte de 32×32 de la imagen de un mueble (la imagen puede estar a otra escala, p. ej. ×2)
+function drawCrop(ctx, dx, dy, src, crop) {
+  const k = src.width / (crop.cols * T);
+  ctx.save();
+  if (crop.mirrored) {
+    ctx.translate(dx + T, dy);
+    ctx.scale(-1, 1);
+  } else ctx.translate(dx, dy);
+  ctx.drawImage(src, crop.col * T * k, crop.row * T * k, T * k, T * k, 0, 0, T, T);
+  ctx.restore();
 }
 
 // Copia los bordes del tile 1 px hacia afuera (evita costuras al escalar)

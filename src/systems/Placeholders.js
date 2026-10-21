@@ -72,6 +72,28 @@ function pickaxe(pc, head, light, dark) {
   pc.outline('#20160e');
 }
 
+// Madera de los muebles y de la pared de madera
+const WOOD = { light: '#c99a58', mid: '#a3733a', dark: '#6e4a22', seam: '#8a5f2b', line: '#2b1a0c' };
+
+// Pared de tablones (más oscura que el bloque de tablones: queda al fondo)
+function drawWoodWall(pc, x0, y0, w, h, v) {
+  const boards = ['#4f361b', '#5a3e20', '#4a3219'];
+  for (let y = 0; y < h; y++) {
+    const b = (y + 1) >> 2;
+    const row = (y + 1) & 3;
+    const base = boards[Math.floor(hash(b, 3, 90 + v) * 3)];
+    const seam = 2 + Math.floor(hash(b, 8, 90 + v) * (w - 4));
+    for (let x = 0; x < w; x++) {
+      let c = base;
+      if (row === 0) c = '#674826';
+      else if (row === 3) c = '#33220f';
+      else if (hash(x, y, 91 + v) < 0.1) c = '#3f2a14';
+      if (x === seam && row !== 0) c = '#2b1c0d';
+      pc.set(x0 + x, y0 + y, c);
+    }
+  }
+}
+
 // Personaje (mirando a la derecha). Cuadros de 24×32 (arte) = 48×64 en pantalla, uno por
 // pose de player/animations.js (8 por fila). Los pies tocan la última fila del cuadro.
 const PLAYER_COLORS = {
@@ -106,11 +128,21 @@ function drawPose(pc, ox, oy, P) {
   const frontLeg = { dx: 0, foot: 31, ...(P.frontLeg || {}) };
   const backLeg = { dx: 0, foot: 31, ...(P.backLeg || {}) };
 
-  // Pierna de 3 px desde la cadera hasta el pie (con bota y punta hacia adelante)
+  // Pierna de 3 px desde la cadera hasta el pie (con bota y punta hacia adelante).
+  // Con knee [x, y], la pierna se dobla: muslo hasta la rodilla y canilla hasta el pie (sentado en una silla)
   const leg = (hipX, L, pants) => {
     const fx = ox + hipX + L.dx;
-    for (let k = 0; k < 3; k++) {
-      pc.line(ox + hipX + hipShift + k, Y(hip), fx + k, Y(L.foot - 3), k === 0 ? C.pantsShade : pants);
+    if (L.knee) {
+      const kx = ox + L.knee[0];
+      const ky = Y(L.knee[1] + bob);
+      for (let k = 0; k < 3; k++) {
+        pc.line(ox + hipX + hipShift, Y(hip) + k, kx, ky + k, k === 2 ? C.pantsShade : pants);
+        pc.line(kx - 2 + k, ky, fx + k, Y(L.foot - 3), k === 0 ? C.pantsShade : pants);
+      }
+    } else {
+      for (let k = 0; k < 3; k++) {
+        pc.line(ox + hipX + hipShift + k, Y(hip), fx + k, Y(L.foot - 3), k === 0 ? C.pantsShade : pants);
+      }
     }
     pc.rect(fx, Y(L.foot - 2), 3, 3, C.boots);
     pc.rect(fx, Y(L.foot - 2), 1, 3, C.bootsShade);
@@ -392,6 +424,87 @@ const PIXEL = {
   wall_stone(pc, v) {
     fillNoise(pc, ['#1a1d22', '#22262c', '#2b3037', '#353a42', '#3f454e'], v, 110);
   },
+  wall_wood(pc, v) {
+    drawWoodWall(pc, 0, 0, 16, 16, v);
+  },
+
+  // ---------- muebles (objetos de varios bloques: 16 px de arte por bloque) ----------
+  door_closed(pc) {
+    // Puerta de tablones con marco arriba, dos travesaños y manija
+    pc.rect(0, 0, 16, 2, WOOD.dark);
+    pc.rect(3, 2, 10, 46, WOOD.mid);
+    for (const x of [5, 8, 11]) pc.rect(x, 2, 1, 46, WOOD.seam);
+    pc.rect(3, 2, 1, 46, WOOD.light);
+    for (const y of [9, 36]) {
+      pc.rect(3, y, 10, 2, WOOD.light);
+      pc.rect(3, y + 2, 10, 1, WOOD.dark);
+    }
+    pc.line(4, 34, 11, 13, WOOD.dark); // diagonal
+    pc.rect(10, 23, 2, 3, '#e0c060');
+    pc.set(10, 23, '#fff1a8');
+    pc.outline(WOOD.line);
+  },
+  door_open(pc) {
+    // Puerta abierta: el marco arriba y la hoja de canto junto a las bisagras (izquierda)
+    pc.rect(0, 0, 16, 2, WOOD.dark);
+    pc.rect(1, 2, 4, 46, WOOD.mid);
+    pc.rect(1, 2, 1, 46, WOOD.light);
+    pc.rect(4, 2, 1, 46, WOOD.dark);
+    for (const y of [9, 36]) pc.rect(1, y, 4, 2, WOOD.light);
+    pc.rect(5, 23, 1, 3, '#e0c060');
+    pc.outline(WOOD.line);
+  },
+  chair(pc) {
+    // Silla mirando a la derecha: respaldo a la izquierda, asiento a la altura de la cadera
+    pc.rect(2, 6, 3, 26, WOOD.mid); // poste del respaldo (y pata de atrás)
+    pc.rect(2, 6, 1, 26, WOOD.light);
+    pc.rect(2, 6, 4, 2, WOOD.light);
+    for (const y of [10, 14]) pc.rect(4, y, 2, 2, WOOD.mid);
+    pc.rect(2, 21, 12, 2, WOOD.light); // asiento
+    pc.rect(2, 23, 12, 1, WOOD.dark);
+    pc.rect(11, 24, 3, 8, WOOD.mid); // pata de adelante
+    pc.rect(13, 24, 1, 8, WOOD.dark);
+    pc.rect(5, 27, 6, 1, WOOD.dark); // travesaño
+    pc.outline(WOOD.line);
+  },
+  table(pc) {
+    // Mesa de 3×2 bloques con un jarro encima
+    pc.rect(1, 14, 46, 2, WOOD.light);
+    pc.rect(1, 16, 46, 1, WOOD.mid);
+    pc.rect(2, 17, 44, 2, WOOD.dark);
+    for (const x of [4, 41]) {
+      pc.rect(x, 19, 3, 13, WOOD.mid);
+      pc.rect(x + 2, 19, 1, 13, WOOD.dark);
+    }
+    pc.rect(7, 25, 34, 1, WOOD.dark);
+    // Jarro
+    pc.rect(30, 8, 5, 6, '#c9d6e3');
+    pc.rect(30, 8, 1, 6, '#ffffff');
+    pc.rect(35, 9, 1, 3, '#9aa8b8');
+    pc.rect(31, 9, 3, 1, '#7a4f22');
+    pc.outline(WOOD.line);
+  },
+  bed(pc) {
+    // Cama de 4×2 bloques: cabecera a la izquierda, almohada, sábana y frazada roja
+    pc.rect(1, 6, 5, 26, WOOD.mid);
+    pc.rect(1, 4, 5, 2, WOOD.light);
+    pc.rect(1, 6, 1, 26, WOOD.light);
+    pc.rect(58, 13, 5, 19, WOOD.mid);
+    pc.rect(58, 12, 5, 1, WOOD.light);
+    pc.rect(62, 13, 1, 19, WOOD.dark);
+    pc.rect(6, 22, 52, 3, WOOD.mid); // larguero
+    pc.rect(6, 25, 52, 1, WOOD.dark);
+    pc.rect(6, 16, 52, 6, '#efe6d8'); // colchón
+    pc.rect(6, 21, 52, 1, '#cfc3b0');
+    pc.rect(7, 13, 11, 4, '#ffffff'); // almohada
+    pc.rect(7, 16, 11, 1, '#d8d0c4');
+    pc.rect(22, 15, 36, 6, '#c0392b'); // frazada
+    pc.rect(22, 15, 36, 1, '#e05a4a');
+    pc.rect(22, 20, 36, 1, '#8e2a1f');
+    pc.rect(22, 15, 2, 6, '#f2efe8'); // doblez de la sábana
+    for (let x = 28; x < 58; x += 6) pc.rect(x, 17, 2, 2, '#e05a4a');
+    pc.outline(WOOD.line);
+  },
   plant_grass(pc, v) {
     for (let k = 0; k < 5; k++) {
       const x = 1 + k * 3 + Math.floor(hash(k, 0, 120 + v) * 2);
@@ -441,6 +554,64 @@ const PIXEL = {
   },
   wood_pickaxe(pc) {
     pickaxe(pc, '#b5843f', '#d9a865', '#8a5f2b');
+  },
+  wood_hammer(pc) {
+    // Mango en diagonal y cabeza atravesada arriba a la derecha
+    for (let i = 0; i < 8; i++) {
+      pc.set(3 + i, 13 - i, '#8a5a2b');
+      pc.set(4 + i, 13 - i, '#6b4420');
+    }
+    pc.line(7, 3, 12, 8, '#8a5f2b');
+    pc.line(8, 2, 13, 7, '#b5843f');
+    pc.line(9, 1, 14, 6, '#d9a865');
+    pc.line(8, 3, 13, 8, '#8a5f2b');
+    pc.line(9, 2, 14, 7, '#b5843f');
+    pc.outline('#20160e');
+  },
+  wood_wall_item(pc) {
+    drawWoodWall(pc, 2, 2, 12, 12, 0);
+    pc.outline('#20160e');
+  },
+  stone_wall_item(pc) {
+    for (let y = 2; y < 14; y++) for (let x = 2; x < 14; x++) pc.set(x, y, pick(['#22262c', '#2b3037', '#353a42', '#3f454e'], hash(x >> 1, y >> 1, 7)));
+    pc.outline('#0e1014');
+  },
+  dirt_wall_item(pc) {
+    for (let y = 2; y < 14; y++) for (let x = 2; x < 14; x++) pc.set(x, y, pick(['#2e1b0e', '#382212', '#422916', '#4c301a'], hash(x >> 1, y >> 1, 9)));
+    pc.outline('#140a04');
+  },
+  door_item(pc) {
+    pc.rect(4, 1, 8, 14, WOOD.mid);
+    for (const x of [6, 9]) pc.rect(x, 1, 1, 14, WOOD.seam);
+    pc.rect(4, 1, 1, 14, WOOD.light);
+    for (const y of [3, 11]) pc.rect(4, y, 8, 1, WOOD.light);
+    pc.rect(10, 7, 1, 2, '#e0c060');
+    pc.outline(WOOD.line);
+  },
+  chair_item(pc) {
+    pc.rect(4, 2, 2, 13, WOOD.mid);
+    pc.rect(4, 2, 1, 13, WOOD.light);
+    pc.rect(4, 9, 8, 1, WOOD.light);
+    pc.rect(4, 10, 8, 1, WOOD.dark);
+    pc.rect(10, 11, 2, 4, WOOD.mid);
+    pc.outline(WOOD.line);
+  },
+  table_item(pc) {
+    pc.rect(1, 6, 14, 1, WOOD.light);
+    pc.rect(1, 7, 14, 1, WOOD.dark);
+    pc.rect(2, 8, 2, 7, WOOD.mid);
+    pc.rect(12, 8, 2, 7, WOOD.mid);
+    pc.rect(9, 3, 2, 3, '#c9d6e3');
+    pc.outline(WOOD.line);
+  },
+  bed_item(pc) {
+    pc.rect(1, 4, 2, 11, WOOD.mid);
+    pc.rect(13, 7, 2, 8, WOOD.mid);
+    pc.rect(3, 9, 10, 2, '#efe6d8');
+    pc.rect(3, 8, 3, 1, '#ffffff');
+    pc.rect(6, 8, 7, 3, '#c0392b');
+    pc.rect(3, 11, 10, 1, WOOD.dark);
+    pc.outline(WOOD.line);
   },
   stone_pickaxe(pc) {
     pickaxe(pc, '#8c939c', '#c2c8cf', '#5d636b');

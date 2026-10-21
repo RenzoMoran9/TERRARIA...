@@ -41,6 +41,7 @@ export class Player {
     this.stepOffset = 0; // suaviza visualmente la subida automática de escalones
     this.pushing = false; // caminando contra una pared
     this.heldLight = 0; // luz de lo que lleva en la mano (antorcha), la usa Lighting
+    this.seat = null; // sentado en una silla o acostado en una cama (ver Furniture)
 
     // Sprite, animaciones y efectos
     this.anim = new PlayerAnimator(scene, this);
@@ -70,6 +71,21 @@ export class Player {
       return;
     }
     if (controls.moveX !== 0 || controls.jump) this.anim.wake();
+
+    // --- Sentado o acostado: moverse o saltar lo levanta ---
+    if (this.seat) {
+      const jumpPressed = controls.jump && !this.prevJump;
+      this.prevJump = controls.jump;
+      if (controls.moveX !== 0 || jumpPressed) {
+        this.standUp();
+      } else {
+        this.vx = 0;
+        this.vy = 0;
+        this.regen(dt);
+        this.anim.update(dt);
+        return;
+      }
+    }
 
     // --- Movimiento horizontal con aceleración ---
     if (controls.moveX !== 0) {
@@ -124,15 +140,46 @@ export class Player {
       this.peakY = this.y;
     }
 
-    // --- Regeneración lenta de vida ---
-    this.timeSinceDamage += dt;
-    if (!this.dead && this.timeSinceDamage > P.REGEN_DELAY && this.health < this.maxHealth) {
-      this.health = Math.min(this.maxHealth, this.health + P.REGEN_PER_SECOND * dt);
-    }
+    this.regen(dt);
 
     // --- Animación ---
     this.stepOffset = Math.max(0, this.stepOffset - dt * 320);
     this.anim.update(dt);
+  }
+
+  /** Regeneración lenta de vida (después de un rato sin recibir daño). */
+  regen(dt) {
+    this.timeSinceDamage += dt;
+    if (!this.dead && this.timeSinceDamage > P.REGEN_DELAY && this.health < this.maxHealth) {
+      this.health = Math.min(this.maxHealth, this.health + P.REGEN_PER_SECOND * dt);
+    }
+  }
+
+  /** Sentarse en una silla o acostarse en una cama (seat lo arma Furniture). */
+  sit(seat) {
+    this.seat = seat;
+    this.x = seat.x;
+    this.y = seat.y;
+    this.vx = 0;
+    this.vy = 0;
+    this.facing = seat.facing;
+    this.stepOffset = 0;
+    this.anim.wake();
+  }
+
+  standUp() {
+    const seat = this.seat;
+    if (!seat) return;
+    this.seat = null;
+    if (seat.kind === 'bed') {
+      this.x = seat.standX;
+      this.y = seat.standY;
+    } else {
+      this.y += 3; // de vuelta al piso
+    }
+    for (let i = 0; i < 4 && this.collides(this.x, this.y); i++) this.y -= TILE_SIZE;
+    this.peakY = this.y;
+    this.anim.standUp(seat);
   }
 
   /** ¿La hitbox en (x, y) toca algún bloque sólido? */
@@ -157,6 +204,11 @@ export class Player {
       dx -= step;
       const nx = this.x + step;
       if (!this.collides(nx, this.y)) {
+        this.x = nx;
+        continue;
+      }
+      // Puerta cerrada en el camino: se abre sola al caminar contra ella
+      if (wantsStepUp && this.scene.furniture?.openDoorsAt(nx, this.y, this.w, this.h) && !this.collides(nx, this.y)) {
         this.x = nx;
         continue;
       }
@@ -210,6 +262,7 @@ export class Player {
 
   damage(amount) {
     if (this.dead || amount <= 0) return;
+    this.standUp();
     this.health -= amount;
     this.timeSinceDamage = 0;
     this.scene.showFloatingText(this.centerX, this.y - 4, `-${amount}`, '#ff5252');
@@ -221,6 +274,7 @@ export class Player {
   die() {
     this.health = 0;
     this.dead = true;
+    this.seat = null;
     this.vx = 0;
     this.vy = 0;
     this.anim.die(); // cae de espaldas y se desvanece

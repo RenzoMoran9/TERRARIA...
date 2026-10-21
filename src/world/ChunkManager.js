@@ -10,7 +10,7 @@ import {
   CHUNKS_PER_FRAME,
   DEPTH,
 } from '../config.js';
-import { BLOCK, IS_SOLID, IS_FRAMED, WALL, tileIndex, variantAt } from './blocks.js';
+import { BLOCK, IS_SOLID, IS_FRAMED, WALL, WALL_MATERIAL, tileIndex, variantAt } from './blocks.js';
 import { getViewRect } from '../systems/view.js';
 import { frameCount } from '../systems/Placeholders.js';
 import { hash2 } from './noise.js';
@@ -40,6 +40,7 @@ export class ChunkManager {
     this._view = { x: 0, y: 0, width: 0, height: 0 };
     this.canopyFrames = frameCount(scene, 'tree_top');
     world.on('tileChanged', this.onTileChanged, this);
+    world.on('wallChanged', this.onWallChanged, this);
   }
 
   /** Revisa qué chunks deberían estar cargados. Con loadAll=true carga todos de una vez. */
@@ -112,7 +113,7 @@ export class ChunkManager {
   wallIndex(tx, ty, id) {
     if (IS_SOLID[id]) return -1; // tapada por un bloque sólido
     const wall = this.world.getWall(tx, ty);
-    return wall === WALL.NONE ? -1 : tileIndex(wall, variantAt(tx, ty), 0);
+    return wall === WALL.NONE ? -1 : tileIndex(WALL_MATERIAL[wall], variantAt(tx, ty), 0);
   }
 
   // ------------------------------------------------------------------ carga
@@ -152,6 +153,7 @@ export class ChunkManager {
 
   _isEmpty(data, x0, y0) {
     for (let i = 0; i < data.length; i++) if (data[i] !== 0) return false;
+    if (this.world.hasWallChanges(x0 / CHUNK_SIZE, y0 / CHUNK_SIZE)) return false; // paredes puestas en el aire
     // Sin bloques; ¿tiene alguna pared? (las paredes empiezan debajo de la superficie)
     const surface = this.world.generator.surface;
     const bottom = y0 + CHUNK_SIZE - 1;
@@ -253,12 +255,29 @@ export class ChunkManager {
     }
   }
 
+  /** Se puso o quitó una pared: redibujar esa celda de la capa de paredes. */
+  onWallChanged(tx, ty) {
+    const cx = tx >> CHUNK_SHIFT;
+    const cy = ty >> CHUNK_SHIFT;
+    const key = cy * WORLD_CHUNKS_X + cx;
+    const entry = this.loaded.get(key);
+    if (!entry) return;
+    if (entry.empty) {
+      this.loaded.delete(key);
+      this.load(cx, cy);
+      return;
+    }
+    const id = this.world.getTile(tx, ty);
+    entry.walls.putTileAt(this.wallIndex(tx, ty, id), tx - cx * CHUNK_SIZE, ty - cy * CHUNK_SIZE, false);
+  }
+
   _refreshCell(entry, tx, ty, id) {
     entry.blocks.putTileAt(this.blockIndex(tx, ty, id), tx - entry.cx * CHUNK_SIZE, ty - entry.cy * CHUNK_SIZE, false);
   }
 
   destroy() {
     this.world.off('tileChanged', this.onTileChanged, this);
+    this.world.off('wallChanged', this.onWallChanged, this);
     for (const key of [...this.loaded.keys()]) this.unload(key);
   }
 }

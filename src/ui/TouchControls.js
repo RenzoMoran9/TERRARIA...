@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ITEMS } from '../systems/items.js';
+import { ITEMS, isPlaceable } from '../systems/items.js';
 import { textStyle } from './styles.js';
 
 const DEADZONE = 0.2;
@@ -95,10 +95,9 @@ export class TouchControls {
     this._updateModeVisual();
   }
 
-  /** Al elegir un ítem en la barra: si es un bloque colocable pasa a COLOCAR; si no, a MINAR. */
+  /** Al elegir un ítem en la barra: si se coloca (bloque, pared o mueble) pasa a COLOCAR; si no, a MINAR. */
   setModeForItem(stack) {
-    const def = stack && ITEMS[stack.id];
-    this.setMode(def && def.places !== undefined ? 'place' : 'mine');
+    this.setMode(isPlaceable(stack && ITEMS[stack.id]) ? 'place' : 'mine');
   }
 
   _updateModeVisual() {

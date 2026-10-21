@@ -18,10 +18,13 @@ import { Inventory } from '../systems/Inventory.js';
 import { DayNight } from '../systems/DayNight.js';
 import { Lighting } from '../systems/Lighting.js';
 import { BlockInteraction } from '../systems/BlockInteraction.js';
+import { Furniture } from '../systems/Furniture.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import { textStyle } from '../ui/styles.js';
 
 const T = TILE_SIZE;
+const NIGHT_SKIP_SPEED = 40; // durmiendo en la cama, la noche pasa 40 veces más rápido
+const TAP_MS = 350; // toque corto (celular): usa la puerta, silla o cama tocada
 
 /**
  * Escena principal: mundo, jugador, cámara, luz, ciclo día/noche y guardado.
@@ -42,7 +45,10 @@ export class GameScene extends Phaser.Scene {
 
     // --- Mundo ---
     this.world = new World(seed);
-    if (save) this.world.restore(save.chunks);
+    if (save) {
+      this.world.restore(save.chunks);
+      this.world.restoreWalls(save.walls);
+    }
     this.dayNight = new DayNight(save ? save.time : 8 / 24, save ? save.day : 1);
 
     // --- Inventario ---
@@ -63,11 +69,13 @@ export class GameScene extends Phaser.Scene {
     this.player.peakY = this.player.y;
     if (save?.player?.health) this.player.health = Phaser.Math.Clamp(save.player.health, 1, PLAYER.MAX_HEALTH);
     this.respawnTimer = 0;
+    this.bedSpawn = save?.bed ?? null; // cama donde se reaparece: { tx, ty } (esquina de la cama)
 
     // --- Sistemas ---
     this.chunkManager = new ChunkManager(this, this.world);
     this.lighting = new Lighting(this, this.world, this.dayNight, this.player);
-    this.interaction = new BlockInteraction(this, this.world, this.player, this.inventory);
+    this.furniture = new Furniture(this, this.world, this.player);
+    this.interaction = new BlockInteraction(this, this.world, this.player, this.inventory, this.furniture);
 
     // --- Partículas: polvo al correr/aterrizar y fragmentos al romper bloques ---
     this.makePixelTexture();
@@ -168,12 +176,27 @@ export class GameScene extends Phaser.Scene {
       if (pointer.wasTouch) {
         this.markPointer = pointer;
         this.markTarget(pointer);
+        this.cameras.main.getWorldPoint(pointer.x, pointer.y, this._tmpVec);
+        this._tap = { id: pointer.id, time: this.time.now, tx: Math.floor(this._tmpVec.x / T), ty: Math.floor(this._tmpVec.y / T) };
         return;
       }
       this.worldPointer = pointer;
       this.pressPending = true;
       if (pointer.wasTouch) this.pressAction = this.touchState.mode;
       else this.pressAction = pointer.button === 2 ? 'place' : pointer.button === 0 ? 'mine' : null;
+    });
+    // Celular: un toque corto sobre una puerta, silla o cama la usa (abrir/cerrar, sentarse, acostarse)
+    this.input.on('pointerup', (pointer) => {
+      const tap = this._tap;
+      this._tap = null;
+      if (!tap || tap.id !== pointer.id || this.uiBlocking || this.player.dead) return;
+      if (this.time.now - tap.time > TAP_MS) return;
+      this.cameras.main.getWorldPoint(pointer.x, pointer.y, this._tmpVec);
+      if (Math.floor(this._tmpVec.x / T) !== tap.tx || Math.floor(this._tmpVec.y / T) !== tap.ty) return;
+      if (this.furniture.isInteractive(tap.tx, tap.ty) && this.interaction.inReach(tap.tx, tap.ty)) {
+        this.furniture.interact(tap.tx, tap.ty);
+        this.manualTarget = null; // se tocó para usarlo, no para marcarlo
+      }
     });
     this.input.on('pointermove', (pointer) => {
       if (!pointer.wasTouch) this.mouseInside = true;
@@ -202,9 +225,16 @@ export class GameScene extends Phaser.Scene {
     const dt = Math.min(delta, 50) / 1000; // limitar el paso si el navegador se trabó
     const cam = this.cameras.main;
 
-    this.dayNight.update(dt); // el cielo lo dibuja BackgroundScene según esta hora
+    // Durmiendo en la cama de noche, el tiempo pasa rápido hasta la mañana
+    const sleeping = this.player.seat?.kind === 'bed' && this.dayNight.isNight();
+    this.dayNight.update(sleeping ? dt * NIGHT_SKIP_SPEED : dt); // el cielo lo dibuja BackgroundScene según esta hora
+    if (sleeping && !this.dayNight.isNight()) {
+      this.player.standUp();
+      this.events.emit('toast', `¡Buen día! Día ${this.dayNight.day}`);
+    }
 
     this.player.update(dt, this.readControls());
+    this.furniture.update(dt);
     if (this.player.dead) {
       this.respawnTimer -= dt;
       if (this.respawnTimer <= 0) this.respawn();
@@ -318,7 +348,7 @@ export class GameScene extends Phaser.Scene {
       const p = this.player;
       const dist = Math.hypot((mt.tx + 0.5) * T - p.centerX, (mt.ty + 0.5) * T - p.centerY) / T;
       const id = this.world.getTile(mt.tx, mt.ty);
-      const done = mt.acted && (ts.mode === 'mine' ? id === BLOCK.AIR : id !== BLOCK.AIR && id !== BLOCK.PLANT);
+      const done = mt.acted && this.interaction.isDoneAt(mt.tx, mt.ty, ts.mode);
       if (dist > REACH_TILES + 3) {
         this.manualTarget = null; // se alejó mucho: volver al objetivo automático
       } else if (done) {
@@ -341,8 +371,8 @@ export class GameScene extends Phaser.Scene {
     const target = this.interaction.findSmartTarget(ts.mode, ts.aimX, ts.aimY);
     if (!target) {
       if (justPressed) {
-        const noBlock = ts.mode === 'place' && this.interaction.selectedBlock() === undefined;
-        this.events.emit('toast', noBlock ? 'Elige un bloque en la barra para colocar' : 'No hay nada al alcance en esa dirección');
+        const noBlock = ts.mode === 'place' && !this.interaction.selectedPlacer();
+        this.events.emit('toast', noBlock ? 'Elige en la barra algo para colocar' : 'No hay nada al alcance en esa dirección');
       }
       return null;
     }
@@ -356,13 +386,19 @@ export class GameScene extends Phaser.Scene {
 
   /** Avisa por qué no se puede actuar sobre el bloque marcado. */
   _explainManual(mt, id, dist) {
+    const I = this.interaction;
     let msg = null;
     if (dist > REACH_TILES) msg = 'Está muy lejos: acércate';
-    else if (this.touchState.mode === 'mine' && id === BLOCK.AIR) msg = 'Ahí no hay nada que minar';
-    else if (this.touchState.mode === 'place') {
-      const block = this.interaction.selectedBlock();
-      if (block === undefined) msg = 'Elige un bloque en la barra para colocar';
-      else if (!this.interaction.canPlaceAt(mt.tx, mt.ty, block)) msg = 'No se puede colocar ahí';
+    else if (this.touchState.mode === 'mine') {
+      if (I.selectedHammer()) {
+        if (!I.canHammer(mt.tx, mt.ty)) msg = 'Ahí no hay pared de fondo para quitar';
+      } else if (id === BLOCK.AIR) msg = 'Ahí no hay nada que minar';
+    } else if (!this.furniture.isInteractive(mt.tx, mt.ty)) {
+      const placer = I.selectedPlacer();
+      if (!placer) msg = 'Elige en la barra algo para colocar';
+      else if (!I.placementAt(mt.tx, mt.ty, placer)) {
+        msg = placer.kind === 'object' ? 'No entra ahí: necesita lugar libre y suelo firme' : 'No se puede colocar ahí';
+      }
     }
     if (msg) this.events.emit('toast', msg);
   }
@@ -408,8 +444,29 @@ export class GameScene extends Phaser.Scene {
     this.events.emit('playerDied');
   }
 
+  /** Dormir en una cama la vuelve el punto de reaparición. */
+  setBedSpawn(tx, ty) {
+    const night = this.dayNight.isNight();
+    const same = this.bedSpawn && this.bedSpawn.tx === tx && this.bedSpawn.ty === ty;
+    this.bedSpawn = { tx, ty };
+    if (night) this.events.emit('toast', 'Durmiendo hasta la mañana… (muévete para levantarte)');
+    else if (!same) this.events.emit('toast', 'Punto de reaparición: tu cama');
+  }
+
   respawn() {
-    this.player.respawn(this.spawn.x, this.spawn.y);
+    // En la cama (si todavía existe) o en el punto de inicio
+    let spot = this.spawn;
+    if (this.bedSpawn) {
+      const bed = this.furniture.bedAt(this.bedSpawn.tx, this.bedSpawn.ty);
+      if (bed) {
+        const s = this.furniture.bedStandSpot(bed);
+        spot = { x: s.standX, y: s.standY };
+      } else {
+        this.bedSpawn = null;
+        this.events.emit('toast', 'Tu cama ya no está: apareces en el inicio');
+      }
+    }
+    this.player.respawn(spot.x, spot.y);
     this.events.emit('playerRespawned');
   }
 
@@ -451,9 +508,11 @@ export class GameScene extends Phaser.Scene {
 
   buildSaveData() {
     const p = this.player;
+    // Acostado en la cama se guarda la posición de pie junto a ella
+    const pos = p.seat && p.seat.kind === 'bed' ? { x: p.seat.standX, y: p.seat.standY } : p;
     const playerData = p.dead
       ? { x: this.spawn.x, y: this.spawn.y, health: PLAYER.MAX_HEALTH }
-      : { x: p.x, y: p.y, health: Math.max(1, Math.round(p.health)) };
+      : { x: pos.x, y: pos.y, health: Math.max(1, Math.round(p.health)) };
     return {
       version: SAVE_VERSION,
       seed: this.world.seed,
@@ -461,9 +520,11 @@ export class GameScene extends Phaser.Scene {
       time: this.dayNight.time,
       day: this.dayNight.day,
       spawn: this.spawn,
+      bed: this.bedSpawn,
       player: playerData,
       inventory: this.inventory.serialize(),
       chunks: this.world.serialize(),
+      walls: this.world.serializeWalls(),
     };
   }
 

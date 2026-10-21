@@ -50,6 +50,74 @@ export const BLOCK_DEFS = [
   },
 ];
 
+// ---------------------------------------------------------------------------
+// Muebles: objetos de varios bloques (puerta, silla, mesa, cama).
+// Cada parte (columna dx, fila dy, desde arriba a la izquierda) es un id de bloque propio:
+// así, desde cualquier parte se sabe dónde empieza el objeto y se lo puede quitar entero.
+// Los ids se generan en este orden: para no romper partidas guardadas, agregar siempre al final.
+// ---------------------------------------------------------------------------
+export const FURNITURE = {
+  door: { name: 'Puerta', item: 'door', hardness: 0.8, color: 0x9a6a35, interactive: true },
+  chair: { name: 'Silla', item: 'chair', hardness: 0.6, color: 0xa3733a, interactive: true },
+  table: { name: 'Mesa', item: 'table', hardness: 0.7, color: 0xa3733a },
+  bed: { name: 'Cama', item: 'bed', hardness: 0.8, color: 0xc0392b, interactive: true },
+};
+
+// Variantes de cada mueble. texture = imagen con el objeto entero (w × h bloques).
+// mirrored = la misma imagen espejada (mirando a la izquierda).
+export const OBJECTS = {
+  door_closed: { type: 'door', texture: 'obj_door_closed', w: 1, h: 3, solid: true },
+  door_open: { type: 'door', texture: 'obj_door_open', w: 1, h: 3 },
+  chair: { type: 'chair', texture: 'obj_chair', w: 1, h: 2 },
+  chair_left: { type: 'chair', texture: 'obj_chair', w: 1, h: 2, mirrored: true },
+  table: { type: 'table', texture: 'obj_table', w: 3, h: 2 },
+  bed: { type: 'bed', texture: 'obj_bed', w: 4, h: 2 },
+  bed_left: { type: 'bed', texture: 'obj_bed', w: 4, h: 2, mirrored: true },
+};
+
+/** Parte de mueble de cada id de bloque (o null): { object, type, dx, dy } */
+export const PART = new Array(256).fill(null);
+
+for (const [key, obj] of Object.entries(OBJECTS)) {
+  const f = FURNITURE[obj.type];
+  obj.key = key;
+  obj.ids = []; // ids[dy][dx]
+  for (let dy = 0; dy < obj.h; dy++) {
+    const row = [];
+    for (let dx = 0; dx < obj.w; dx++) {
+      const id = BLOCK_DEFS.length;
+      row.push(id);
+      PART[id] = { object: obj, type: obj.type, dx, dy };
+      BLOCK_DEFS.push({
+        id,
+        name: f.name,
+        texture: null,
+        // Recorte de la imagen del objeto que le toca a esta parte
+        crop: { key: obj.texture, col: obj.mirrored ? obj.w - 1 - dx : dx, row: dy, cols: obj.w, mirrored: !!obj.mirrored },
+        solid: !!obj.solid,
+        hardness: f.hardness,
+        tier: 0,
+        drop: f.item,
+        light: 0,
+        color: f.color,
+      });
+    }
+    obj.ids.push(row);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Paredes de fondo. Las naturales las calcula el generador; las que pone o quita el
+// jugador se guardan aparte (ver World). Ids fijos: se guardan en las partidas.
+// ---------------------------------------------------------------------------
+export const WALL = Object.freeze({ NONE: 0, DIRT: 1, STONE: 2, WOOD: 3 });
+export const WALL_DEFS = [
+  null,
+  { name: 'Pared de tierra', texture: 'wall_dirt', item: 'dirt_wall', color: 0x4c301a },
+  { name: 'Pared de piedra', texture: 'wall_stone', item: 'stone_wall', color: 0x3f454e },
+  { name: 'Pared de madera', texture: 'wall_wood', item: 'wood_wall', color: 0x6b4a26 },
+];
+
 // Tablas de consulta rápida (se usan miles de veces por frame)
 export const IS_SOLID = new Uint8Array(256);
 export const LIGHT_EMIT = new Float32Array(256);
@@ -61,8 +129,10 @@ for (const def of BLOCK_DEFS) {
 }
 
 // ---------------------------------------------------------------------------
-// Tileset: cada "material" (bloque o pared) ocupa VARIANTS filas de 16 columnas.
-// Columna = máscara de vecinos sólidos (1 arriba, 2 derecha, 4 abajo, 8 izquierda).
+// Tileset: cada "material" (bloque, parte de mueble o pared) ocupa varias celdas seguidas:
+// - con bordes (framed): VARIANTS × 16 celdas (16 = máscara de vecinos sólidos:
+//   1 arriba, 2 derecha, 4 abajo, 8 izquierda)
+// - sin bordes: una celda por variante (las partes de muebles, una sola)
 // ---------------------------------------------------------------------------
 export const VARIANTS = 3;
 export const MASK_COUNT = 16;
@@ -73,17 +143,31 @@ export const MATERIALS = [
     covered: def.covered || null,
     framed: !!def.framed,
     grassy: def.id === BLOCK.GRASS,
+    crop: def.crop || null,
   })),
-  { textures: ['wall_dirt'], covered: null, framed: false, grassy: false },
-  { textures: ['wall_stone'], covered: null, framed: false, grassy: false },
+  ...WALL_DEFS.slice(1).map((w) => ({ textures: [w.texture], covered: null, framed: false, grassy: false, crop: null })),
 ];
 
-// Paredes de fondo (no se guardan: se calculan con el generador). Su valor es su material.
-export const WALL = Object.freeze({ NONE: -1, DIRT: BLOCK_DEFS.length, STONE: BLOCK_DEFS.length + 1 });
+/** Material (fila del tileset) de cada pared */
+export const WALL_MATERIAL = WALL_DEFS.map((w, i) => (i === 0 ? -1 : BLOCK_DEFS.length + i - 1));
+
+const MATERIAL_FIRST = new Int32Array(MATERIALS.length); // primera celda de cada material
+const MATERIAL_KIND = new Uint8Array(MATERIALS.length); // 0 = una celda, 1 = por variante, 2 = variante y bordes
+let cellCount = 0;
+MATERIALS.forEach((m, i) => {
+  MATERIAL_FIRST[i] = cellCount;
+  MATERIAL_KIND[i] = m.framed ? 2 : m.crop ? 0 : 1;
+  m.cells = m.framed ? VARIANTS * MASK_COUNT : m.crop ? 1 : VARIANTS;
+  cellCount += m.cells;
+});
+export const TILESET_CELLS = cellCount;
 
 /** Índice dentro del tileset para un material, variante y máscara de vecinos. */
 export function tileIndex(material, variant, mask) {
-  return (material * VARIANTS + variant) * MASK_COUNT + mask;
+  const kind = MATERIAL_KIND[material];
+  const first = MATERIAL_FIRST[material];
+  if (kind === 2) return first + variant * MASK_COUNT + mask;
+  return kind === 1 ? first + variant : first;
 }
 
 /** Variante (0..VARIANTS-1) fija para cada posición del mundo. */

@@ -50,6 +50,8 @@ export const POSES = [
   { name: 'sit2', bob: 6, front: [17, 23], back: [8, 23], frontLeg: { dx: 7 }, backLeg: { dx: 6 }, eyes: 'closed', mouth: 'o', sit: true },
   { name: 'wave1', front: [17, 4], eyes: 'happy', mouth: 'smile' },
   { name: 'wave2', front: [19, 7], eyes: 'happy', mouth: 'smile' },
+  // Sentado en una silla: rodillas dobladas, manos sobre las piernas
+  { name: 'seat', bob: 1, front: [16, 22], back: [13, 22], frontLeg: { dx: 6, knee: [18, 22] }, backLeg: { dx: 7, knee: [16, 22] }, mouth: 'smile' },
 ];
 
 /** Índice de cuadro por nombre: FRAME.idle, FRAME.walk0, FRAME.swing1… */
