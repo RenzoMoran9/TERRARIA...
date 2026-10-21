@@ -58,7 +58,7 @@ La carpeta `dist/` se puede subir tal cual a cualquier hosting estático (GitHub
 | Paredes y muebles     | Elegirlos en la barra y **clic derecho** (se ve una vista previa) | Elegirlos en la barra y botón de acción (el recuadro muestra dónde quedan) |
 | Quitar paredes        | Elegir el **martillo** y mantener clic izquierdo | Elegir el martillo y mantener el botón de acción |
 | Usar puerta, silla o cama | **Clic derecho** sobre ella      | **Tocarla**                                    |
-| Atacar                | Elegir una **espada** y mantener clic izquierdo hacia el enemigo | Elegir una espada: el botón de acción pasa a **ATACAR** y se gira solo hacia el enemigo más cercano |
+| Atacar                | Elegir un **arma** y hacer clic izquierdo hacia el enemigo: cada clic es el siguiente golpe del combo (mantener = sigue solo) | Elegir un arma: el botón de acción pasa a **ATACAR**; cada toque es un golpe del combo y se gira solo hacia el enemigo más cercano |
 | Apuntar sin marcar    | —                                   | Inclinar el joystick mientras se mantiene la acción (abajo = cavar hacia abajo) |
 | Cambiar modo          | —                                   | Botón de flechas (MINAR ↔ COLOCAR). Elegir un bloque en la barra pasa solo a COLOCAR; un pico, a MINAR |
 | Barra rápida          | Teclas `1`–`9` o rueda del ratón    | Tocar la casilla                               |
@@ -200,6 +200,17 @@ Las puertas se abren solas al caminar contra ellas y se cierran al alejarse. Par
   Aparecen fuera de la pantalla y nunca donde hay paredes de fondo puestas por ti. Hacen daño al tocarte, te
   empujan y quedas invulnerable un momento (parpadeas). Espadas de madera y de piedra; los slimes sueltan **gel**
   (1 madera + 1 gel → 3 antorchas). Al reaparecer se van los enemigos cercanos.
+- **Combos de armas**: **un toque = un golpe entero** (no hace falta mantener apretado; si lo mantienes, sigue
+  atacando solo). Cada toque hace el **siguiente movimiento** del combo (5 por arma) y el arma deja un rastro del
+  color de su material; si dejas de atacar un segundo, el combo vuelve a empezar. El último golpe se anuncia.
+  | Arma | Los 5 movimientos |
+  | --- | --- |
+  | Espadas | Tajo · Revés (lanza hacia arriba) · Estocada · Giro (golpea a los dos lados) · **Golpe final** (salta y cae con onda) |
+  | Daga | Puñalada · Tajo · Puñalada baja · Revés · Remolino (dos golpes) |
+  | Maza | Mazazo · Gancho (lanza lejos hacia arriba) · Molino · Mazazo doble · **Terremoto** (onda alrededor) |
+  | Lanza | Estocada · Estocada alta · Barrido · Doble estocada · **Embestida** (te lanzas hacia adelante) |
+  | Arcos | Disparo · Disparo rápido · Doble disparo · Abanico de 3 flechas · **Tiro cargado** (más rápido y fuerte) |
+  | Cuchillos | Lanzamiento · Lanzamiento rápido · Doble · Abanico de 3 · **Tiro fuerte** |
 - **Armas de todo tipo** (en la PC se apunta con el ratón; en el celular el botón ATACAR apunta solo al enemigo
   más cercano):
   | Arma | Tipo | Receta |
@@ -496,7 +507,7 @@ src/
   assets.js            Mapa central clave → imagen
   scenes/              BootScene (carga), BackgroundScene (cielo y paisaje), MenuScene, GameScene (mundo) y UIScene (interfaz)
   world/               Ruido con semilla, bloques, generador, datos por chunks, renderizado de chunks y tileset
-  player/              Jugador: física, colisiones, vida y daño por caída (Player), poses (animations) y animaciones y efectos (PlayerAnimator)
+  player/              Jugador: física, colisiones, vida y daño por caída (Player), poses (animations), combos de las armas (attacks) y animaciones y efectos (PlayerAnimator)
   systems/             Sonido y música (Audio), inventario, ítems, crafteo, minar/colocar, muebles (Furniture), casas y fachadas (Housing), experiencia y habilidades (Skills, Abilities), aldeanos (Npcs), enemigos, zonas (Zones) y sus partículas (Ambience), neblina de las islas (IslandMist), día/noche, iluminación, guardado y placeholders (pixel art por código)
   ui/                  HUD, barra rápida, inventario, controles táctiles, debug y avisos
 ```

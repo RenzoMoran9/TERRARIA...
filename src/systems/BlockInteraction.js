@@ -1,4 +1,5 @@
 import { TILE_SIZE, WORLD_WIDTH, WORLD_HEIGHT, REACH_TILES, DEPTH } from '../config.js';
+import { COMBOS, comboStyle } from '../player/attacks.js';
 import { XP } from './Skills.js';
 import { BLOCK, BLOCK_DEFS, IS_SOLID, IS_PLANT, IS_TRUNK, WALL, WALL_DEFS, PART, variantAt } from '../world/blocks.js';
 import { ITEMS, HAND } from './items.js';
@@ -6,6 +7,12 @@ import { frameCount } from './Placeholders.js';
 import { PROJECTILE_GRAVITY } from './Projectiles.js';
 import { audio } from './Audio.js';
 
+const COMBO_RESET = 1; // segundos sin atacar para que el combo vuelva al primer golpe
+// Tamaño del arma en la mano (px) según su tipo de combo
+const WEAPON_SIZE = { sword: 28, dagger: 22, heavy: 30, spear: 38, throw: 22, boomerang: 24 };
+/** Color del rastro del golpe según el material del arma. */
+const trailColor = (id) =>
+  id.startsWith('hell') ? 0xff8a3a : id.startsWith('crystal') ? 0x9ef0ff : id.startsWith('gold') ? 0xffe070 : id.startsWith('cactus') ? 0xb8f08a : 0xffffff;
 const T = TILE_SIZE;
 const REACH_PX2 = (REACH_TILES * T) ** 2;
 const PLACE_FIRST_REPEAT = 0.4; // al mantener pulsado: espera antes de empezar a repetir
@@ -90,6 +97,7 @@ export class BlockInteraction {
   }
 
   update(dt, pa) {
+    this._tickCombo();
     if (!pa || this.player.dead) {
       this.highlight.setVisible(false);
       this.ghost.setVisible(false);
@@ -119,7 +127,10 @@ export class BlockInteraction {
       this.ghost.setVisible(false);
       this._resetMining();
       this._resetPlacing();
-      if (pa.action === 'mine') this._updateAttack(pa, weapon);
+      if (pa.action === 'mine') {
+        this._updateAttack(pa, weapon, pa.press !== this._lastPress);
+        this._lastPress = pa.press;
+      }
       return;
     }
     const tx = Math.floor(pa.x / T);
@@ -226,19 +237,19 @@ export class BlockInteraction {
   selectedWeapon() {
     const stack = this.inventory.selectedStack;
     const def = stack && ITEMS[stack.id];
-    return def && def.weapon ? { icon: def.icon, ...def.weapon } : null;
+    return def && def.weapon ? { id: stack.id, icon: def.icon, ...def.weapon } : null;
   }
 
   /**
-   * Mantener el clic (o el botón de acción) con un arma: ataca hacia donde apunta.
-   * Espadas, daga y maza golpean en arco; la lanza da estocadas; arcos, bumerán y
-   * cuchillos lanzan proyectiles en la dirección apuntada.
+   * Atacar con un arma: cada toque (clic o botón) hace un movimiento entero del combo
+   * (ver attacks.js); tocar otra vez durante el golpe encadena el siguiente, y mantener
+   * apretado sigue atacando solo. Espadas, daga y maza golpean; la lanza da estocadas;
+   * arcos, bumerán y cuchillos lanzan proyectiles en la dirección apuntada.
    */
-  _updateAttack(pa, weapon) {
+  _updateAttack(pa, weapon, newPress) {
     const p = this.player;
     const kind = weapon.kind || 'swing';
     const oy = p.y + 22;
-    const ranged = kind === 'bow' || kind === 'boomerang' || kind === 'throw';
     // Flechas y cuchillos caen un poco: se apunta un poco más arriba para compensar
     let ty = pa.y;
     const g = kind === 'bow' ? PROJECTILE_GRAVITY.arrow : kind === 'throw' ? PROJECTILE_GRAVITY.knife : 0;
@@ -246,36 +257,79 @@ export class BlockInteraction {
       const t = Math.hypot(pa.x - p.centerX, pa.y - oy) / weapon.projSpeed;
       ty -= 0.5 * g * t * t;
     }
-    const aim = Math.atan2(ty - oy, pa.x - p.centerX);
-    if (!p.seat) p.facing = Math.cos(aim) >= 0 ? 1 : -1;
-    p.anim.swing(weapon.icon, 0, 0, null, 0, {
-      rate: weapon.speed,
-      pose: kind === 'bow' ? 'aim' : kind === 'thrust' ? 'thrust' : 'swing',
-      aim,
-      onHit: () => (ranged ? this._shoot(weapon, kind, aim) : this.scene.enemies.meleeHit(p, weapon, aim)),
-    });
+    this.attackAim = Math.atan2(ty - oy, pa.x - p.centerX);
+    if (p.anim.attack) {
+      // Tocar otra vez durante un golpe: el siguiente queda en espera y sale apenas termine
+      if (newPress) this.comboQueued = true;
+      return;
+    }
+    // Sin golpe en curso: un toque nuevo, o mantener apretado (sigue atacando solo)
+    this._startMove(weapon);
   }
 
-  /** Dispara o lanza un proyectil (gasta flechas o cuchillos). */
-  _shoot(weapon, kind, aim) {
+  /** Si se pidió otro golpe durante el anterior, sale apenas termina (con la misma arma). */
+  _tickCombo() {
+    if (!this.comboQueued || this.player.anim.attack) return;
+    this.comboQueued = false;
+    const weapon = this.selectedWeapon();
+    if (weapon && weapon.id === this.comboWeapon && !this.player.dead) this._startMove(weapon);
+  }
+
+  /** Empieza el siguiente movimiento del combo del arma (vuelve al primero si pasó un rato). */
+  _startMove(weapon) {
+    const p = this.player;
+    const kind = weapon.kind || 'swing';
+    const style = comboStyle(weapon);
+    const list = COMBOS[style];
+    if (weapon.id !== this.comboWeapon || p.anim.time - p.anim.attackEnd > COMBO_RESET) this.comboStep = 0;
+    this.comboWeapon = weapon.id;
+    const step = this.comboStep % list.length;
+    const move = list[step];
+    this.comboStep = step + 1;
+    const aim = this.attackAim;
+    if (!p.seat) p.facing = Math.cos(aim) >= 0 ? 1 : -1;
+    const ranged = kind === 'bow' || kind === 'boomerang' || kind === 'throw';
+    p.anim.attackStart(move, {
+      icon: weapon.icon,
+      rate: weapon.speed,
+      aim,
+      size: WEAPON_SIZE[style] || 28,
+      trail: trailColor(weapon.id),
+      onHit: (i, dir) => (ranged ? this._shoot(weapon, kind, this.attackAim, move) : this.scene.enemies.strike(p, weapon, move, dir)),
+    });
+    // El último golpe del combo se anuncia
+    if (step === list.length - 1 && list.length > 1) this.scene.showFloatingText(p.centerX, p.y - 18, move.name, '#ffe28a', 14);
+  }
+
+  /** Dispara o lanza proyectiles (gasta flechas o cuchillos); move = movimiento del combo. */
+  _shoot(weapon, kind, aim, move = {}) {
     const p = this.player;
     const proj = this.scene.projectiles;
     const x = p.centerX + Math.cos(aim) * 18;
     const y = p.y + 22 + Math.sin(aim) * 18;
-    if (kind === 'bow') {
-      if (this.inventory.count('wood_arrow') <= 0) {
-        this._warnOnce('Necesitas flechas (se hacen en la mesa: 1 madera + 1 piedra)');
-        return;
+    const n = move.shots || 1;
+    const speed = weapon.projSpeed * (move.speed || 1);
+    const dmg = move.dmg || 1;
+    for (let i = 0; i < n; i++) {
+      const a = aim + (i - (n - 1) / 2) * (move.spread || 0);
+      if (kind === 'bow') {
+        if (this.inventory.count('wood_arrow') <= 0) {
+          this._warnOnce('Necesitas flechas (se hacen en la mesa: 1 madera + 1 piedra)');
+          return;
+        }
+        this.inventory.remove('wood_arrow', 1);
+        proj.fire('arrow', 'item_wood_arrow', x, y, a, speed, Math.round((weapon.damage + ITEMS.wood_arrow.ammo.damage) * dmg), weapon.knockback);
+      } else if (kind === 'boomerang') {
+        if (proj.count('boomerang') > 0) return; // uno a la vez: hay que esperar que vuelva
+        proj.fire('boomerang', weapon.icon, x, y, a, speed, weapon.damage, weapon.knockback);
+      } else {
+        const slot = this.inventory.slots[this.inventory.selected];
+        if (!slot || slot.id !== weapon.id) return; // se acabaron los cuchillos
+        this.inventory.removeFromSlot(this.inventory.selected, 1);
+        proj.fire('knife', weapon.icon, x, y, a, speed, Math.round(weapon.damage * dmg), weapon.knockback);
       }
-      this.inventory.remove('wood_arrow', 1);
-      proj.fire('arrow', 'item_wood_arrow', x, y, aim, weapon.projSpeed, weapon.damage + ITEMS.wood_arrow.ammo.damage, weapon.knockback);
-    } else if (kind === 'boomerang') {
-      if (proj.count('boomerang') > 0) return; // uno a la vez: hay que esperar que vuelva
-      proj.fire('boomerang', weapon.icon, x, y, aim, weapon.projSpeed, weapon.damage, weapon.knockback);
-    } else {
-      this.inventory.removeFromSlot(this.inventory.selected, 1);
-      proj.fire('knife', weapon.icon, x, y, aim, weapon.projSpeed, weapon.damage, weapon.knockback);
     }
+    if (move.charge) this.scene.spawnSparkles(x, y, 8, 0xfff2a0);
   }
 
   /** Martillo elegido en la barra (quita paredes de fondo en vez de minar bloques), o null. */

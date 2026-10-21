@@ -244,6 +244,7 @@ export class GameScene extends Phaser.Scene {
     this.worldPointer = null; // puntero que empezó a pulsar sobre el mundo
     this.pressPending = false; // la pulsación aún no se procesó (por si se suelta antes del siguiente frame)
     this.pressAction = null;
+    this.pressSerial = 0; // cuenta cada pulsación (para que dos toques seguidos sean dos golpes)
     this.mouseInside = true;
     this.input.on('pointerdown', (pointer) => {
       if (this.uiBlocking) return;
@@ -262,6 +263,7 @@ export class GameScene extends Phaser.Scene {
       }
       this.worldPointer = pointer;
       this.pressPending = true;
+      this.pressSerial++;
       if (pointer.wasTouch) this.pressAction = this.touchState.mode;
       else this.pressAction = pointer.button === 2 ? 'place' : pointer.button === 0 ? 'mine' : null;
     });
@@ -409,6 +411,7 @@ export class GameScene extends Phaser.Scene {
         cam.getWorldPoint(wp.x, wp.y, this._tmpVec);
         pa.x = this._tmpVec.x;
         pa.y = this._tmpVec.y;
+        pa.press = this.pressSerial;
         if (!wp.isDown) pa.action = this.pressAction; // clic/toque muy corto: se procesa una vez
         else if (wp.wasTouch) pa.action = this.touchState.mode;
         else pa.action = wp.rightButtonDown() ? 'place' : wp.leftButtonDown() ? 'mine' : null;
@@ -453,6 +456,8 @@ export class GameScene extends Phaser.Scene {
     const acting = ts.action || pressed;
     const justPressed = pressed || (ts.action && !this._actionWasDown);
     this._actionWasDown = ts.action;
+    if (justPressed) this.pressSerial++;
+    pa.press = this.pressSerial;
     if (!acting) this._holdStop = false;
 
     // Con un arma: el botón ataca, apuntando al enemigo más cercano (las de distancia, más lejos)

@@ -3,6 +3,7 @@ import { PLAYER as P, DEPTH, TILE_SIZE } from '../config.js';
 import { FRAME, WALK_FRAMES, ART_W, ART_H, frontHand } from './animations.js';
 import { frameCount } from '../systems/Placeholders.js';
 import { audio, digSound } from '../systems/Audio.js';
+import { bladeAt } from './attacks.js';
 
 // Tiempos del personaje quieto (segundos sin tocar nada)
 const LOOK_AT = 6; // mira hacia atrás y se da vuelta
@@ -19,6 +20,12 @@ const TOOL_SIZE = 24;
 const SWING_ANGLE = { swing1: -1.45, swing2: 0.35, swing3: 1.65 };
 
 const ease = (t) => 1 - (1 - t) * (1 - t);
+const TRAIL_LIFE = 0.13; // segundos que dura el rastro del golpe
+/** Ángulo apuntado visto desde donde mira el jugador (0 = adelante, negativo = arriba). */
+const relAngle = (aim, facing) => {
+  const a = facing > 0 ? aim : Math.PI - aim;
+  return Math.atan2(Math.sin(a), Math.cos(a));
+};
 
 /**
  * Animaciones del jugador: elige el cuadro de la hoja según lo que esté pasando
@@ -53,6 +60,10 @@ export class PlayerAnimator {
     this.walkPhase = 0;
     this.lastWalkFrame = -1;
     this.mining = null; // datos del golpe mientras se mina (ver swing)
+    this.attack = null; // movimiento de ataque en curso (ver attackStart y attacks.js)
+    this.attackEnd = -10; // cuándo terminó el último (para seguir el combo)
+    this.trail = []; // rastro del golpe: [{ bx, by, tx, ty, age }]
+    this.trailGfx = scene.add.graphics().setDepth(DEPTH.TOOL - 0.1);
     this._swingReq = null;
     this.swingPhase = 0;
     this.toolAngle = SWING_ANGLE.swing1;
@@ -155,9 +166,20 @@ export class PlayerAnimator {
     this.wake();
   }
 
+  /**
+   * Empieza un movimiento de ataque (uno de los combos de attacks.js). Se juega entero
+   * aunque se suelte el botón. opts: { icon, rate, aim, size (px), trail (color), onHit(i, dir) }
+   */
+  attackStart(move, opts) {
+    this.player.standUp();
+    this.attack = { move, icon: opts.icon, rate: opts.rate, aim: opts.aim, trail: opts.trail, size: opts.size || 28, onHit: opts.onHit, t: 0, dur: move.dur / opts.rate, hitsDone: 0, lunged: false };
+    this.wake();
+  }
+
   die() {
     this.deathTime = 0;
     this.action = null;
+    this.attack = null;
     this._swingReq = null;
     this.sprite.clearTint();
   }
@@ -185,6 +207,7 @@ export class PlayerAnimator {
     this._swingReq = null;
     // Empieza con el pico levantado; el arco y la lanza, casi listos para disparar
     if (this.mining && !wasMining) this.swingPhase = this.mining.pose === 'swing' ? 0.1 : 0.45;
+    if (this.attack && (p.dead || (p.seat && p.seat.kind === 'bed'))) this.attack = null;
 
     if (this.action) {
       this.action.t += dt;
@@ -243,6 +266,7 @@ export class PlayerAnimator {
       }
       return FRAME.blink;
     }
+    if (this.attack) return this._attackFrame(dt);
     if (this._is('hurt')) return FRAME.hurt;
     if (this.mining) return this._swingFrame(dt);
     if (this._is('use')) return FRAME.use;
@@ -356,6 +380,89 @@ export class PlayerAnimator {
     return FRAME.swing2;
   }
 
+  /** Hoja del arma en este momento: ángulo relativo (a), extensión y dirección en el mundo. */
+  _blade() {
+    const m = this.attack;
+    const f = this.player.facing;
+    const u = Math.min(1, m.t / m.dur);
+    const { a, ext } = bladeAt(m.move, u, relAngle(m.aim, f));
+    return { a, ext, dir: f > 0 ? a : Math.PI - a, u };
+  }
+
+  /** Avanza el movimiento de ataque: golpes en su momento, saltitos, embestida; elige la pose. */
+  _attackFrame(dt) {
+    const m = this.attack;
+    const mv = m.move;
+    const p = this.player;
+    this.idleTime = 0;
+    m.t += dt;
+    const u = Math.min(1, m.t / m.dur);
+    if (mv.lunge && !m.lunged && u >= 0.3) {
+      m.lunged = true;
+      p.vx = p.facing * mv.lunge;
+      this.scene.spawnDust(p.centerX - p.facing * 10, p.y + p.h - 4, 6);
+    }
+    while (m.hitsDone < mv.hits.length && u >= mv.hits[m.hitsDone]) {
+      const i = m.hitsDone++;
+      if (!mv.shots) audio.play('swing');
+      m.onHit?.(i, this._blade().dir);
+      this.sx = 1.08;
+      this.sy = 0.94;
+    }
+    // Saltitos: el giro sube y baja; el golpe final sube y cae con fuerza
+    if (mv.hop) this.hop = Math.sin(u * Math.PI) * mv.hop;
+    else if (mv.hopUp) {
+      const top = 0.45;
+      const land = mv.hits[0];
+      this.hop = u < top ? ease(u / top) * mv.hopUp : u < land ? (1 - (u - top) / (land - top)) * mv.hopUp : 0;
+    }
+    if (mv.charge && u < mv.hits[0] && Math.floor((m.t - dt) / 0.12) !== Math.floor(m.t / 0.12)) {
+      const [hx, hy] = this._handPos();
+      this.scene.spawnSparkles(hx, hy, 2, 0xfff2a0);
+    }
+    const frame = this._attackPose();
+    if (u >= 1) {
+      this.attack = null;
+      this.attackEnd = this.time;
+    }
+    return frame;
+  }
+
+  _attackPose() {
+    const mv = this.attack.move;
+    if (mv.pose === 'aim' || mv.pose === 'use') return FRAME.use;
+    const a = Math.atan2(Math.sin(this._blade().a), Math.cos(this._blade().a));
+    if (a < -0.7 || Math.abs(a) > 2.2) return FRAME.swing1;
+    if (a < 0.8) return FRAME.swing2;
+    return FRAME.swing3;
+  }
+
+  /** Rastro blanco (o del color del arma) que deja la hoja al moverse. */
+  _updateTrail(dt, base, tip) {
+    const tr = this.trail;
+    for (const q of tr) q.age += dt;
+    while (tr.length && tr[0].age > TRAIL_LIFE) tr.shift();
+    if (base) tr.push({ bx: base[0], by: base[1], tx: tip[0], ty: tip[1], age: 0 });
+    const g = this.trailGfx;
+    g.clear();
+    if (tr.length < 2) return;
+    const color = this.attack?.trail ?? 0xffffff;
+    for (let i = 1; i < tr.length; i++) {
+      const a = tr[i - 1];
+      const b = tr[i];
+      const alpha = (1 - b.age / TRAIL_LIFE) * 0.5;
+      if (alpha <= 0) continue;
+      g.fillStyle(color, alpha);
+      g.beginPath();
+      g.moveTo(a.bx, a.by);
+      g.lineTo(a.tx, a.ty);
+      g.lineTo(b.tx, b.ty);
+      g.lineTo(b.bx, b.by);
+      g.closePath();
+      g.fillPath();
+    }
+  }
+
   _updateDeath(dt) {
     const p = this.player;
     const t = (this.deathTime += dt);
@@ -389,7 +496,8 @@ export class PlayerAnimator {
     let icon = null;
     let torch = false;
     if (!p.dead && !(p.seat && p.seat.kind === 'bed')) {
-      if (this.mining) icon = this.mining.icon;
+      if (this.attack) icon = this.attack.icon;
+      else if (this.mining) icon = this.mining.icon;
       else if (this._is('use')) icon = this.useIcon;
       else if (this.scene.inventory?.selectedStack?.id === 'torch') {
         icon = 'tile_torch';
@@ -401,11 +509,36 @@ export class PlayerAnimator {
     if (!icon || !this.scene.textures.exists(icon)) {
       held.setVisible(false);
       this.glow.setVisible(false);
+      this._updateTrail(dt, null, null);
       return;
     }
     if (held.texture.key !== icon) held.setTexture(icon);
     const [hx, hy] = this._handPos();
-    held.setVisible(true).setAlpha(this.sprite.alpha);
+    held.setVisible(true).setAlpha(this.sprite.alpha).setFlipX(false);
+
+    if (this.attack) {
+      const mv = this.attack.move;
+      this.glow.setVisible(false);
+      if (mv.pose === 'aim') {
+        // Arco: apunta hacia donde se dispara (en el tiro cargado se estira de a poco)
+        const pull = mv.charge ? 1 + Math.min(1, this.attack.t / (this.attack.dur * mv.hits[0])) * 0.15 : 1;
+        held.setOrigin(0.5, 0.5).setPosition(hx, hy).setScale((26 / held.width) * pull).setRotation(this.attack.aim);
+        this._updateTrail(dt, null, null);
+        return;
+      }
+      // Espadas, dagas, mazas, lanzas y cuchillos: la hoja sigue el movimiento del combo
+      const { dir, ext } = this._blade();
+      const size = this.attack.size;
+      const x = hx + Math.cos(dir) * ext;
+      const y = hy + Math.sin(dir) * ext;
+      held.setOrigin(TOOL_ORIGIN[0], TOOL_ORIGIN[1]).setPosition(x, y).setScale(size / held.width).setRotation(dir + Math.PI / 4);
+      const c = Math.cos(dir);
+      const sn = Math.sin(dir);
+      if (mv.shots) this._updateTrail(dt, null, null);
+      else this._updateTrail(dt, [x + c * size * 0.35, y + sn * size * 0.35], [x + c * size * 1.05, y + sn * size * 1.05]);
+      return;
+    }
+    this._updateTrail(dt, null, null);
 
     if (this.mining && this.mining.pose !== 'swing') {
       // Arco: apunta hacia donde se dispara. Lanza: además avanza y vuelve en cada estocada
@@ -464,6 +597,7 @@ export class PlayerAnimator {
     this.sprite.destroy();
     this.held.destroy();
     this.glow.destroy();
+    this.trailGfx.destroy();
   }
 }
 

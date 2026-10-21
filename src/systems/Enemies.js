@@ -630,38 +630,49 @@ export class Enemies {
   }
 
   /**
-   * Golpe cuerpo a cuerpo: daña a los enemigos delante del jugador. Devuelve cuántos golpeó.
-   * Espada/daga/maza: zona delante del jugador. Lanza: a lo largo de la estocada (angle).
+   * Golpe de un movimiento del combo (ver attacks.js). dir = dirección de la hoja en el mundo.
+   * front: zona delante · around: alrededor (giros y terremoto) · line: a lo largo de la hoja (estocadas).
+   * Devuelve cuántos enemigos golpeó.
    */
-  meleeHit(player, weapon, angle = player.facing > 0 ? 0 : Math.PI) {
+  strike(player, weapon, move, dir) {
     const f = player.facing;
-    const reach = weapon.reach;
-    const box = {
-      x: f > 0 ? player.centerX - 6 : player.centerX - reach,
-      y: player.y - 12,
-      w: reach + 6,
-      h: player.h + 16,
-    };
-    const thrust = weapon.kind === 'thrust';
+    const reach = weapon.reach * (move.reach || 1);
     const ox = player.centerX;
     const oy = player.y + 22;
+    let box = null;
+    if (move.area === 'around') box = { x: ox - reach, y: player.y - 16, w: reach * 2, h: player.h + 24 };
+    else if (move.area !== 'line') {
+      const up = move.up ? 24 : 0;
+      box = { x: f > 0 ? ox - 6 : ox - reach, y: player.y - 12 - up, w: reach + 6, h: player.h + 16 + up };
+    }
     const touched = (e) => {
-      if (!thrust) return e.overlaps(box);
-      // Puntos a lo largo de la lanza
-      for (let d = 10; d <= reach; d += 10) {
-        const px = ox + Math.cos(angle) * d;
-        const py = oy + Math.sin(angle) * d;
-        if (px > e.x - 4 && px < e.x + e.w + 4 && py > e.y - 4 && py < e.y + e.h + 4) return true;
+      if (box) return e.overlaps(box);
+      for (let d = 10; d <= reach + 24; d += 10) {
+        const px = ox + Math.cos(dir) * d;
+        const py = oy + Math.sin(dir) * d;
+        if (px > e.x - 6 && px < e.x + e.w + 6 && py > e.y - 6 && py < e.y + e.h + 6) return true;
       }
       return false;
     };
+    const damage = Math.max(1, Math.round(weapon.damage * (move.dmg || 1)));
+    const kb = weapon.knockback * (move.kb || 1);
     let hits = 0;
     for (const e of this.list) {
       if (e.dead || !touched(e)) continue;
-      e.hit(weapon.damage, weapon.knockback, player.centerX);
+      e.hit(damage, kb, ox);
+      if (move.up && !e.dead) e.vy = -(260 + 200 * move.up) * (1 - e.def.resist * 0.6);
       hits++;
     }
-    if (hits) this.scene.cameras.main.shake(70, 0.003);
+    const cam = this.scene.cameras.main;
+    if (move.slam) {
+      // Golpe al suelo: polvo, onda y sacudón aunque no le pegue a nadie
+      const gx = move.area === 'around' ? ox : ox + f * reach * 0.6;
+      const gy = player.y + player.h;
+      this.scene.spawnDust(gx, gy - 4, 14);
+      this.scene.showShockwave(gx, gy - 6, move.area === 'around' ? reach : reach * 0.7, 0xffffff);
+      audio.play('pound', { x: gx, y: gy });
+      cam.shake(160, 0.007);
+    } else if (hits) cam.shake(70 * (move.shake || 1), 0.003 * (move.shake || 1));
     return hits;
   }
 
