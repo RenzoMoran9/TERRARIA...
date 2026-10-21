@@ -2,6 +2,7 @@ import { TILE_SIZE, WORLD_WIDTH, WORLD_HEIGHT, REACH_TILES, DEPTH } from '../con
 import { BLOCK, BLOCK_DEFS, IS_SOLID, WALL, WALL_DEFS, PART } from '../world/blocks.js';
 import { ITEMS, HAND } from './items.js';
 import { frameCount } from './Placeholders.js';
+import { PROJECTILE_GRAVITY } from './Projectiles.js';
 
 const T = TILE_SIZE;
 const REACH_PX2 = (REACH_TILES * T) ** 2;
@@ -212,14 +213,53 @@ export class BlockInteraction {
     return def && def.weapon ? { icon: def.icon, ...def.weapon } : null;
   }
 
-  /** Mantener el clic (o el botón de acción) con la espada: golpea hacia donde apunta. */
+  /**
+   * Mantener el clic (o el botón de acción) con un arma: ataca hacia donde apunta.
+   * Espadas, daga y maza golpean en arco; la lanza da estocadas; arcos, bumerán y
+   * cuchillos lanzan proyectiles en la dirección apuntada.
+   */
   _updateAttack(pa, weapon) {
     const p = this.player;
-    if (!p.seat) p.facing = pa.x >= p.centerX ? 1 : -1;
+    const kind = weapon.kind || 'swing';
+    const oy = p.y + 22;
+    const ranged = kind === 'bow' || kind === 'boomerang' || kind === 'throw';
+    // Flechas y cuchillos caen un poco: se apunta un poco más arriba para compensar
+    let ty = pa.y;
+    const g = kind === 'bow' ? PROJECTILE_GRAVITY.arrow : kind === 'throw' ? PROJECTILE_GRAVITY.knife : 0;
+    if (g) {
+      const t = Math.hypot(pa.x - p.centerX, pa.y - oy) / weapon.projSpeed;
+      ty -= 0.5 * g * t * t;
+    }
+    const aim = Math.atan2(ty - oy, pa.x - p.centerX);
+    if (!p.seat) p.facing = Math.cos(aim) >= 0 ? 1 : -1;
     p.anim.swing(weapon.icon, 0, 0, null, 0, {
       rate: weapon.speed,
-      onHit: () => this.scene.enemies.meleeHit(p, weapon),
+      pose: kind === 'bow' ? 'aim' : kind === 'thrust' ? 'thrust' : 'swing',
+      aim,
+      onHit: () => (ranged ? this._shoot(weapon, kind, aim) : this.scene.enemies.meleeHit(p, weapon, aim)),
     });
+  }
+
+  /** Dispara o lanza un proyectil (gasta flechas o cuchillos). */
+  _shoot(weapon, kind, aim) {
+    const p = this.player;
+    const proj = this.scene.projectiles;
+    const x = p.centerX + Math.cos(aim) * 18;
+    const y = p.y + 22 + Math.sin(aim) * 18;
+    if (kind === 'bow') {
+      if (this.inventory.count('wood_arrow') <= 0) {
+        this._warnOnce('Necesitas flechas (se hacen en la mesa: 1 madera + 1 piedra)');
+        return;
+      }
+      this.inventory.remove('wood_arrow', 1);
+      proj.fire('arrow', 'item_wood_arrow', x, y, aim, weapon.projSpeed, weapon.damage + ITEMS.wood_arrow.ammo.damage, weapon.knockback);
+    } else if (kind === 'boomerang') {
+      if (proj.count('boomerang') > 0) return; // uno a la vez: hay que esperar que vuelva
+      proj.fire('boomerang', weapon.icon, x, y, aim, weapon.projSpeed, weapon.damage, weapon.knockback);
+    } else {
+      this.inventory.removeFromSlot(this.inventory.selected, 1);
+      proj.fire('knife', weapon.icon, x, y, aim, weapon.projSpeed, weapon.damage, weapon.knockback);
+    }
   }
 
   /** Martillo elegido en la barra (quita paredes de fondo en vez de minar bloques), o null. */

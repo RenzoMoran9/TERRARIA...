@@ -150,7 +150,7 @@ export class PlayerAnimator {
    */
   swing(icon, x, y, color, speed, opts = null) {
     this.player.standUp();
-    this._swingReq = { icon, x, y, color, speed, rate: opts?.rate, onHit: opts?.onHit };
+    this._swingReq = { icon, x, y, color, speed, rate: opts?.rate, onHit: opts?.onHit, pose: opts?.pose || 'swing', aim: opts?.aim ?? 0 };
     this.wake();
   }
 
@@ -182,7 +182,8 @@ export class PlayerAnimator {
     const wasMining = this.mining !== null;
     this.mining = this._swingReq;
     this._swingReq = null;
-    if (this.mining && !wasMining) this.swingPhase = 0.1; // empieza con el pico levantado
+    // Empieza con el pico levantado; el arco y la lanza, casi listos para disparar
+    if (this.mining && !wasMining) this.swingPhase = this.mining.pose === 'swing' ? 0.1 : 0.45;
 
     if (this.action) {
       this.action.t += dt;
@@ -344,6 +345,7 @@ export class PlayerAnimator {
       this.sx = 1.06;
       this.sy = 0.95;
     }
+    if (m.pose !== 'swing') return FRAME.use; // arco y lanza: brazo estirado hacia adelante
     if (u < 0.45) return FRAME.swing1;
     if (u < 0.6) return FRAME.swing2;
     if (u < 0.85) return FRAME.swing3;
@@ -401,6 +403,21 @@ export class PlayerAnimator {
     const [hx, hy] = this._handPos();
     held.setVisible(true).setAlpha(this.sprite.alpha);
 
+    if (this.mining && this.mining.pose !== 'swing') {
+      // Arco: apunta hacia donde se dispara. Lanza: además avanza y vuelve en cada estocada
+      const m = this.mining;
+      const u = this.swingPhase % 1;
+      const ext = m.pose === 'thrust' && u >= 0.6 ? Math.sin(((u - 0.6) / 0.4) * Math.PI) * 18 : 0;
+      const bow = m.pose === 'aim';
+      const s = (bow ? 26 : 34) / held.width;
+      held
+        .setOrigin(bow ? 0.5 : 0.3, bow ? 0.5 : 0.7)
+        .setPosition(hx + Math.cos(m.aim) * ext, hy + Math.sin(m.aim) * ext)
+        .setScale(s)
+        .setRotation(m.aim + (bow ? 0 : Math.PI / 4)); // los íconos diagonales apuntan arriba a la derecha
+      this.glow.setVisible(false);
+      return;
+    }
     if (this.mining) {
       // Pico: gira desde el mango siguiendo la pose del brazo
       const target = SWING_ANGLE[this.frameName] ?? SWING_ANGLE.swing1;

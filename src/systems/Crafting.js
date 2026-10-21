@@ -20,6 +20,15 @@ export const RECIPES = [
   { result: 'iron_pickaxe', count: 1, ingredients: [['iron_bar', 12], ['wood', 3]], station: 'anvil' },
   { result: 'iron_sword', count: 1, ingredients: [['iron_bar', 8]], station: 'anvil' },
   { result: 'iron_hammer', count: 1, ingredients: [['iron_bar', 10], ['wood', 3]], station: 'anvil' },
+  // Armas de todo tipo
+  { result: 'wood_bow', count: 1, ingredients: [['wood', 10]], station: 'workbench' },
+  { result: 'wood_arrow', count: 10, ingredients: [['wood', 1], ['stone', 1]], station: 'workbench' },
+  { result: 'wood_boomerang', count: 1, ingredients: [['planks', 8]], station: 'workbench' },
+  { result: 'stone_mace', count: 1, ingredients: [['planks', 3], ['stone', 14]], station: 'workbench' },
+  { result: 'iron_dagger', count: 1, ingredients: [['iron_bar', 4]], station: 'anvil' },
+  { result: 'iron_spear', count: 1, ingredients: [['iron_bar', 6], ['wood', 4]], station: 'anvil' },
+  { result: 'iron_bow', count: 1, ingredients: [['iron_bar', 8], ['wood', 2]], station: 'anvil' },
+  { result: 'throwing_knife', count: 15, ingredients: [['iron_bar', 1]], station: 'anvil' },
   // Casas
   { result: 'wood_hammer', count: 1, ingredients: [['planks', 8]], station: 'workbench' },
   { result: 'wood_wall', count: 4, ingredients: [['planks', 1]], station: 'workbench' },

@@ -86,6 +86,19 @@ function hammer(pc, light, mid, dark) {
   pc.outline('#20160e');
 }
 
+// Arco apuntando a la derecha: madera curva y cuerda vertical a la izquierda
+function bow(pc, wood, dark) {
+  for (let y = 1; y <= 14; y++) {
+    const t = (y - 7.5) / 6.5;
+    const x = Math.round(5 + (1 - t * t) * 6);
+    pc.set(x, y, wood);
+    pc.set(x + 1, y, dark);
+  }
+  pc.line(5, 1, 5, 14, '#e8e0c8');
+  pc.rect(10, 6, 2, 4, '#5a3a1a'); // empuñadura
+  pc.outline('#1a120c');
+}
+
 // Espada: hoja en diagonal hacia arriba a la derecha, mango y guarda abajo a la izquierda
 function sword(pc, blade, mid, dark) {
   for (let i = 0; i < 9; i++) {
@@ -608,6 +621,80 @@ const PIXEL = {
   },
   iron_sword(pc) {
     sword(pc, '#eef2f6', '#b4bcc6', '#7c8590');
+  },
+  iron_dagger(pc) {
+    // Hoja corta en diagonal con guarda y mango
+    for (let i = 0; i < 6; i++) {
+      pc.set(8 + i, 7 - i, '#eef2f6');
+      pc.set(9 + i, 7 - i, '#b4bcc6');
+      pc.set(8 + i, 8 - i, '#7c8590');
+    }
+    pc.line(5, 6, 9, 10, '#8a6a2a');
+    pc.line(6, 6, 10, 10, '#c9a64a');
+    pc.line(3, 13, 7, 9, '#5a3a1a');
+    pc.line(4, 13, 7, 10, '#7a4f22');
+    pc.outline('#1a120c');
+  },
+  stone_mace(pc) {
+    // Mango largo y cabeza de piedra con púas
+    for (let i = 0; i < 9; i++) {
+      pc.set(2 + i, 14 - i, '#8a5a2b');
+      pc.set(3 + i, 14 - i, '#6b4420');
+    }
+    pc.disc(11.5, 4.5, 3.6, '#8c939c');
+    pc.disc(11, 4, 2.2, '#b4bcc6');
+    for (const [x, y] of [[11, 0], [15, 4], [11, 8], [7, 4], [14, 1], [14, 7], [8, 1]]) pc.set(x, y, '#5d636b');
+    pc.outline('#1a120c');
+  },
+  iron_spear(pc) {
+    // Asta larga en diagonal y punta de hierro arriba a la derecha
+    for (let i = 0; i < 12; i++) {
+      pc.set(1 + i, 14 - i, '#8a5a2b');
+      pc.set(2 + i, 14 - i, '#6b4420');
+    }
+    pc.rect(12, 1, 3, 3, '#b4bcc6');
+    pc.set(15, 0, '#eef2f6');
+    pc.set(14, 0, '#eef2f6');
+    pc.set(15, 1, '#eef2f6');
+    pc.set(12, 3, '#7c8590');
+    pc.line(10, 5, 12, 3, '#7c8590');
+    pc.outline('#1a120c');
+  },
+  wood_bow(pc) {
+    bow(pc, '#a3733a', '#6e4a22');
+  },
+  iron_bow(pc) {
+    bow(pc, '#b4bcc6', '#6c7480');
+  },
+  wood_arrow(pc) {
+    // Flecha en diagonal: punta arriba a la derecha, plumas abajo a la izquierda
+    for (let i = 0; i < 10; i++) pc.set(3 + i, 12 - i, '#a3733a');
+    pc.rect(12, 2, 2, 2, '#b4bcc6');
+    pc.set(14, 1, '#e6eaef');
+    pc.set(2, 11, '#e8e8e8');
+    pc.set(3, 13, '#e8e8e8');
+    pc.set(1, 12, '#c0392b');
+    pc.set(2, 14, '#c0392b');
+    pc.outline('#1a120c');
+  },
+  wood_boomerang(pc) {
+    // Bumerán en forma de V
+    pc.line(2, 4, 8, 11, '#b5843f');
+    pc.line(3, 3, 9, 10, '#d9a865');
+    pc.line(8, 11, 14, 4, '#b5843f');
+    pc.line(8, 10, 13, 4, '#8a5f2b');
+    pc.line(2, 5, 8, 12, '#8a5f2b');
+    pc.outline('#20160e');
+  },
+  throwing_knife(pc) {
+    for (let i = 0; i < 7; i++) {
+      pc.set(6 + i, 9 - i, '#eef2f6');
+      pc.set(7 + i, 9 - i, '#9aa3ad');
+    }
+    pc.line(3, 12, 6, 9, '#3a3a3a');
+    pc.line(4, 12, 6, 10, '#555555');
+    pc.set(2, 13, '#c0392b');
+    pc.outline('#1a120c');
   },
   iron_bar(pc) {
     // Lingote en perspectiva

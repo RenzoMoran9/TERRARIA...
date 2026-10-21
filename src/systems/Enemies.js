@@ -363,8 +363,11 @@ export class Enemies {
     return true;
   }
 
-  /** Golpe de espada: daña a los enemigos delante del jugador. Devuelve cuántos golpeó. */
-  meleeHit(player, weapon) {
+  /**
+   * Golpe cuerpo a cuerpo: daña a los enemigos delante del jugador. Devuelve cuántos golpeó.
+   * Espada/daga/maza: zona delante del jugador. Lanza: a lo largo de la estocada (angle).
+   */
+  meleeHit(player, weapon, angle = player.facing > 0 ? 0 : Math.PI) {
     const f = player.facing;
     const reach = weapon.reach;
     const box = {
@@ -373,9 +376,22 @@ export class Enemies {
       w: reach + 6,
       h: player.h + 16,
     };
+    const thrust = weapon.kind === 'thrust';
+    const ox = player.centerX;
+    const oy = player.y + 22;
+    const touched = (e) => {
+      if (!thrust) return e.overlaps(box);
+      // Puntos a lo largo de la lanza
+      for (let d = 10; d <= reach; d += 10) {
+        const px = ox + Math.cos(angle) * d;
+        const py = oy + Math.sin(angle) * d;
+        if (px > e.x - 4 && px < e.x + e.w + 4 && py > e.y - 4 && py < e.y + e.h + 4) return true;
+      }
+      return false;
+    };
     let hits = 0;
     for (const e of this.list) {
-      if (e.dead || !e.overlaps(box)) continue;
+      if (e.dead || !touched(e)) continue;
       e.hit(weapon.damage, weapon.knockback, player.centerX);
       hits++;
     }

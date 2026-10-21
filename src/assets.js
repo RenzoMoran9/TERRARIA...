@@ -77,6 +77,14 @@ export const ASSETS = {
   item_iron_pickaxe: { file: 'items/iron_pickaxe.png', width: 32, height: 32, placeholder: 'iron_pickaxe' },
   item_iron_sword: { file: 'items/iron_sword.png', width: 32, height: 32, placeholder: 'iron_sword' },
   item_iron_hammer: { file: 'items/iron_hammer.png', width: 32, height: 32, placeholder: 'iron_hammer' },
+  item_iron_dagger: { file: 'items/iron_dagger.png', width: 32, height: 32, placeholder: 'iron_dagger' },
+  item_stone_mace: { file: 'items/stone_mace.png', width: 32, height: 32, placeholder: 'stone_mace' },
+  item_iron_spear: { file: 'items/iron_spear.png', width: 32, height: 32, placeholder: 'iron_spear' },
+  item_wood_bow: { file: 'items/wood_bow.png', width: 32, height: 32, placeholder: 'wood_bow' },
+  item_iron_bow: { file: 'items/iron_bow.png', width: 32, height: 32, placeholder: 'iron_bow' },
+  item_wood_arrow: { file: 'items/wood_arrow.png', width: 32, height: 32, placeholder: 'wood_arrow' },
+  item_wood_boomerang: { file: 'items/wood_boomerang.png', width: 32, height: 32, placeholder: 'wood_boomerang' },
+  item_throwing_knife: { file: 'items/throwing_knife.png', width: 32, height: 32, placeholder: 'throwing_knife' },
 
   // ---------- Enemigos (mirando a la derecha; los pies abajo al centro) ----------
   // Slime: 3 cuadros de 32×24 (quieto, aplastado, estirado), en gris claro: el juego lo tiñe de verde o azul

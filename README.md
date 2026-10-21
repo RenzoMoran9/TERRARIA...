@@ -99,6 +99,18 @@ Las puertas se abren solas al caminar contra ellas y se cierran al alejarse. Par
   (1 madera + 1 gel → 3 antorchas). Al reaparecer se van los enemigos cercanos.
   **Para que una casa te proteja**: piso, techo y costados de **bloques** (tablones, piedra…) y una **puerta**.
   Las paredes de fondo solo decoran (se pasa por delante) y evitan que aparezcan enemigos adentro.
+- **Armas de todo tipo** (en la PC se apunta con el ratón; en el celular el botón ATACAR apunta solo al enemigo
+  más cercano):
+  | Arma | Tipo | Receta |
+  | --- | --- | --- |
+  | Espadas de madera, piedra y hierro | Golpe en arco | Mesa / Mesa / Yunque |
+  | Daga de hierro | Muy rápida, poco alcance | 4 lingotes (Yunque) |
+  | Maza de piedra | Lenta, golpe fuerte que empuja lejos | 3 tablones + 14 piedra (Mesa) |
+  | Lanza de hierro | Estocada larga (3 bloques) | 6 lingotes + 4 madera (Yunque) |
+  | Arcos de madera y de hierro | Disparan **flechas** (las gastan) | 10 madera (Mesa) / 8 lingotes + 2 madera (Yunque) |
+  | Flechas de madera ×10 | Munición del arco | 1 madera + 1 piedra (Mesa) |
+  | Bumerán de madera | Va, golpea y vuelve a la mano | 8 tablones (Mesa) |
+  | Cuchillos arrojadizos ×15 | Se lanzan y se gastan | 1 lingote (Yunque) |
 - **Progresión**: con el **Horno** (20 piedra + 4 madera + 3 antorchas, en la mesa) se funde el mineral de hierro
   (3 → 1 lingote) y se hacen **ladrillos de piedra** (2 piedra → 1, un bloque sólido para construir). Con 5 lingotes
   se hace el **Yunque de hierro**, donde se fabrican el pico (12 lingotes + 3 madera, el más rápido), la espada
@@ -136,7 +148,7 @@ Con `npm run dev` la página se recarga sola al agregar o cambiar una imagen. Pa
 Se recomienda **PNG con transparencia**. Si una imagen tiene otro tamaño se escala al tamaño de dibujo
 (los bloques siempre se dibujan a 32×32), así que también se pueden usar imágenes al doble de resolución.
 
-### Lista completa de imágenes (72)
+### Lista completa de imágenes (80)
 
 **Bloques.** Basta con dibujar un bloque "entero" de 32×32: el juego genera solo el contorno oscuro y las esquinas
 redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pasto tapado por otro bloque usa la imagen de la tierra.
@@ -188,6 +200,14 @@ redondeadas donde el bloque toca aire, y las 16 combinaciones de vecinos. El pas
 | `items/iron_pickaxe.png`             | 32 × 32     | Ícono de *Pico de hierro* (misma orientación que los otros picos)          |
 | `items/iron_sword.png`               | 32 × 32     | Ícono de *Espada de hierro* (misma orientación que las otras espadas)      |
 | `items/iron_hammer.png`              | 32 × 32     | Ícono de *Martillo de hierro*                                               |
+| `items/iron_dagger.png`              | 32 × 32     | Ícono de *Daga de hierro* (como todas las armas: mango abajo a la izquierda, punta arriba a la derecha) |
+| `items/stone_mace.png`               | 32 × 32     | Ícono de *Maza de piedra*                                                   |
+| `items/iron_spear.png`               | 32 × 32     | Ícono de *Lanza de hierro*                                                  |
+| `items/wood_bow.png`                 | 32 × 32     | Ícono de *Arco de madera* **apuntando a la derecha** (cuerda a la izquierda) |
+| `items/iron_bow.png`                 | 32 × 32     | Ícono de *Arco de hierro* (misma orientación)                               |
+| `items/wood_arrow.png`               | 32 × 32     | *Flecha de madera* (punta arriba a la derecha; también se ve volando)       |
+| `items/wood_boomerang.png`           | 32 × 32     | *Bumerán de madera* (también se ve girando en el aire)                      |
+| `items/throwing_knife.png`           | 32 × 32     | *Cuchillo arrojadizo* (punta arriba a la derecha)                           |
 | `items/gel.png`                      | 32 × 32     | Ícono de *Gel*                                                              |
 | `items/wood_sword.png`               | 32 × 32     | Ícono de *Espada de madera* (mango abajo a la izquierda, punta arriba a la derecha: así se ve en la mano) |
 | `items/stone_sword.png`              | 32 × 32     | Ícono de *Espada de piedra* (misma orientación)                             |

@@ -20,6 +20,7 @@ import { Lighting } from '../systems/Lighting.js';
 import { BlockInteraction } from '../systems/BlockInteraction.js';
 import { Furniture } from '../systems/Furniture.js';
 import { Enemies } from '../systems/Enemies.js';
+import { Projectiles } from '../systems/Projectiles.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import { textStyle } from '../ui/styles.js';
 
@@ -78,6 +79,7 @@ export class GameScene extends Phaser.Scene {
     this.furniture = new Furniture(this, this.world, this.player);
     this.interaction = new BlockInteraction(this, this.world, this.player, this.inventory, this.furniture);
     this.enemies = new Enemies(this, this.world, this.player, this.dayNight, this.inventory);
+    this.projectiles = new Projectiles(this, this.world, this.enemies, this.player);
 
     // --- Partículas: polvo al correr/aterrizar y fragmentos al romper bloques ---
     this.makePixelTexture();
@@ -238,6 +240,7 @@ export class GameScene extends Phaser.Scene {
     this.player.update(dt, this.readControls());
     this.furniture.update(dt);
     this.enemies.update(dt);
+    this.projectiles.update(dt);
     if (this.player.dead) {
       this.respawnTimer -= dt;
       if (this.respawnTimer <= 0) this.respawn();
@@ -345,12 +348,14 @@ export class GameScene extends Phaser.Scene {
     this._actionWasDown = ts.action;
     if (!acting) this._holdStop = false;
 
-    // Con una espada: el botón ataca, mirando hacia el enemigo más cercano (si hay alguno a mano)
-    if (this.interaction.selectedWeapon()) {
+    // Con un arma: el botón ataca, apuntando al enemigo más cercano (las de distancia, más lejos)
+    const weapon = this.interaction.selectedWeapon();
+    if (weapon) {
       const p = this.player;
-      const e = this.enemies.nearest(5 * T);
-      pa.x = e ? e.centerX : p.centerX + p.facing * T;
-      pa.y = p.centerY;
+      const ranged = weapon.kind === 'bow' || weapon.kind === 'boomerang' || weapon.kind === 'throw';
+      const e = this.enemies.nearest((ranged ? 16 : weapon.kind === 'thrust' ? 6 : 5) * T);
+      pa.x = e ? e.centerX : p.centerX + p.facing * 4 * T;
+      pa.y = e ? e.centerY : p.y + 22;
       pa.action = acting ? 'mine' : null;
       pa.smart = true;
       pa.manual = false;
@@ -563,6 +568,7 @@ export class GameScene extends Phaser.Scene {
     this.scale.off('resize', this.applyZoom, this);
     this.interaction.destroy();
     this.enemies.destroy();
+    this.projectiles.destroy();
     this.player.anim.destroy();
     this.lighting.destroy();
     this.chunkManager.destroy();
