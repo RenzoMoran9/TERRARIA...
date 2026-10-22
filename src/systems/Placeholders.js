@@ -1,6 +1,17 @@
 import Phaser from 'phaser';
 import { PixelCanvas, hash, pick } from './PixelArt.js';
 import { POSES, SHEET_COLS, ART_W, ART_H } from '../player/animations.js';
+// Arte mejorado por áreas (cada módulo reemplaza los pintores que quiere; ver src/art/README.md)
+import * as ART_TERRAIN from '../art/terrain.js';
+import * as ART_BUILDING from '../art/building.js';
+import * as ART_FLORA from '../art/flora.js';
+import * as ART_CHARACTERS from '../art/characters.js';
+import * as ART_MONSTERS from '../art/monsters.js';
+import * as ART_FAUNA from '../art/fauna.js';
+import * as ART_GEAR from '../art/gear.js';
+import * as ART_ITEMS from '../art/items.js';
+import * as ART_SKY from '../art/sky.js';
+import * as ART_UI from '../art/ui.js';
 
 // =====================================================================
 //  Arte de reemplazo generado por código.
@@ -2690,6 +2701,22 @@ const CTX = {
   },
 };
 
+// Los módulos de src/art reemplazan pintores y pueden retocar las tablas internas (temas del fondo, colores…)
+const ART_MODULES = [ART_TERRAIN, ART_BUILDING, ART_FLORA, ART_CHARACTERS, ART_MONSTERS, ART_FAUNA, ART_GEAR, ART_ITEMS, ART_SKY, ART_UI];
+const ORIGINAL = { PIXEL: { ...PIXEL }, CTX: { ...CTX } }; // por si un pintor nuevo falla
+for (const m of ART_MODULES) {
+  Object.assign(PIXEL, m.PIXEL || {});
+  Object.assign(CTX, m.CTX || {});
+}
+for (const m of ART_MODULES) {
+  m.patch?.({ PIXEL, CTX, BG_THEMES, HILL_PROPS, FRONT, PLAYER_COLORS, ARMOR_ICON, LEAF, JUNGLE_LEAF, SHADOW_LEAF, WOOD, GRASS_TOP, DIRT, STONE });
+}
+
+/** Pintores originales (para que un módulo de src/art pueda reutilizar o envolver uno). */
+export { PIXEL as PIXEL_PAINTERS, CTX as CTX_PAINTERS };
+// Ayudantes reutilizables desde src/art (solo se usan al pintar, nunca al cargar el módulo)
+export { fillNoise, pebbles, oreClumps, pickaxe, hammer, bow, grassTop, crystalShard, sword, drawWoodWall, drawPose, drawCanopy, circleBtn, slotShape, ridge, drawShingles, drawNpc, drawCoin, drawPotion, drawMapHead, drawPet, drawBar };
+
 /** Dibuja la variante 'variant' de un asset y devuelve un canvas del tamaño del asset. */
 export function paintPlaceholder(asset, variant = 0) {
   const canvas = document.createElement('canvas');
@@ -2698,12 +2725,22 @@ export function paintPlaceholder(asset, variant = 0) {
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = false;
   const name = asset.placeholder;
-  if (PIXEL[name]) {
-    const pc = new PixelCanvas(asset.width / 2, asset.height / 2);
-    PIXEL[name](pc, variant, asset);
-    pc.draw(ctx, 0, 0, 2);
-  } else {
-    (CTX[name] || CTX.missing)(ctx, asset.width, asset.height, variant, asset);
+  const paint = (pixel, ctxPainters) => {
+    if (pixel[name]) {
+      const pc = new PixelCanvas(asset.width / 2, asset.height / 2);
+      pixel[name](pc, variant, asset);
+      pc.draw(ctx, 0, 0, 2);
+    } else {
+      (ctxPainters[name] || ctxPainters.missing)(ctx, asset.width, asset.height, variant, asset);
+    }
+  };
+  try {
+    paint(PIXEL, CTX);
+  } catch (e) {
+    // Un pintor de src/art falló: se usa el original para que el juego siga funcionando
+    console.error(`[arte] Falló el pintor "${name}":`, e);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    paint(ORIGINAL.PIXEL, ORIGINAL.CTX);
   }
   return canvas;
 }
