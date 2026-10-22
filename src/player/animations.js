@@ -13,14 +13,16 @@
 // antorcha en la mano), así que una hoja propia debe respetar este orden de cuadros.
 
 const WALK_FEET = [4, 3, 1, -2, -4, -3, -1, 2];
+// Cuánto se levanta cada pie al pasar hacia adelante (solo cambia el dibujo de la pierna, no las manos)
+const WALK_LIFT = [0, 0, 0, 0, 0, 1, 2, 1];
 
 const walk = (i) => {
   const front = WALK_FEET[i];
   return {
     name: `walk${i}`,
     bob: i % 4 === 1 || i % 4 === 2 ? 1 : 0,
-    frontLeg: { dx: front },
-    backLeg: { dx: -front },
+    frontLeg: { dx: front, foot: 31 - WALK_LIFT[i] },
+    backLeg: { dx: -front, foot: 31 - WALK_LIFT[(i + 4) % 8] },
     front: [12 - Math.round(front * 0.6), 22],
     back: [9 + Math.round(front * 0.6), 22],
   };

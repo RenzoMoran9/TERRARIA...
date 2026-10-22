@@ -2,23 +2,20 @@ import { TILE_SIZE } from '../config.js';
 import { ASSETS } from '../assets.js';
 import { MATERIALS, VARIANTS, MASK_COUNT, TILESET_CELLS } from './blocks.js';
 import { paintPlaceholder } from '../systems/Placeholders.js';
+import { EDGE_STYLE, defaultEdgeStyle, frameTile } from '../art/terrain.js';
 
 const T = TILE_SIZE;
 const S = T + 2; // cada tile lleva 1 px de borde "extruido" a cada lado
 
 const TOP = 1;
-const RIGHT = 2;
-const BOTTOM = 4;
-const LEFT = 8;
-const OUTLINE = 'rgba(14,9,6,0.6)';
-const SHINE = 'rgba(255,255,255,0.10)';
 
 /**
  * Arma la textura 'tileset' con todos los bloques, partes de muebles y paredes.
  * - Las celdas de cada material van seguidas (ver tileIndex en blocks.js), 16 por fila.
  * - Bloques con bordes: una celda por variante y combinación de vecinos.
- * - Donde un bloque toca aire se dibuja un contorno oscuro y las esquinas se
- *   redondean (como Terraria). Esto se genera solo, también para imágenes propias:
+ * - Donde un bloque toca aire se dibuja un contorno oscuro del color del material, las esquinas se
+ *   redondean, el borde de arriba se ilumina y el de abajo se sombrea; el pasto baja por los costados
+ *   (ver frameTile en art/terrain.js). Se genera solo, también para imágenes propias:
  *   basta con dibujar UN bloque de 32×32.
  * - Muebles: cada parte es el recorte de 32×32 que le toca de la imagen del objeto entero.
  * - 1 px de borde extruido (margin 1, spacing 2) evita líneas entre bloques con zoom no entero.
@@ -53,7 +50,57 @@ export function buildTileset(scene) {
   cellCanvas.height = S;
   const cctx = cellCanvas.getContext('2d');
   cctx.imageSmoothingEnabled = false;
+  // Píxeles de cada textura (para dibujar los bordes píxel a píxel) y su estilo de borde
+  const readCanvas = document.createElement('canvas');
+  readCanvas.width = T;
+  readCanvas.height = T;
+  const rctx = readCanvas.getContext('2d', { willReadFrequently: true });
+  rctx.imageSmoothingEnabled = false;
+  const pixelCache = new Map();
+  const pixels = (key, variant) => {
+    const id = `${key}#${variant}`;
+    if (pixelCache.has(id)) return pixelCache.get(id);
+    const src = source(key, variant);
+    let data = null;
+    if (src) {
+      rctx.clearRect(0, 0, T, T);
+      rctx.drawImage(src, 0, 0, src.width, src.height, 0, 0, T, T);
+      data = rctx.getImageData(0, 0, T, T).data;
+    }
+    pixelCache.set(id, data);
+    return data;
+  };
+  const styleOf = (key, data, grassy) => {
+    const style = EDGE_STYLE[key] || defaultEdgeStyle(data);
+    if (!grassy || style.grass) return style;
+    // Pasto de una imagen propia: los tonos salen del color de arriba
+    const p = (3 * T + 16) * 4;
+    const c = [data[p], data[p + 1], data[p + 2]];
+    const hex = (k) => '#' + c.map((v) => Math.round(Math.min(255, v * k)).toString(16).padStart(2, '0')).join('');
+    return { ...style, grass: { deep: hex(0.45), dark: hex(0.7), mid: hex(1), light: hex(1.15), hi: hex(1.3) } };
+  };
+  const cellData = new ImageData(S, S);
+
   let cell = 0;
+  // Celda con bordes: se calcula en píxeles y se copia con su borde extruido
+  const putPixels = (data) => {
+    const c = cell++;
+    const d = cellData.data;
+    for (let y = 0; y < S; y++) {
+      const sy = Math.min(T - 1, Math.max(0, y - 1));
+      for (let x = 0; x < S; x++) {
+        const sx = Math.min(T - 1, Math.max(0, x - 1));
+        const p = (y * S + x) * 4;
+        const q = (sy * T + sx) * 4;
+        d[p] = data[q];
+        d[p + 1] = data[q + 1];
+        d[p + 2] = data[q + 2];
+        d[p + 3] = data[q + 3];
+      }
+    }
+    cctx.putImageData(cellData, 0, 0);
+    ctx.drawImage(cellCanvas, (c % MASK_COUNT) * S, Math.floor(c / MASK_COUNT) * S);
+  };
   const put = (draw) => {
     const c = cell++;
     cctx.clearRect(0, 0, S, S);
@@ -70,64 +117,31 @@ export function buildTileset(scene) {
       continue;
     }
     for (let v = 0; v < VARIANTS; v++) {
-      const src = source(mat.textures[Math.min(v, mat.textures.length - 1)], v);
-      const covered = source(mat.covered, v);
-      const grassColor = mat.grassy && src ? samplePixel(src, 16, 3) : null;
-      const masks = mat.framed ? MASK_COUNT : 1;
-      for (let mask = 0; mask < masks; mask++) {
-        if (!src) {
-          cell++;
-          continue;
-        }
-        put((g) => drawFramedTile(g, 1, 1, src, covered, mat.framed ? mask : 15, grassColor));
+      const key = mat.textures[Math.min(v, mat.textures.length - 1)];
+      const src = source(key, v);
+      if (!mat.framed) {
+        if (src) put((g) => g.drawImage(src, 0, 0, src.width, src.height, 1, 1, T, T));
+        else cell++;
+        continue;
+      }
+      const data = src && pixels(key, v);
+      if (!data) {
+        cell += MASK_COUNT;
+        continue;
+      }
+      const style = styleOf(key, data, mat.grassy);
+      const cov = mat.covered && pixels(mat.covered, v);
+      const covStyle = cov && styleOf(mat.covered, cov, false);
+      for (let mask = 0; mask < MASK_COUNT; mask++) {
+        // Pasto con un bloque encima → se ve como la tierra de 'covered'
+        if (cov && mask & TOP) putPixels(frameTile(cov, mask, covStyle, v));
+        else putPixels(frameTile(data, mask, style, v));
       }
     }
   }
 
   if (scene.textures.exists('tileset')) scene.textures.remove('tileset');
   scene.textures.addCanvas('tileset', canvas);
-}
-
-function drawFramedTile(ctx, dx, dy, src, covered, mask, grassColor) {
-  const top = mask & TOP;
-  const right = mask & RIGHT;
-  const bottom = mask & BOTTOM;
-  const left = mask & LEFT;
-  // Pasto con un bloque encima → se ve como tierra
-  const img = covered && top ? covered : src;
-  ctx.drawImage(img, 0, 0, img.width, img.height, dx, dy, T, T);
-  if (mask === 15) return;
-
-  // El pasto "baja" un poco por los costados expuestos
-  if (grassColor && !top) {
-    ctx.fillStyle = grassColor;
-    if (!left) ctx.fillRect(dx, dy, 2, 10);
-    if (!right) ctx.fillRect(dx + T - 2, dy, 2, 10);
-  }
-
-  // Contorno en los lados que tocan aire
-  ctx.fillStyle = OUTLINE;
-  if (!top) ctx.fillRect(dx, dy, T, 2);
-  if (!bottom) ctx.fillRect(dx, dy + T - 2, T, 2);
-  if (!left) ctx.fillRect(dx, dy + (top ? 0 : 2), 2, T - (top ? 0 : 2) - (bottom ? 0 : 2));
-  if (!right) ctx.fillRect(dx + T - 2, dy + (top ? 0 : 2), 2, T - (top ? 0 : 2) - (bottom ? 0 : 2));
-  // Brillo suave bajo el borde superior/izquierdo
-  ctx.fillStyle = SHINE;
-  if (!top) ctx.fillRect(dx + 2, dy + 2, T - 4, 2);
-  if (!left) ctx.fillRect(dx + 2, dy + 4, 2, T - 8);
-
-  // Esquinas redondeadas donde se juntan dos lados expuestos
-  const corner = (cx, cy, sx, sy) => {
-    // cx, cy: esquina; sx, sy: dirección hacia adentro
-    ctx.clearRect(sx > 0 ? cx : cx - 4, sy > 0 ? cy : cy - 2, 4, 2);
-    ctx.clearRect(sx > 0 ? cx : cx - 2, sy > 0 ? cy + 2 : cy - 4, 2, 2);
-    ctx.fillStyle = OUTLINE;
-    ctx.fillRect(sx > 0 ? cx + 2 : cx - 4, sy > 0 ? cy + 2 : cy - 4, 2, 2);
-  };
-  if (!top && !left) corner(dx, dy, 1, 1);
-  if (!top && !right) corner(dx + T, dy, -1, 1);
-  if (!bottom && !left) corner(dx, dy + T, 1, -1);
-  if (!bottom && !right) corner(dx + T, dy + T, -1, -1);
 }
 
 // Recorte de 32×32 de la imagen de un mueble (la imagen puede estar a otra escala, p. ej. ×2)
@@ -148,16 +162,4 @@ function extrude(ctx, canvas, dx, dy) {
   ctx.drawImage(canvas, dx + T - 1, dy, 1, T, dx + T, dy, 1, T);
   ctx.drawImage(canvas, dx - 1, dy, T + 2, 1, dx - 1, dy - 1, T + 2, 1);
   ctx.drawImage(canvas, dx - 1, dy + T - 1, T + 2, 1, dx - 1, dy + T, T + 2, 1);
-}
-
-// Color de un píxel de una imagen (para que el pasto de los costados combine con la imagen)
-function samplePixel(src, x, y) {
-  const c = document.createElement('canvas');
-  c.width = T;
-  c.height = T;
-  const pctx = c.getContext('2d', { willReadFrequently: true });
-  pctx.imageSmoothingEnabled = false;
-  pctx.drawImage(src, 0, 0, src.width, src.height, 0, 0, T, T);
-  const [r, g, b, a] = pctx.getImageData(x, y, 1, 1).data;
-  return a > 0 ? `rgb(${r},${g},${b})` : null;
 }
