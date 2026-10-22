@@ -117,6 +117,8 @@ function stamp(F, inner = 0.62) {
   clear();
 }
 const put = (x, y, c) => LAYER.set(x, y, c);
+// Borra de la capa todo lo que está de la fila y para abajo
+const clipBelow = (y) => LAYER.px.fill(null, Math.max(0, y) * ART_W);
 // Dibuja una plantilla de texto (un carácter por píxel, '.' = vacío) con un mapa carácter → color
 function blit(x0, y0, rows, map) {
   for (let r = 0; r < rows.length; r++) {
@@ -152,7 +154,7 @@ const MATERIAL = {
   '#8a5a2b': 'wood', '#9a6a35': 'wood', '#7a4f22': 'wood',
   '#3e7a2e': 'cactus', '#4f8a3a': 'cactus', '#3e6a2c': 'cactus',
   '#8a9098': 'metal', '#9aa2aa': 'metal', '#7a8088': 'metal',
-  '#d8a820': 'metal', '#e0b030': 'metal', '#c89820': 'metal',
+  '#d8a820': 'gold', '#e0b030': 'gold', '#c89820': 'gold',
   '#b8301a': 'hell', '#c83a1a': 'hell', '#9a2a14': 'hell',
   '#c47ad8': 'crystal', '#d890f0': 'crystal', '#b070d0': 'crystal',
 };
@@ -186,26 +188,28 @@ function palette(C) {
   const pants = ramp(C.pants, C.pantsShade, lighter(C.pants, 0.08));
   const boots = ramp(C.boots, C.bootsShade, lighter(C.boots, 0.1));
   const belt = ramp(C.belt, darker(C.belt, 0.07), lighter(C.belt, 0.1));
-  return { skin, hair, shirt, pants, boots, belt, buckle: C.buckle, buckleShade: darker(C.buckle, 0.16), eye: C.eye, eyeWhite: C.eyeWhite, mouth: C.mouth, lash: darker(C.hair, 0.12) };
+  const cheek = mix(C.skin, '#f07a6a', 0.28);
+  return { C, skin, hair, shirt, pants, boots, belt, cheek, buckle: C.buckle, buckleShade: darker(C.buckle, 0.16), eye: C.eye, eyeWhite: C.eyeWhite, mouth: C.mouth, lash: darker(C.hair, 0.12) };
 }
 
 // ---------------------------------------------------------------- cabeza
 // Plantillas de 13 columnas desde x = cabeza + 6 (la cara mira a la derecha), fila 0 = arriba del pelo.
-// d/H/L/W = pelo hondo/medio/luz/brillo, h = pelo sombra; S/s/x/k = piel media/sombra/honda/luz; e = oreja
+// d/H/L/W = pelo hondo/medio/luz/brillo, h = pelo sombra; S/s/x/k = piel media/sombra/honda/luz; e = oreja,
+// c = mejilla
 const HAIR = {
-  // Héroe: pelo revuelto con flequillo que cae sobre la frente
+  // Héroe: pelo revuelto y con volumen, mechón que cae sobre la frente y otro en la nuca
   hero: [
     '...dhHHHhd...',
-    '..dHLLWLHhd..',
-    '.dHLWWLHLLHd.',
-    'dHLLHHhHLHhd.',
-    '.dHhdHdShHhd.',
-    'dHhHdsSSSsS..',
+    '..dHLLWLLHd..',
+    '.dHLWWLLHLHd.',
+    'dHLLHLLHHLHHd',
+    'dHHhHHdhShHhd',
+    'dHhHdsSSSShd.',
     '.dHdeSSSSSS..',
-    '..dheSSSSSs..',
+    '.dhdekSSScs..',
     '..ddsSSSSSs..',
-    '...dsSSSSSs..',
-    '....xsssss...',
+    '...dsSSSSs...',
+    '....xssss....',
   ],
   // Guía: pelo prolijo con raya al costado
   guide: [
@@ -216,10 +220,10 @@ const HAIR = {
     '.dHHhdsssHd..',
     '.dHHdSSSSSS..',
     '.ddHeSSSSSS..',
-    '..dheSSSSSs..',
+    '..dhekSSScs..',
     '..ddsSSSSSs..',
-    '...dsSSSSSs..',
-    '....xsssss...',
+    '...dsSSSSs...',
+    '....xssss....',
   ],
   // Enfermera: pelo largo que cae por la espalda (más filas)
   long: [
@@ -230,10 +234,10 @@ const HAIR = {
     'dHHHHdHsHHd..',
     'dHLHdSsSSsS..',
     'dHLHeSSSSSS..',
-    'dHLhekSSSSs..',
+    'dHLhekSSScs..',
     'dHHhsSSSSSs..',
-    'dHHdsSSSSSs..',
-    '.dHhxsssss...',
+    'dHHdsSSSSs...',
+    '.dHhxssss....',
     '.dhd.........',
   ],
   // Comerciante: canoso y corto (el sombrero tapa el resto)
@@ -245,36 +249,121 @@ const HAIR = {
     '.dHHdSSSSSs..',
     '.dHHdSSSSSS..',
     '.ddHeSSSSSS..',
-    '..dheSSSSSs..',
+    '..dhekSSScs..',
     '..ddsSSSSSs..',
-    '...dsSSSSSs..',
-    '....xsssss...',
+    '...dsSSSSs...',
+    '....xssss....',
   ],
-  // Casco (pieza de armadura): o/n/m/l/w = metal hondo/sombra/medio/luz/brillo, r = remache, v = nasal
-  helmet: [
-    '...onmmmo....',
-    '..omlwwlmno..',
-    '.omlwwllmmno.',
-    '.mlllllllllvo',
-    'ommrmmmrmmmmo',
-    '.oonnoSSSSvo.',
-    '.ommnoSSSSv..',
-    '.omlnosSSSs..',
-    '.omnnosSSSs..',
-    '..oonoxSSSs..',
-    '.....xssss...',
+};
+
+// Cascos (pieza de armadura): o/n/m/l/w = hondo/sombra/medio/luz/brillo del material, r = remache o adorno,
+// g = brillo propio (brasa, gema). El pelo del héroe asoma por la nuca (d/h/H).
+const HELMET = {
+  // Metal: cúpula lisa con reflejo, banda con remaches, ala que sombrea los ojos y carrillera
+  metal: [
+    '....onmmmo...',
+    '..omlwwlmmo..',
+    '.omlwwllmmmo.',
+    '.mlrlllrllmno',
+    '.onnnnnnnnno.',
+    'dHomnsSSSSS..',
+    'dHomnSSSSSS..',
+    '.domnkSSScs..',
+    '..onnsSSSSs..',
+    '...oosSSSs...',
+    '....xssss....',
   ],
+  // Madera: gorro de tablas con vetas y un aro oscuro; deja ver el pelo de atrás
+  wood: [
+    '....onmonm...',
+    '..onlwnlmono.',
+    '.omlwonlmonmo',
+    'mwllrlllrllmn',
+    'onnnnnnnnnnno',
+    'dHhHdsSSSShd.',
+    '.dHdeSSSSSS..',
+    '.dhdekSSScs..',
+    '..ddsSSSSSs..',
+    '...dsSSSSs...',
+    '....xssss....',
+  ],
+  // Cactus: cúpula verde con costillas, espinas claras y una flor rosada arriba
+  cactus: [
+    '.....rgr.....',
+    '..onmmrmmno..',
+    '.omlwnmlwnmo.',
+    'omlwlnmlwlnmn',
+    'onmlnnmlnnmmo',
+    'dHhHdsSSSShd.',
+    '.dHdeSSSSSS..',
+    '.dhdekSSScs..',
+    '..ddsSSSSSs..',
+    '...dsSSSSs...',
+    '....xssss....',
+  ],
+  // Infernal: yelmo oscuro con cuernos de hueso, visera en punta y grietas de brasa
+  hell: [
+    'rr...onmmo...',
+    '.rrromlwlmno.',
+    '..rommlwgmmno',
+    'omlwlgmmmmmmn',
+    'onnnnnnnnnnno',
+    'dHomgsSSSSS..',
+    'dHomnSSSSSS..',
+    '.domnkSSScs..',
+    '..onnsSSSSs..',
+    '...oosSSSs...',
+    '....xssss....',
+  ],
+  // Cristal: corona de facetas con una gema en la frente
+  crystal: [
+    '...l..l..l...',
+    '..olnmlnmlo..',
+    '.omlwwlmlwmo.',
+    'omlwllmmlmmmn',
+    'onnnnngnnnnno',
+    'dHomnsSSSSS..',
+    'dHomnSSSSSS..',
+    '.domnkSSScs..',
+    '..onnsSSSSs..',
+    '...oosSSSs...',
+    '....xssss....',
+  ],
+};
+// El oro usa el casco de metal con una cresta
+HELMET.gold = HELMET.metal;
+
+// Rampa del material del casco (más contraste que la del pelo)
+function helmetRamp(C) {
+  return memo(`hr${C.helm}${C.helmLight}`, () => {
+    const mid = C.helm;
+    const shade = darker(mid, 0.13);
+    return { deep: darker(shade, 0.13), shade, mid, light: C.helmLight, hi: lighter(C.helmLight, 0.12) };
+  });
+}
+const HELM_ACCENT = {
+  metal: (M) => [M.hi, M.hi],
+  gold: (M) => [M.hi, '#ff5a6a'],
+  wood: (M) => [M.deep, M.light],
+  cactus: () => ['#f070a8', '#ffe070'],
+  hell: () => ['#3a2418', '#ffb040'],
+  crystal: () => ['#ffffff', '#7af0ff'],
 };
 
 function drawHead(x0, y0, pal, P, style) {
   const H = pal.hair;
   const S = pal.skin;
   const helmet = style.helmet;
-  const rows = HAIR[helmet ? 'helmet' : style.hair || 'hero'];
-  const map = { d: H.deep, h: H.shade, H: H.mid, L: H.light, W: H.hi, S: S.mid, s: S.shade, x: S.deep, k: S.light, e: S.shade };
-  if (helmet) Object.assign(map, helmetMap(pal, style.helmet));
+  const rows = helmet ? HELMET[helmet] : HAIR[style.hair || 'hero'];
+  const map = { d: H.deep, h: H.shade, H: H.mid, L: H.light, W: H.hi, S: S.mid, s: S.shade, x: S.deep, k: S.light, e: S.shade, c: pal.cheek };
+  if (helmet) {
+    const M = helmetRamp(pal.C);
+    const [r, g] = HELM_ACCENT[helmet](M);
+    Object.assign(map, { o: M.deep, n: M.shade, m: M.mid, l: M.light, w: M.hi, r, g });
+    if (helmet === 'hell') map.r = '#d8c8a8'; // cuernos de hueso
+  }
   blit(x0 + 6, y0, rows, map);
-  if (helmet) helmetDetail(x0, y0, pal, style.helmet);
+  if (helmet) helmetDetail(x0, y0, pal, helmet);
   face(x0, y0, pal, P, !!helmet);
   style.headExtra?.(x0, y0, pal, P);
 }
@@ -285,7 +374,7 @@ function face(hx, hy, pal, P, noBrow) {
   const S = pal.skin;
   const p = (x, y, c) => put(hx + x, hy + y, c);
   const iris = pal.eye;
-  const irisDark = darker(pal.eye, 0.1);
+  const irisDark = darker(pal.eye, 0.12);
   switch (P.eyes || 'open') {
     case 'closed':
       p(13, 6, lash);
@@ -303,7 +392,7 @@ function face(hx, hy, pal, P, noBrow) {
       for (const y of [4, 5, 6]) p(13, y, pal.eyeWhite);
       p(14, 4, pal.eyeWhite);
       p(14, 5, iris);
-      p(14, 6, pal.eyeWhite);
+      p(14, 6, irisDark);
       p(15, 5, lash);
       break;
     case 'back':
@@ -311,7 +400,7 @@ function face(hx, hy, pal, P, noBrow) {
       p(14, 6, pal.eyeWhite);
       p(13, 5, iris);
       p(13, 6, irisDark);
-      p(13, 4, lash);
+      if (!noBrow) p(13, 4, lash);
       break;
     case 'hurt':
       p(13, 4, lash);
@@ -368,123 +457,97 @@ function face(hx, hy, pal, P, noBrow) {
       break;
     default:
       p(14, 8, m);
-      p(15, 8, m);
+      p(15, 8, mix(m, S.mid, 0.45));
   }
 }
 
-// Rampa del metal del casco (más contraste que la del pelo)
-const helmetRamp = (pal) => ramp(pal.hair.mid, darker(pal.hair.mid, 0.12), pal.hair.light);
-function helmetMap(pal, mat) {
-  const M = helmetRamp(pal);
-  const wood = mat === 'wood';
-  return { o: M.deep, n: M.shade, m: M.mid, l: M.light, w: wood ? M.light : M.hi, r: wood ? M.deep : M.hi, v: M.shade };
-}
-// Detalles del casco según el material: vetas, espinas, cuernos, facetas
+// Detalles del casco según el material: cresta, vetas, brasas, destellos
 function helmetDetail(hx, hy, pal, mat) {
-  const M = helmetRamp(pal);
+  const M = helmetRamp(pal.C);
   const p = (x, y, c) => put(hx + x, hy + y, c);
-  if (mat === 'metal') {
-    p(9, -1, M.mid); // cresta
-    p(10, -1, M.light);
-    p(11, -1, M.mid);
-  } else if (mat === 'wood') {
-    p(11, 1, M.shade); // vetas
-    p(12, 1, M.shade);
-    p(9, 2, M.shade);
-    p(10, 2, M.shade);
-    p(14, 2, M.shade);
-    p(15, 3, M.deep);
-  } else if (mat === 'cactus') {
-    p(10, -1, M.hi); // espinas que asoman
-    p(14, 0, M.hi);
-    p(6, 2, M.hi);
-    p(12, 1, M.hi);
-    p(16, 2, M.hi);
-    p(9, 2, M.shade);
+  if (mat === 'gold') {
+    // cresta de placas sobre la cúpula
+    for (let x = 10; x <= 13; x++) p(x, -1, x === 10 ? M.light : x === 13 ? M.shade : M.mid);
+    p(11, -1, M.hi);
+    p(12, 1, '#ff5a6a'); // gema roja en la frente
+    p(12, 2, '#c02a4a');
+  } else if (mat === 'metal') {
+    p(12, 2, M.light);
   } else if (mat === 'hell') {
-    // cuernos hacia atrás y vetas de brasa
-    p(7, 1, '#3a1410');
-    p(6, 0, '#3a1410');
-    p(5, 0, '#ffb040');
-    p(9, 0, '#3a1410');
-    p(9, -1, '#ffb040');
-    p(12, 2, '#ffd060');
-    p(13, 2, '#ff8a30');
-    p(8, 6, '#ff8a30');
+    p(16, 5, '#ffd060'); // ojo de la visera
+    p(10, 6, '#ff8a30');
   } else if (mat === 'crystal') {
-    p(10, -1, M.light); // facetas y destellos
-    p(11, -1, '#ffffff');
-    p(11, 1, '#ffffff');
-    p(13, 2, M.shade);
-    p(14, 1, M.shade);
-    p(12, 3, '#ffffff');
+    p(12, 4, '#7af0ff');
+    p(11, 4, '#3ab0e0');
   }
 }
 
 // ---------------------------------------------------------------- torso
-// Pechera (x 8..15 del cuadro, filas desde el hombro)
+// Pechera (x 8..15 del cuadro, filas desde el hombro): gola, peto con reflejo arriba a la izquierda,
+// borde inferior hondo y una lama (escarcela) debajo
 const CHEST = [
-  '.lloolm.',
-  'lwwlmmnn',
-  'lwlmmmno',
-  'llmmmnno',
-  'mooooooo',
-  'llllllmn',
+  '.lwwlmn.',
+  'lwlllmmn',
+  'lllmmmno',
+  'llmmmmno',
+  'lmmmmnno',
+  'onnnnnoo',
+  'lllllmmn',
   'mmmmnnno',
-  'nnnnnnoo',
 ];
 // Detalles por material: [x, y, tono de la rampa o color]
 const CHEST_DETAIL = {
-  metal: [[9, 5, 'hi'], [14, 5, 'hi'], [13, 2, 'light']],
-  hell: [[12, 2, '#ffd060'], [13, 3, '#ff8a30'], [9, 5, 'light']],
-  wood: [[10, 2, 'shade'], [11, 2, 'shade'], [12, 3, 'shade'], [10, 6, 'deep'], [13, 5, 'shade']],
-  cactus: [[11, 1, 'hi'], [13, 2, 'hi'], [10, 3, 'hi'], [12, 6, 'hi'], [9, 7, 'hi']],
-  crystal: [[10, 1, '#ffffff'], [11, 2, 'hi'], [13, 1, 'shade'], [12, 3, 'light'], [10, 6, '#ffffff']],
+  metal: [[9, 6, 'hi'], [14, 6, 'shade'], [10, 1, 'hi']],
+  gold: [[9, 6, 'hi'], [14, 6, 'shade'], [10, 1, 'hi'], [11, 3, '#ff5a6a'], [11, 4, '#c02a4a']],
+  hell: [[11, 2, '#ffd060'], [12, 3, '#ff8a30'], [12, 4, '#ff8a30'], [9, 6, 'hi'], [13, 7, '#ff8a30']],
+  wood: [[10, 2, 'shade'], [10, 3, 'shade'], [13, 1, 'shade'], [13, 2, 'shade'], [11, 6, 'deep'], [14, 6, 'deep']],
+  cactus: [[10, 2, 'hi'], [12, 1, 'hi'], [13, 3, 'hi'], [9, 7, 'hi'], [12, 7, 'hi']],
+  crystal: [[9, 1, '#ffffff'], [10, 2, 'hi'], [12, 2, 'shade'], [13, 3, 'shade'], [11, 3, 'light'], [10, 6, '#ffffff']],
 };
 function drawTorso(ux, top, pal, style) {
   const R = pal.shirt;
   const armor = style.chest;
   const p = (x, y, c) => put(ux + x, top + y, c);
-  // Volumen: hombros con luz, borde de atrás iluminado, frente y bajo el pecho en sombra
+  // Volumen: hombros y espalda con luz (arriba a la izquierda), el frente y el vientre en sombra
   for (let r = 0; r < 8; r++) {
     const x0 = r === 0 ? 9 : 8;
     const x1 = r === 0 ? 14 : 15;
     for (let x = x0; x <= x1; x++) {
       let c = R.mid;
-      if (r === 0 || (r === 1 && x < 12)) c = R.light;
-      else if (x === x0) c = r < 6 ? R.light : R.mid;
+      if (x - x0 + r < 3) c = R.light;
       else if (x === x1) c = r < 2 ? R.mid : R.shade;
-      else if (r >= 6) c = x >= 12 ? R.shade : R.mid;
+      else if (r >= 6 && x >= 12) c = R.shade;
       p(x, r, c);
     }
   }
+  p(9, 1, R.hi);
   if (armor) {
-    // Pechera: placa del pecho con reflejo, borde inferior hondo y una lama debajo
     const wood = armor === 'wood';
     blit(ux + 8, top, CHEST, { o: R.deep, n: R.shade, m: R.mid, l: R.light, w: wood ? R.light : R.hi });
-    const d = CHEST_DETAIL[armor];
-    for (const [x, y, k] of d) p(x, y, k[0] === '#' ? k : R[k]);
+    for (const [x, y, k] of CHEST_DETAIL[armor]) p(x, y, k[0] === '#' ? k : R[k]);
   } else {
-    // Camisa: escote en V con ribete, costura del hombro y un pliegue suave bajo el brazo
+    // Camisa: escote en V con ribete claro, pliegues en la espalda y bajo el pecho
     p(11, 0, pal.skin.mid);
     p(12, 0, pal.skin.shade);
     p(11, 1, pal.skin.shade);
     p(10, 0, R.hi);
     p(13, 0, R.hi);
-    p(12, 1, R.hi);
-    p(10, 1, R.hi);
-    p(9, 5, R.shade); // pliegue hacia el cinturón
+    p(12, 1, R.light);
+    p(10, 1, R.light);
+    p(8, 4, R.mid); // pliegue de la espalda
+    p(9, 5, R.shade);
+    p(9, 4, R.light);
     p(10, 6, R.shade);
-    p(9, 6, R.light);
+    p(15, 4, R.deep); // sombra bajo el pecho
+    p(14, 5, R.shade);
   }
   // Cinturón con hebilla
   const B = pal.belt;
-  for (let x = 8; x <= 15; x++) p(x, 8, x === 8 ? B.light : x >= 14 ? B.shade : B.mid);
-  p(9, 8, B.light);
+  for (let x = 8; x <= 15; x++) p(x, 8, x <= 9 ? B.light : x >= 14 ? B.shade : B.mid);
   p(12, 8, pal.buckleShade);
   p(13, 8, pal.buckle);
-  // Faldón de la camisa (o de la pechera) con pliegues
-  for (let x = 8; x <= 15; x++) p(x, 9, x === 8 ? R.mid : x === 11 || x === 14 ? R.deep : R.shade);
+  // Faldón que se abre un poco sobre la cadera, con pliegues
+  for (let x = 7; x <= 16; x++) p(x, 9, x <= 8 ? R.mid : x === 11 || x === 14 ? R.deep : R.shade);
   style.torsoExtra?.(ux, top, pal);
 }
 
@@ -492,7 +555,8 @@ function drawTorso(ux, top, pal, style) {
 function drawLeg(hipX, hipY, fx, foot, knee, pants, boots, style) {
   const ax = fx + 1;
   const ay = foot - 4;
-  const paint = (t, s) => lit(pants, s);
+  // Pantalón: luz al frente del muslo y sombra detrás; un pliegue hondo en la corva
+  const paint = (t, s) => (s > 0.35 ? pants.light : s < -0.35 ? (t > 0.45 && t < 0.62 ? pants.deep : pants.shade) : pants.mid);
   let kx;
   let ky;
   if (knee) [kx, ky] = knee;
@@ -506,18 +570,19 @@ function drawLeg(hipX, hipY, fx, foot, knee, pants, boots, style) {
     capsule(kx, ky, ax, ay, 1.1, paint);
   } else capsule(hipX, hipY, ax, ay, 1.15, paint);
   if (style.greaves) {
-    // rodillera
+    // rodillera de placa con brillo
     const gx = kx !== undefined ? kx : Math.round((hipX + ax) / 2);
     const gy = ky !== undefined ? ky : Math.round((hipY + ay) / 2) + 1;
     put(gx - 1, gy, pants.light);
     put(gx, gy, pants.hi);
-    put(gx, gy + 1, pants.mid);
+    put(gx + 1, gy, pants.mid);
+    put(gx, gy + 1, pants.shade);
   }
-  // Bota: caña con doblez, empeine con punta y suela
+  // Bota: caña con doblez claro arriba, empeine con punta redondeada y suela honda
   const B = boots;
   put(fx, foot - 3, B.light);
-  put(fx + 1, foot - 3, B.light);
-  put(fx + 2, foot - 3, B.mid);
+  put(fx + 1, foot - 3, B.hi);
+  put(fx + 2, foot - 3, B.light);
   put(fx, foot - 2, B.shade);
   put(fx + 1, foot - 2, B.mid);
   put(fx + 2, foot - 2, B.mid);
@@ -525,22 +590,25 @@ function drawLeg(hipX, hipY, fx, foot, knee, pants, boots, style) {
   put(fx + 1, foot - 1, B.mid);
   put(fx + 2, foot - 1, B.light);
   put(fx + 3, foot - 1, B.mid);
-  for (let x = 0; x < 4; x++) put(fx + x, foot, B.deep);
-  if (style.greaves) put(fx + 3, foot - 1, B.hi);
+  for (let x = 0; x < 4; x++) put(fx + x, foot, x === 3 ? B.shade : B.deep);
+  if (style.greaves) put(fx + 2, foot - 2, B.light);
 }
 
 function drawArm(sx, sy, hx, hy, shirt, skin, style, front) {
-  // Manga larga hasta la muñeca, con puño claro; la piel apenas asoma antes de la mano.
-  // Con pechera: manga de malla (más oscura y tramada) con brazal claro y hombrera de placa.
+  // Manga larga con puño claro; la piel apenas asoma antes de la mano.
+  // Con pechera: manga del material y brazal de placa claro, más la hombrera.
   const armor = style.chest;
-  const sleeve = armor ? back(shirt) : shirt;
-  const mail = armor === 'metal' || armor === 'hell';
   const len = Math.max(1, Math.hypot(hx + 1 - sx, hy - sy));
   const cut = 1 - 1.6 / len;
-  const cuff = cut - (armor ? 1.6 : 1) / len;
-  capsule(sx, sy, hx + 1, hy, 1.1, (t, s, x, y) => {
-    if (t < cuff) return mail && (x + y) % 2 && s > -0.35 ? sleeve.light : lit(sleeve, s);
-    if (t < cut) return armor ? (s > -0.35 ? shirt.light : shirt.shade) : s > -0.35 ? shirt.light : shirt.mid;
+  const cuff = cut - (armor ? 1.8 : 1) / len;
+  const elbow = 0.5;
+  capsule(sx, sy, hx + 1, hy, 1.1, (t, s) => {
+    if (t < cuff) {
+      // pliegue del codo del lado de la sombra
+      if (s < -0.35 && Math.abs(t - elbow) < 0.09) return shirt.deep;
+      return lit(shirt, s);
+    }
+    if (t < cut) return s > 0.35 ? shirt.hi : s < -0.35 ? shirt.mid : shirt.light;
     return s < -0.35 ? skin.shade : skin.mid;
   });
   if (armor && front) {
@@ -550,12 +618,15 @@ function drawArm(sx, sy, hx, hy, shirt, skin, style, front) {
       [-1, [H.light, H.hi, H.light]],
       [-2, [H.light, H.hi, H.light, H.mid, H.shade]],
       [-2, [H.mid, H.light, H.mid, H.shade, H.deep]],
-      [-1, [H.deep, H.deep, H.deep]],
+      [-1, [H.deep, H.shade, H.deep]],
     ];
     rows.forEach(([x0, cs], k) => cs.forEach((c, i) => put(sx + x0 + i, sy - 1 + k, c)));
-    if (mail) put(sx + 1, sy, H.hi); // remache
+    if (armor !== 'wood' && armor !== 'cactus') put(sx + 1, sy, H.hi); // remache
   }
-  // Puño (3×2) con nudillo iluminado
+  fist(hx, hy, skin);
+}
+// Puño (3×2) con nudillo iluminado
+function fist(hx, hy, skin) {
   put(hx, hy, skin.light);
   put(hx + 1, hy, skin.mid);
   put(hx + 2, hy, skin.mid);
@@ -612,7 +683,20 @@ function drawFigure(F, P, pal, style) {
   stamp(F);
   if (!raised) {
     drawArm(ux + 13, Y(shoulder), fx, fy, shirt, pal.skin, style, true);
-    stamp(F, 0.72); // línea más marcada donde el brazo tapa el cuerpo
+    stamp(F, 0.85); // línea más marcada donde el brazo tapa el cuerpo
+  } else {
+    // El antebrazo levantado por encima del pelo se ve delante (agarra el pico, saluda)
+    const top = hy + 3;
+    if (fy < top) {
+      drawArm(ux + 13, Y(shoulder), fx, fy, shirt, pal.skin, style, false);
+      clipBelow(top);
+      stamp(F, 0.85);
+    }
+    if (by < top) {
+      drawArm(ux + 10, Y(shoulder), bx, by, back(shirt), back(pal.skin), style, false);
+      clipBelow(top);
+      stamp(F, 0.85);
+    }
   }
 }
 
@@ -635,7 +719,7 @@ function drawSheet(pc, poses, C, style, cols = poses.length) {
 }
 
 // Aldeanos: quieto, caminar ×4 y hablando (ver systems/Npcs.js)
-const npcPoses = () => [POSES[0], POSES[3], POSES[5], POSES[7], POSES[9], { name: 'talk', front: [17, 12], eyes: 'happy', mouth: 'open' }];
+const npcPoses = () => [POSES[0], POSES[3], POSES[5], POSES[7], POSES[9], { name: 'talk', lean: 1, front: [18, 15], back: [8, 21], eyes: 'happy', mouth: 'open' }];
 
 // ---------------------------------------------------------------- cabezas del mapa (16×16, de frente)
 // Mismos códigos que las cabezas de perfil; E/I = ojo blanco/iris, b = ceja, M = boca, + adornos (sombrero, cofia…)
@@ -817,11 +901,12 @@ const NURSE = { hair: '#d86a8a', hairLight: '#f08aa8', shirt: '#f2f2f2', shirtSh
 export const PIXEL = {
   player(pc, v, asset) {
     // Con armadura (asset.colors): el casco cambia el pelo, la pechera la camisa y las grebas el pantalón y las botas
-    const A = asset?.colors || {};
-    const C = { ...PLAYER, ...A };
+    // (el casco no tiñe el pelo: se guarda aparte y el pelo del héroe asoma por debajo)
+    const { hair, hairLight, ...A } = asset?.colors || {};
+    const C = { ...PLAYER, ...A, helm: hair, helmLight: hairLight };
     const style = {
       hair: 'hero',
-      helmet: A.hair ? material(A.hair) : null,
+      helmet: hair ? material(hair) : null,
       chest: A.shirt ? material(A.shirt) : null,
       greaves: A.pants ? material(A.pants) : null,
     };
