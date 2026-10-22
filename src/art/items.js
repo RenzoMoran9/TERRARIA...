@@ -12,7 +12,7 @@ const IRON = ['#272b3c', '#3e4558', '#5b6476', '#7a8494', '#a2acb8', '#d4dade', 
 const GOLD = ['#5e2f10', '#9a5a1a', '#cc8a28', '#e8b440', '#f8d870', '#fff6c4', '#ffffff'];
 const COPPER = ['#4a1a0c', '#7a3416', '#a85224', '#cc7038', '#ec9a5c', '#ffc896', '#fff0dc'];
 const SILVER = ['#2a3044', '#4c5468', '#76808f', '#a2abb8', '#cad1da', '#eef2f6', '#ffffff'];
-const HELL = ['#2a0608', '#4a0c0c', '#721810', '#9c2614', '#c84018', '#f07428', '#ffd27a'];
+const HELL = ['#1a0408', '#34090c', '#521210', '#701e14', '#902c16', '#b8441c', '#ffd27a'];
 // Fuego: rojo hondo → blanco
 const FIRE = ['#7a1a0a', '#c23a0e', '#ee6a18', '#ffa22c', '#ffd65a', '#fff6cc'];
 const SPARK = '#fff8dc';
@@ -91,6 +91,56 @@ function spans(rows) {
   return m;
 }
 
+// Máscara de un polígono (lista de [x, y]); se prueba el centro de cada píxel
+function poly(pts) {
+  return mask((x, y) => {
+    const px = x + 0.5;
+    const py = y + 0.5;
+    let inside = false;
+    for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+      const [xi, yi] = pts[i];
+      const [xj, yj] = pts[j];
+      if (yi > py !== yj > py && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) inside = !inside;
+    }
+    return inside;
+  });
+}
+
+// Facetas tipo piedra tallada: cada píxel toma el tono de la semilla [x, y, tono] más cercana;
+// las aristas que miran a la luz se aclaran y el borde de abajo-derecha se oscurece.
+function facets(pc, m, seeds, R) {
+  const id = new Int8Array(256).fill(-1);
+  for (let y = 0; y < 16; y++) {
+    for (let x = 0; x < 16; x++) {
+      if (!inM(m, x, y)) continue;
+      let best = 1e9;
+      for (let k = 0; k < seeds.length; k++) {
+        const dd = (x - seeds[k][0]) ** 2 + (y - seeds[k][1]) ** 2;
+        if (dd < best) {
+          best = dd;
+          id[y * 16 + x] = k;
+        }
+      }
+    }
+  }
+  const at = (x, y) => (inM(m, x, y) ? id[y * 16 + x] : -1);
+  for (let y = 0; y < 16; y++) {
+    for (let x = 0; x < 16; x++) {
+      const k = at(x, y);
+      if (k < 0) continue;
+      let t = seeds[k][2];
+      const up = at(x, y - 1);
+      const lf = at(x - 1, y);
+      const dn = at(x, y + 1);
+      const rt = at(x + 1, y);
+      if ((up >= 0 && up !== k) || (lf >= 0 && lf !== k)) t = Math.min(R.length - 2, t + 1);
+      else if ((dn >= 0 && dn !== k && seeds[dn][2] > t) || (rt >= 0 && rt !== k && seeds[rt][2] > t)) t = Math.max(0, t - 1);
+      if (rt < 0 || dn < 0) t = Math.max(0, t - 1);
+      pc.set(x, y, R[t]);
+    }
+  }
+}
+
 // Biselado direccional (luz arriba-izquierda) sobre una máscara. R = [hondo, oscuro, medio, base, claro, brillo]
 function bevel(pc, m, R) {
   for (let y = 0; y < 16; y++) {
@@ -130,63 +180,68 @@ function glint(pc, x, y, big = true, arm = SPARK) {
 }
 
 // ---------------------------------------------------------------- formas compartidas
-// Lingote en perspectiva (cara de arriba, frente y costado derecho). R = rampa de 7 tonos.
+// Lingote trapezoidal visto desde arriba y adelante: cara de arriba (con sello), filo biselado y frente.
+// Letras → índice de la rampa R de 7 tonos (K hondo … W blanco).
+const INGOT = [
+  '................',
+  '................',
+  '................',
+  '................',
+  '................',
+  '....HLLLLLLLLLM.',
+  '...HLLLLLLLLLMD.',
+  '..HLLLLLLLLLMDD.',
+  '.WHHHHHHHHHHMDD.',
+  '.LBBBBBBBBBBMDK.',
+  '.LBBBBBBBBBBMK..',
+  '.MMMMMMMMMMMK...',
+  '................',
+];
+const RAMP_KEYS = { K: 0, D: 1, M: 2, B: 3, L: 4, H: 5, W: 6 };
 function ingot(pc, R, veins) {
-  // Cara de arriba: 3 hileras corridas a la derecha hacia el fondo
-  for (let k = 0; k < 3; k++) {
-    const y = 6 + k;
-    const x0 = 4 - k;
-    for (let x = x0; x <= x0 + 9; x++) pc.set(x, y, k === 2 ? R[5] : R[4]);
-  }
-  pc.set(4, 6, R[5]);
-  pc.set(6, 7, R[5]);
-  pc.set(7, 7, R[5]);
-  pc.set(12, 7, R[3]);
-  pc.set(13, 6, R[4]);
-  // Frente
-  for (let y = 9; y <= 12; y++) for (let x = 2; x <= 11; x++) pc.set(x, y, y === 12 ? R[2] : R[3]);
-  for (let y = 9; y <= 12; y++) pc.set(2, y, R[4]);
-  for (let x = 3; x <= 10; x++) pc.set(x, 9, R[4]);
-  pc.set(2, 9, R[5]);
-  for (let x = 3; x <= 11; x++) pc.set(x, 12, R[2]);
-  pc.set(11, 11, R[2]);
-  // Costado derecho (más oscuro, en sombra)
-  for (let y = 7; y <= 11; y++) pc.set(12, y, y === 7 ? R[4] : y === 11 ? R[1] : R[2]);
-  for (let y = 6; y <= 10; y++) pc.set(13, y, y === 6 ? R[4] : y === 10 ? R[0] : R[1]);
+  const pal = {};
+  for (const k in RAMP_KEYS) pal[k] = R[RAMP_KEYS[k]];
+  paint(pc, INGOT, pal);
+  // Reflejos del metal pulido: franja clara y franja oscura en diagonal sobre la cara de arriba
+  for (const [x, y] of [[6, 7], [7, 6], [8, 5]]) pc.set(x, y, R[5]);
+  for (const [x, y] of [[9, 7], [10, 6], [11, 5], [10, 7], [11, 6], [12, 5]]) pc.set(x, y, R[3]);
+  for (const [x, y] of [[3, 9], [3, 10]]) pc.set(x, y, R[4]);
+  for (const [x, y] of [[9, 9], [9, 10], [10, 10]]) pc.set(x, y, R[2]);
   if (veins) veins();
   rim(pc);
-  glint(pc, 3, 8);
+  pc.set(2, 8, R[6]);
+  pc.set(4, 5, R[6]);
 }
 
-// Moneda redonda con canto, borde biselado, estrella en relieve y destello. R = rampa de 7 tonos.
+// Moneda redonda vista de frente: canto estriado abajo, borde en relieve, ranura grabada y estrella acuñada.
+const COIN_ROWS = { 2: [6, 9], 3: [4, 11], 4: [3, 12], 5: [3, 12], 6: [2, 13], 7: [2, 13], 8: [2, 13], 9: [2, 13], 10: [3, 12], 11: [3, 12], 12: [4, 11], 13: [6, 9] };
+const COIN_STAR = ['..6..', '.665.', '66654', '.554.', '.5.4.'];
 function coin(pc, R) {
-  const cx = 7.5;
-  const cy = 7;
-  const r = 5.6;
-  const inC = (x, y, oy = 0) => (x - cx) ** 2 + (y - cy - oy) ** 2 <= r * r + 0.6;
-  // Canto (grosor de la moneda) abajo
-  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) if (inC(x, y, 1) && !inC(x, y)) pc.set(x, y, R[1]);
+  const inC = (x, y) => !!COIN_ROWS[y] && x >= COIN_ROWS[y][0] && x <= COIN_ROWS[y][1];
+  const isEdge = (x, y) => inC(x, y) && (!inC(x - 1, y) || !inC(x + 1, y) || !inC(x, y - 1) || !inC(x, y + 1));
   for (let y = 0; y < 16; y++) {
     for (let x = 0; x < 16; x++) {
-      if (!inC(x, y)) continue;
-      const dx = x - cx;
-      const dy = y - cy;
-      const d = Math.sqrt(dx * dx + dy * dy) / r;
-      const lit = (-dx - dy) / (Math.abs(dx) + Math.abs(dy) + 0.001); // 1 = arriba-izquierda
-      let c;
-      if (d > 0.8) c = lit > 0.5 ? R[5] : lit > -0.2 ? R[4] : lit > -0.7 ? R[3] : R[2];
-      else if (d > 0.62) c = lit > 0.3 ? R[2] : lit < -0.3 ? R[5] : R[3];
-      else c = dx + dy > 2 ? R[3] : R[4];
-      pc.set(x, y, c);
+      if (inC(x, y)) {
+        const dx = x - 7.5;
+        const dy = y - 7.5;
+        const lit = (-dx - dy) / (Math.abs(dx) + Math.abs(dy) + 0.001); // 1 = arriba-izquierda
+        let c = R[3];
+        if (isEdge(x, y)) c = lit > 0.4 ? R[5] : lit > -0.4 ? R[4] : lit > -0.85 ? R[3] : R[2];
+        else if (isEdge(x - 1, y) || isEdge(x + 1, y) || isEdge(x, y - 1) || isEdge(x, y + 1)) c = lit > 0.3 ? R[2] : lit < -0.3 ? R[4] : R[3];
+        pc.set(x, y, c);
+      } else if (inC(x, y - 1)) {
+        // Canto (grosor) con estrías
+        pc.set(x, y, x % 2 ? R[1] : R[2]);
+      }
     }
   }
-  // Estrella en relieve (con sombra abajo-derecha)
-  const star = ['..XX..', 'XXXXXX', '.XXXX.', '.X..X.'];
-  const isS = (i, j) => star[j] !== undefined && star[j][i] === 'X';
-  for (let j = 0; j < 4; j++) for (let i = 0; i < 6; i++) if (isS(i, j) && !isS(i + 1, j + 1)) pc.set(6 + i, 6 + j, R[2]);
-  for (let j = 0; j < 4; j++) for (let i = 0; i < 6; i++) if (isS(i, j)) pc.set(5 + i, 5 + j, j === 0 || i === 0 || !isS(i - 1, j) ? R[6] : R[5]);
+  // Estrella en relieve con su sombra abajo-derecha
+  const star = (i, j) => (COIN_STAR[j] || '')[i] > '.';
+  for (let j = 0; j < 6; j++) for (let i = 0; i < 6; i++) if (!star(i, j) && star(i - 1, j - 1)) pc.set(5 + i, 5 + j, R[2]);
+  paint(pc, COIN_STAR, { 2: R[2], 3: R[3], 4: R[4], 5: R[5], 6: R[6] }, 5, 5);
   rim(pc);
-  glint(pc, 11, 3);
+  glint(pc, 4, 4, false);
+  pc.set(6, 2, R[6]);
 }
 
 // Frasco de vidrio (dibujo con texto) con el líquido de la paleta Q
@@ -201,45 +256,48 @@ function flask(pc, rows, Q, oy, sparkles) {
 export const PIXEL = {
   // ---------- materiales ----------
   wood(pc) {
-    // Tronco acostado con el corte a la vista (anillos) y una hojita
-    const B = ['#3c2210', '#5a3418', '#76461f', '#93602e', '#b07a3e', '#c8955a'];
-    const E = ['#9a6432', '#c08a4e', '#dcac6c', '#efc98e', '#fbe2b2'];
+    // Tronco acostado: corteza con surcos a lo largo, corte a la vista con anillos y médula, y una ramita con hoja
+    const B = ['#341c0c', '#52301a', '#6e4320', '#8c5a2c', '#a8723a', '#c4904e'];
+    const E = ['#7a4a22', '#b07a40', '#d6a466', '#ecc68a', '#fadfae'];
+    const cx = 11.5;
+    const cy = 8.5;
     for (let y = 5; y <= 12; y++) {
       for (let x = 1; x <= 11; x++) {
         if (x === 1 && (y === 5 || y === 12)) continue;
-        pc.set(x, y, y === 5 ? B[4] : y <= 9 ? B[3] : y === 10 ? B[2] : y === 11 ? B[1] : B[0]);
+        pc.set(x, y, B[[5, 4, 3, 3, 3, 2, 1, 0][y - 5]]);
       }
     }
-    // Vetas de la corteza (largas y horizontales) y un nudo
-    for (const [x0, x1, y, c] of [[3, 7, 7, 2], [6, 9, 9, 2], [2, 4, 10, 1], [8, 10, 11, 0], [4, 6, 6, 4], [8, 10, 6, 4], [2, 3, 8, 4]]) for (let x = x0; x <= x1; x++) pc.set(x, y, B[c]);
-    pc.set(1, 6, B[4]);
-    pc.set(1, 7, B[4]);
-    pc.set(5, 8, B[1]);
-    pc.set(6, 8, B[0]);
-    pc.set(5, 9, B[2]);
-    pc.set(6, 7, B[4]);
-    // Corte: elipse con corteza, albura clara y anillos
-    const cx = 11.5;
-    const cy = 8.5;
-    for (let y = 4; y <= 13; y++) {
+    // Surcos de la corteza: raya oscura con su borde de luz arriba
+    for (const [x0, x1, y] of [[2, 5, 7], [6, 9, 6], [3, 7, 9], [8, 10, 8], [2, 4, 11], [6, 9, 10]]) {
+      for (let x = x0; x <= x1; x++) {
+        pc.set(x, y, B[Math.max(0, [5, 4, 3, 3, 3, 2, 1, 0][y - 5] - 2)]);
+        if (y > 5) pc.set(x, y - 1, B[Math.min(5, [5, 4, 3, 3, 3, 2, 1, 0][y - 6] + 1)]);
+      }
+    }
+    // Nudo
+    pc.set(5, 9, B[0]);
+    pc.set(4, 9, B[1]);
+    pc.set(5, 8, B[4]);
+    // Corte: elipse con corteza, albura clara, dos anillos y la médula
+    for (let y = 3; y <= 14; y++) {
       for (let x = 8; x <= 15; x++) {
-        const dx = (x - cx) / 3.1;
-        const dy = (y - cy) / 4.2;
+        const dx = (x - cx) / 3.3;
+        const dy = (y - cy) / 4.5;
         const d = Math.sqrt(dx * dx + dy * dy);
         if (d > 1) continue;
-        const s = x - cx + (y - cy);
-        const lit = s < -1.5 ? 1 : s > 2 ? -1 : 0;
+        const lit = x - cx + (y - cy) < -1.5;
         let c;
-        if (d > 0.78) c = lit > 0 ? B[3] : lit < 0 ? B[0] : B[1];
-        else if (d > 0.6) c = E[3 + lit];
-        else if (d > 0.4) c = E[1 + (lit > 0 ? 1 : 0)];
-        else if (d > 0.18) c = E[3 - (lit < 0 ? 1 : 0)];
+        if (d > 0.82) c = lit ? B[4] : x - cx + (y - cy) > 2 ? B[0] : B[2];
+        else if (d > 0.62) c = lit ? E[4] : E[3];
+        else if (d > 0.46) c = E[1];
+        else if (d > 0.18) c = lit ? E[4] : E[3];
         else c = E[0];
         pc.set(x, y, c);
       }
     }
+    // Grieta en el corte
     pc.set(13, 10, E[1]);
-    pc.set(13, 11, E[0]);
+    pc.set(14, 11, E[1]);
     // Ramita con hoja
     pc.set(4, 4, B[3]);
     pc.set(4, 3, B[2]);
@@ -250,72 +308,40 @@ export const PIXEL = {
     rim(pc);
   },
   coal(pc) {
-    // Trozo de carbón con caras planas (facetas) y destellos fríos
-    const R = ['#121219', '#1c1d27', '#282a36', '#363948', '#4a4e62', '#6a7088', '#a8b0c8'];
-    const m = mask((x, y) => {
-      const d = (cx, cy, r) => (x - cx) ** 2 + (y - cy) ** 2 <= r * r;
-      return d(6, 9.5, 3.6) || d(10, 8.5, 3.7) || d(8.5, 11.5, 2.8) || d(8.5, 6, 2.6) || d(4.5, 7.5, 2);
-    });
-    const seeds = [[5, 6, 4], [9, 5, 5], [12, 8, 3], [4, 10, 3], [8, 9, 4], [11, 12, 1], [7, 13, 1], [3, 8, 4]];
-    const id = new Int8Array(256);
-    for (let y = 0; y < 16; y++) {
-      for (let x = 0; x < 16; x++) {
-        if (!inM(m, x, y)) continue;
-        let best = 1e9;
-        for (let k = 0; k < seeds.length; k++) {
-          const dd = (x - seeds[k][0]) ** 2 + (y - seeds[k][1]) ** 2;
-          if (dd < best) {
-            best = dd;
-            id[y * 16 + x] = k;
-          }
-        }
-      }
-    }
-    for (let y = 0; y < 16; y++) {
-      for (let x = 0; x < 16; x++) {
-        if (!inM(m, x, y)) continue;
-        const k = id[y * 16 + x];
-        let t = seeds[k][2];
-        // Arista iluminada donde empieza otra faceta (arriba o a la izquierda)
-        const up = inM(m, x, y - 1) ? id[(y - 1) * 16 + x] : -1;
-        const lf = inM(m, x - 1, y) ? id[y * 16 + x - 1] : -1;
-        if ((up >= 0 && up !== k) || (lf >= 0 && lf !== k)) t = Math.min(5, t + 1);
-        if (!inM(m, x + 1, y) || !inM(m, x, y + 1)) t = Math.max(0, t - 2);
-        pc.set(x, y, R[t]);
-      }
-    }
+    // Trozo de carbón anguloso: caras planas, aristas que brillan frías y destellos minerales
+    const R = ['#0d0e15', '#191b25', '#252836', '#333748', '#454b5f', '#626a86', '#aab6d6'];
+    const m = poly([[1.6, 10], [3, 5.5], [6.5, 2.4], [10.5, 2], [13.6, 4.6], [14.6, 9.4], [12, 13.6], [6.5, 14], [2.8, 12.6]]);
+    facets(pc, m, [[5, 5, 5], [10, 4, 4], [13, 8, 2], [3, 10, 3], [8, 9, 3], [11, 12, 1], [6, 13, 1], [7, 6, 4]], R);
     rim(pc);
-    pc.set(8, 4, R[6]);
-    pc.set(5, 6, R[5]);
-    glint(pc, 9, 5, false);
+    pc.set(5, 4, R[6]);
+    pc.set(4, 5, R[5]);
+    pc.set(11, 3, R[5]);
+    pc.set(9, 7, R[5]);
+    pc.set(3, 10, R[5]);
   },
   gel(pc) {
-    // Gota de gel azul, translúcida: brillo grande arriba y luz que la atraviesa abajo
-    const R = ['#1c3478', '#2650b0', '#3474e0', '#4f98fa', '#80bcff', '#bfe0ff'];
-    const m = spans({ 3: [7, 8], 4: [6, 9], 5: [5, 10], 6: [4, 11], 7: [3, 12], 8: [2, 13], 9: [2, 13], 10: [2, 13], 11: [2, 13], 12: [2, 13], 13: [3, 12] });
+    // Gota de gel azul, blanda y translúcida: montoncito redondo con puntita, brillo húmedo y luz que la atraviesa
+    const R = ['#182a78', '#2244b0', '#2f66dc', '#4a8cf6', '#78b2ff', '#b6dcff'];
+    const m = spans({ 3: [8, 8], 4: [6, 9], 5: [4, 11], 6: [3, 12], 7: [2, 13], 8: [2, 13], 9: [2, 13], 10: [2, 13], 11: [2, 13], 12: [3, 12] });
     for (let y = 0; y < 16; y++) {
       for (let x = 0; x < 16; x++) {
         if (!inM(m, x, y)) continue;
-        const t = sphereLight(x, y, 7.5, 9.5, 6.5);
-        let c = t > 0.55 ? R[4] : t > 0.25 ? R[3] : t > -0.1 ? R[2] : R[1];
+        const t = sphereLight(x, y, 7.2, 8.4, 6.6);
+        let c = t > 0.66 ? R[4] : t > 0.36 ? R[3] : t > 0.02 ? R[2] : R[1];
         if (!inM(m, x + 1, y) || (!inM(m, x, y + 1) && x > 9)) c = R[1];
-        if (!inM(m, x, y + 1) && x >= 4 && x <= 9) c = R[3]; // luz que atraviesa
-        if (y === 12 && x >= 5 && x <= 8) c = R[2];
         pc.set(x, y, c);
       }
     }
-    // Burbujitas adentro
-    pc.set(10, 10, R[4]);
-    pc.set(9, 11, R[3]);
-    pc.set(6, 11, R[3]);
+    // Luz que atraviesa el gel y sale por abajo (como un lente)
+    for (let x = 4; x <= 9; x++) pc.set(x, 12, R[3]);
+    for (let x = 5; x <= 8; x++) pc.set(x, 11, R[2]);
+    pc.set(3, 12, R[2]);
+    pc.set(8, 3, R[4]);
+    // Burbujas adentro
+    for (const [x, y, c] of [[10, 8, R[4]], [11, 9, R[3]], [9, 10, R[4]], [4, 10, R[3]]]) pc.set(x, y, c);
     rim(pc);
-    // Brillo especular
-    pc.set(5, 6, '#ffffff');
-    pc.set(4, 7, R[5]);
-    pc.set(5, 7, '#ffffff');
-    pc.set(6, 6, R[5]);
-    pc.set(4, 8, R[5]);
-    pc.set(7, 4, R[5]);
+    // Brillo húmedo: arco blanco arriba a la izquierda y un punto
+    for (const [x, y, c] of [[4, 8, R[5]], [4, 7, '#ffffff'], [5, 6, '#ffffff'], [6, 6, R[5]], [6, 5, R[5]], [8, 5, R[5]], [5, 9, R[4]]]) pc.set(x, y, c);
   },
   iron_bar(pc) {
     ingot(pc, IRON);
@@ -324,9 +350,20 @@ export const PIXEL = {
     ingot(pc, GOLD);
   },
   hellstone_bar(pc) {
-    // Metal infernal oscuro con grietas de lava encendida
+    // Metal infernal casi negro, partido por grietas de magma (centro amarillo, bordes rojos) con su resplandor
     ingot(pc, HELL, () => {
-      for (const [x, y, c] of [[4, 10, 3], [5, 11, 4], [6, 11, 3], [8, 10, 4], [9, 10, 5], [9, 11, 3], [7, 8, 4], [8, 7, 3], [10, 8, 5], [12, 9, 4], [13, 8, 3]]) pc.set(x, y, FIRE[c]);
+      const V = [
+        [10, 5, 1], [9, 6, 2], [8, 6, 3], [7, 7, 4], [6, 7, 3], [5, 8, 4], [4, 9, 3], [4, 10, 2], [3, 11, 1],
+        [7, 9, 1], [8, 10, 3], [9, 10, 4], [10, 9, 3], [11, 9, 2], [13, 8, 2], [13, 9, 1],
+      ];
+      const hot = new Set(V.map(([x, y]) => x + y * 16));
+      for (const [x, y] of V) {
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const k = x + dx + (y + dy) * 16;
+          if (!hot.has(k) && pc.get(x + dx, y + dy)) pc.set(x + dx, y + dy, '#8a2a14');
+        }
+      }
+      for (const [x, y, c] of V) pc.set(x, y, FIRE[c]);
     });
   },
   cactus_item(pc) {
@@ -387,7 +424,7 @@ export const PIXEL = {
     for (let y = 9; y <= 14; y++) pc.set(7, y, S[2]);
     for (let y = 9; y <= 14; y++) pc.set(8, y, S[1]);
     for (const [x, y, c] of [[9, 11, 3], [10, 11, 4], [11, 10, 4], [9, 12, 2], [10, 12, 2], [11, 11, 3], [12, 10, 3], [5, 13, 3], [6, 13, 2], [4, 12, 4]]) pc.set(x, y, S[c]);
-    const P = ['#7a1a44', '#b82a62', '#e04a84', '#f474a4', '#ffa6c8', '#ffd8e8'];
+    const P = ['#6a0a2a', '#a8183e', '#d83254', '#f05a70', '#ff8e9c', '#ffc8d0'];
     const petals = [[7.5, 2.6], [3.4, 5.6], [11.6, 5.6], [5, 9.4], [10, 9.4]];
     for (const [cx, cy] of petals) {
       for (let y = Math.floor(cy - 3); y <= cy + 3; y++) {
@@ -404,36 +441,48 @@ export const PIXEL = {
     pc.set(6, 1, P[5]);
     pc.set(2, 4, P[5]);
   },
-  life_crystal(pc) {
-    // Cristal de vida: corazón de rubí tallado en facetas, con brillo
-    const R = ['#4a0618', '#8a0e2e', '#c01c40', '#e83a5a', '#ff6e86', '#ffa8b8', '#ffe4ea'];
-    const m = spans({ 2: [2, 5, 10, 13], 3: [1, 6, 9, 14], 4: [1, 14], 5: [1, 14], 6: [1, 14], 7: [1, 14], 8: [2, 13], 9: [3, 12], 10: [4, 11], 11: [5, 10], 12: [6, 9], 13: [7, 8] });
-    for (let y = 0; y < 16; y++) {
-      for (let x = 0; x < 16; x++) {
-        if (!inM(m, x, y)) continue;
-        const left = x <= 7;
-        const top = y <= 5;
-        let c = top ? (left ? R[4] : R[3]) : left ? R[3] : R[2];
-        // Faceta de la mesa (centro) y aristas
-        if (Math.abs(x - 7.5) + Math.abs(y - 6.5) < 3.2) c = left ? R[4] : R[3];
-        if (x === 8 && y >= 4) c = R[4];
-        if (x === 7 && y >= 4) c = R[2];
-        if (!inM(m, x + 1, y) || !inM(m, x, y + 1)) c = left ? R[2] : R[1];
-        if (!inM(m, x + 1, y + 1) && !inM(m, x, y + 1) && !left) c = R[0];
-        if ((!inM(m, x - 1, y) || !inM(m, x, y - 1)) && top) c = R[5];
-        pc.set(x, y, c);
+  life_crystal(pc, v, asset) {
+    // Cristal de vida: corazón de rubí tallado en facetas (arista central, mesa clara, reflejos internos).
+    // Como bloque del mundo (tile_life_crystal) además descansa en una base de roca.
+    const R = ['#4a0618', '#7a0c28', '#a8143a', '#d42a4c', '#ee5068', '#ff8a9c', '#ffd0d8'];
+    paint(pc, [
+      '................',
+      '................',
+      '..5665....4554..',
+      '.455654..444432.',
+      '.45555441444322.',
+      '.34444441333321.',
+      '.23333341222211.',
+      '..233334122211..',
+      '...2333412211...',
+      '....23341210....',
+      '.....234110.....',
+      '......2410......',
+      '.......30.......',
+    ], R, 0, 0);
+    // Reflejos internos del cristal (se ve a través de las caras oscuras)
+    for (const [x, y, c] of [[10, 7, 4], [11, 6, 3], [10, 8, 3], [4, 7, 4], [12, 5, 4]]) pc.set(x, y, R[c]);
+    const tile = asset && asset.file && asset.file.startsWith('tiles/');
+    if (tile) {
+      // Base de roca donde está engarzado
+      const S = ['#24222e', '#34323f', '#4a4756', '#625e70', '#7c788a'];
+      const m = spans({ 10: [3, 4, 11, 12], 11: [2, 5, 10, 13], 12: [1, 6, 9, 14], 13: [0, 15], 14: [0, 15], 15: [0, 15] });
+      for (let y = 10; y < 16; y++) {
+        for (let x = 0; x < 16; x++) {
+          if (!inM(m, x, y)) continue;
+          let c = !inM(m, x, y - 1) ? S[4] : !inM(m, x - 1, y) ? S[3] : hash(x, y, 5) < 0.3 ? S[1] : S[2];
+          if (!inM(m, x + 1, y) && x < 15) c = S[1];
+          if (y === 15 || (y === 14 && hash(x, 0, 6) < 0.4)) c = S[0];
+          pc.set(x, y, c);
+        }
       }
+      // Esquirlas rosadas en la roca
+      for (const [x, y, c] of [[3, 9, '#ff8a9c'], [3, 10, '#d42a4c'], [12, 9, '#ee5068'], [12, 10, '#a8143a'], [5, 13, '#d42a4c']]) pc.set(x, y, c);
     }
-    pc.set(3, 3, R[6]);
-    pc.set(4, 3, R[5]);
-    pc.set(3, 4, R[5]);
-    pc.set(10, 3, R[5]);
-    pc.set(5, 8, R[4]);
     rim(pc);
     glint(pc, 3, 3);
-    pc.set(12, 2, '#ffffff');
+    pc.set(11, 3, R[6]);
   },
-
   // ---------- estaciones y muebles ----------
   furnace_item(pc) {
     // Horno de ladrillos de piedra con boca encendida y chimenea
@@ -512,35 +561,37 @@ export const PIXEL = {
     glint(pc, 6, 6, false);
   },
   door_item(pc) {
-    // Puerta de madera con dos paneles hundidos, bisagras y manija
+    // Puerta de tablones verticales en su marco, con bisagras de hierro remachadas y tirador dorado
     paint(pc, [
-      '....lllllllh....',
-      '...lbbbbbbbbm...',
-      '...Ibddddddbm...',
-      '...Ibdmmmmlbm...',
-      '...lbdmmmmlbm...',
-      '...lbdmmmmlbm...',
-      '...lblllllhbm...',
-      '...lbbbbbbGbm...',
-      '...lbbbbbbgbm...',
-      '...lbddddddbm...',
-      '...lbdmmmmlbm...',
-      '...Ibdmmmmlbm...',
-      '...Iblllllhbm...',
-      '...dkkkkkkkkk...',
-    ], { ...WD, I: IRON[5], G: GOLD[5], g: GOLD[2] }, 0, 1);
-    for (const y of [3, 4, 12, 13]) pc.set(4, y, IRON[2]);
+      '....hhhhhhhhh...',
+      '....lbmlbmlbd...',
+      '....IIIIIIlbd...',
+      '....iWiiiWlbd...',
+      '....lbmlbmlbd...',
+      '....lbmlbmlbd...',
+      '....lbmlbmGgd...',
+      '....lbmlbmlgd...',
+      '....lbmlbmlbd...',
+      '....lbmlbmlbd...',
+      '....IIIIIIlbd...',
+      '....iWiiiWlbd...',
+      '....lbmlbmlbd...',
+      '....kkkkkkkkk...',
+    ], { ...WD, I: IRON[4], i: IRON[2], W: IRON[6], G: GOLD[5], g: GOLD[2] }, 0, 1);
+    // Vetas y nudos en los tablones
+    for (const [x, y] of [[5, 6], [8, 9], [5, 13], [11, 5]]) pc.set(x, y, WD.m);
     rim(pc);
   },
   chair_item(pc) {
+    // Silla de respaldo alto con travesaños y cojín rojo (como la silla colocada)
     paint(pc, [
-      '..hll...........',
-      '...lb...........',
-      '...lbm..........',
-      '...lb...........',
-      '...lbm..........',
-      '...lb...........',
-      '...lb...........',
+      '...hll..........',
+      '...l.m..........',
+      '...lhm..........',
+      '...l.m..........',
+      '...l.m..........',
+      '...lhm.RRRRRR...',
+      '...lbmrrrrrrrq..',
       '...lhhhhhhhhhl..',
       '...lbbbbbbbbbm..',
       '...lkdddddddkd..',
@@ -548,7 +599,7 @@ export const PIXEL = {
       '...lbmmmmmmlb...',
       '...lb......lb...',
       '...dk......dk...',
-    ], WD, 0, 1);
+    ], { ...WD, R: '#f06a5a', r: '#c8323a', q: '#8a1e2a' }, 0, 1);
     rim(pc);
   },
   table_item(pc) {
@@ -564,9 +615,9 @@ export const PIXEL = {
       '..lb........lb..',
       '..dk........dk..',
     ], WD, 0, 5);
-    // Jarra sobre la mesa
-    paint(pc, ['lhh.', 'lbbm', 'lbbd', 'mddk'], { l: '#9aa8b8', h: '#e8f0f6', b: '#c4d0dc', m: '#7a8898', d: '#5a6878', k: '#3e4a5a' }, 9, 1);
-    pc.set(13, 2, '#7a8898');
+    // Jarra de loza con franja azul y una manzana sobre la mesa (como la mesa colocada)
+    paint(pc, ['.wwW.', 'wWWSs', 'BBBbs', 'WWSS.'], { w: '#ffffff', W: '#dfe6ee', S: '#a8b4c4', s: '#8a96a8', B: '#4a7ad0', b: '#2e56a0' }, 9, 1);
+    paint(pc, ['.sl', 'Ar.', 'rd.'], { s: '#6a4020', l: '#58b040', A: '#ff7a6a', r: '#d8303a', d: '#9a1828' }, 3, 2);
     rim(pc);
   },
   bed_item(pc) {
@@ -577,13 +628,13 @@ export const PIXEL = {
       '.lb.............',
       '.lbppP.......hl.',
       '.lbpPPqqqqqqqlb.',
-      '.lbssRRRRRRRRlb.',
-      '.lbSSrRRRRRRrlb.',
+      '.lbssRRyRRyRRlb.',
+      '.lbSSYYYYYYYYlb.',
       '.lhlllllllllllb.',
       '.lbmmmmmmmmmmmb.',
       '.lb..........lb.',
       '.dk..........dk.',
-    ], { ...WD, p: '#ffffff', P: '#d4d8e8', s: '#f4f0e8', S: '#c8c0b4', q: '#ff6a5a', R: '#d8343e', r: '#9a1c30' }, 0, 2);
+    ], { ...WD, p: '#ffffff', P: '#d4d8e8', s: '#f4f0e8', S: '#c8c0b4', q: '#ff6a5a', R: '#d8343e', r: '#9a1c30', y: '#ffd050', Y: '#e8a830' }, 0, 2);
     rim(pc);
   },
   wood_wall_item(pc) {
@@ -780,155 +831,178 @@ export const PIXEL = {
     glint(pc, 7, 9, false);
   },
   relic_stinger(pc) {
-    // Aguijón de la reina: cono curvo ámbar con franjas y veneno violeta en la punta
-    const R = ['#4a1e06', '#7a3a0c', '#b8661a', '#e09a28', '#f6c84a', '#fff0a0'];
-    const ax = 3;
-    const ay = 13;
-    const bx = 13;
-    const by = 3;
-    const L = Math.hypot(bx - ax, by - ay);
-    const ux = (bx - ax) / L;
-    const uy = (by - ay) / L;
-    const at = (x, y) => ((x - ax) * ux + (y - ay) * uy) / L;
-    const side = (x, y) => (x - ax) * -uy + (y - ay) * ux - Math.sin(at(x, y) * Math.PI) * 1.1; // < 0: arriba-izquierda
-    const m = mask((x, y) => {
-      const t = at(x, y);
-      if (t < -0.08 || t > 1) return false;
-      return Math.abs(side(x, y)) <= 2.7 * (1 - t) + 0.35;
-    });
-    for (let y = 0; y < 16; y++) {
-      for (let x = 0; x < 16; x++) {
-        if (!inM(m, x, y)) continue;
-        const t = at(x, y);
-        const s = side(x, y);
-        let k = s < -0.9 ? 4 : s < 0.3 ? 3 : s < 1.2 ? 2 : 1;
-        if (t > 0.7) k = Math.max(0, k - 2); // punta oscura
-        else if (t > 0.5) k = Math.max(0, k - 1);
-        if (t < 0.3 && Math.floor(t * 14) % 2 === 1) k = Math.max(0, k - 2); // franjas de abeja
-        pc.set(x, y, R[k]);
-      }
-    }
-    for (const [x, y] of [[4, 9], [5, 8], [7, 6], [8, 5]]) if (inM(m, x, y)) pc.set(x, y, R[5]);
+    // Aguijón dorado del Rey Escorpión: punta de su cola con placas de oro que se curvan, el bulbo violeta
+    // de veneno (como el del jefe) y una púa curva que suelta una gota
+    const G = ['#4a2408', '#7a4410', '#b06a18', '#dc9a2a', '#f4c64a', '#ffe68a'];
+    const V = ['#2a0848', '#4a1070', '#7a24b0', '#a64ae8', '#d08cff', '#f4d4ff'];
+    const ball = (cx, cy, r, R) => {
+      pc.disc(cx, cy, r + 0.9, R[0]);
+      pc.disc(cx, cy, r, (x, y) => {
+        const t = sphereLight(x, y, cx, cy, r);
+        return R[t > 0.7 ? 5 : t > 0.4 ? 4 : t > 0.05 ? 3 : t > -0.35 ? 2 : 1];
+      });
+    };
+    ball(3.2, 12.4, 2.2, G);
+    ball(4.6, 8.4, 2.5, G);
+    ball(7.4, 4.9, 2.4, G);
+    ball(10.8, 4.4, 2.7, V);
+    // Púa curva y afilada (violeta casi negro) que sale del bulbo y apunta hacia abajo
+    for (const [x, y, c] of [[13, 4, 2], [13, 5, 1], [14, 5, 2], [14, 6, 1], [14, 7, 3], [14, 8, 4]]) pc.set(x, y, V[c]);
     rim(pc);
+    // Brillos
+    pc.set(10, 3, '#ffffff');
+    pc.set(6, 4, G[5]);
+    pc.set(3, 7, G[5]);
     // Gota de veneno
-    pc.set(14, 2, '#d070ff');
-    pc.set(14, 1, '#f4c8ff');
-    pc.set(15, 2, '#8a2ac0');
-    pc.set(14, 3, '#8a2ac0');
-    glint(pc, 3, 9, false);
+    pc.set(14, 11, V[5]);
+    pc.set(14, 12, V[3]);
   },
   relic_hive(pc) {
-    // Panal de la colmena: hexágono de celdas con miel brillante y una gota colgando
-    const W = ['#5a2e06', '#8a4a0a', '#c47a14', '#e8a828', '#f8d050', '#fff0a0'];
-    const H = ['#a85a08', '#d88a10', '#ffb020', '#ffd060'];
-    const m = spans({ 2: [5, 10], 3: [4, 11], 4: [3, 12], 5: [2, 13], 6: [2, 13], 7: [2, 13], 8: [2, 13], 9: [2, 13], 10: [2, 13], 11: [3, 12], 12: [4, 11], 13: [5, 10] });
+    // Corazón de la colmena: trozo de panal de 7 celdas hexagonales (cera clara, miel ámbar hundida);
+    // la celda del centro brilla como una brasa dorada y la miel gotea por un costado
+    const cells = [[7, 3], [2, 5], [12, 5], [7, 7], [2, 9], [12, 9], [7, 11]];
+    const cellPx = new Map();
+    cells.forEach(([cx, cy], k) => {
+      for (const [dx, dy] of [[0, 0], [1, 0], [-1, 1], [0, 1], [1, 1], [2, 1], [0, 2], [1, 2]]) cellPx.set(cx + dx + (cy + dy) * 16, k);
+    });
+    const isCell = (x, y) => x >= 0 && x < 16 && cellPx.has(x + y * 16);
+    const isWall = (x, y) => {
+      if (x < 1 || x > 14 || isCell(x, y)) return false;
+      for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) if (isCell(x + i, y + j)) return true;
+      return false;
+    };
+    const HEART = 3;
     for (let y = 0; y < 16; y++) {
       for (let x = 0; x < 16; x++) {
-        if (!inM(m, x, y)) continue;
-        const row = Math.floor((y - 1) / 3);
-        const off = row % 2 ? 2 : 0;
-        const cy = (y - 1) % 3;
-        const cx = (x + off) % 4;
-        const wall = cy === 0 || cx === 0;
-        const shade = x + y > 18 ? -1 : x + y < 11 ? 1 : 0;
-        let c;
-        if (wall) c = W[3 + shade];
-        else c = cx === 1 && cy === 1 ? H[shade > 0 ? 1 : 0] : cx === 3 && cy === 2 ? H[3] : H[2 + (shade < 0 ? -1 : 0)];
-        if (!inM(m, x + 1, y) || !inM(m, x, y + 1)) c = W[1];
-        if (!inM(m, x - 1, y) || !inM(m, x, y - 1)) c = W[4];
-        pc.set(x, y, c);
+        if (isCell(x, y)) {
+          const k = cellPx.get(x + y * 16);
+          const ry = y - cells[k][1];
+          if (k === HEART) pc.set(x, y, ry === 1 && (x === 7 || x === 8) ? '#ffffff' : '#ffe680');
+          else pc.set(x, y, ry === 0 ? '#5e2404' : ry === 1 ? '#9a4806' : '#d27412');
+        } else if (isWall(x, y)) {
+          const out = (i, j) => !isWall(i, j) && !isCell(i, j);
+          pc.set(x, y, out(x - 1, y) || out(x, y - 1) ? '#ffe8a0' : out(x + 1, y) || out(x, y + 1) ? '#c8841e' : '#efc052');
+        }
       }
     }
-    // Gota de miel colgando
-    for (const [x, y, c] of [[8, 14, H[2]], [9, 14, H[1]], [8, 15, H[1]], [7, 14, H[3]]]) pc.set(x, y, c);
+    // Canto del panal (grosor), abajo a la derecha
+    for (let y = 15; y >= 1; y--) for (let x = 15; x >= 1; x--) if (!pc.get(x, y) && (isWall(x - 1, y - 1) || isCell(x - 1, y - 1))) pc.set(x, y, '#8a4a0c');
+    // Brillo de la miel en cada celda y resplandor alrededor del corazón
+    cells.forEach(([cx, cy], k) => {
+      if (k !== HEART) pc.set(cx + 1, cy + 2, '#ffb838');
+    });
+    for (const [x, y] of [[6, 6], [9, 6], [5, 8], [10, 8], [6, 10], [9, 10], [7, 6], [8, 6], [7, 10], [8, 10]]) pc.set(x, y, '#fff6c8');
+    // Miel que gotea por el costado izquierdo
+    pc.set(3, 13, '#d87c12');
+    pc.set(3, 14, '#ffb838');
     rim(pc);
-    glint(pc, 5, 4);
-    pc.set(7, 14, '#fff0a0');
+    glint(pc, 3, 4, false);
   },
   relic_eye(pc) {
-    // Ojo del cielo: globo con venas, iris violeta brillante y pupila
-    const S = ['#4a2a4e', '#7a5a80', '#a690ae', '#d0c4d6', '#ece6ee', '#ffffff'];
-    const cx = 7.5;
-    const cy = 7.5;
-    const r = 6.4;
+    // Ojo de las sombras: globo blanco con venas, iris violeta con pupila de serpiente y tentáculos oscuros
+    const S = ['#4a3058', '#7c6890', '#a898ba', '#d4cade', '#eee8f2', '#ffffff'];
+    const cx = 9;
+    const cy = 7;
+    const r = 5.4;
     for (let y = 0; y < 16; y++) {
       for (let x = 0; x < 16; x++) {
-        if ((x - cx) ** 2 + (y - cy) ** 2 > r * r + 0.3) continue;
+        if ((x - cx) ** 2 + (y - cy) ** 2 > r * r + 0.4) continue;
         const t = sphereLight(x, y, cx, cy, r);
-        pc.set(x, y, S[t > 0.75 ? 5 : t > 0.45 ? 4 : t > 0.1 ? 3 : t > -0.3 ? 2 : 1]);
+        pc.set(x, y, S[t > 0.78 ? 5 : t > 0.5 ? 4 : t > 0.15 ? 3 : t > -0.25 ? 2 : 1]);
       }
     }
-    // Venas
-    for (const [x0, y0, x1, y1] of [[2, 5, 4, 6], [2, 10, 4, 9], [13, 11, 11, 10], [10, 2, 9, 4], [5, 13, 6, 11]]) pc.line(x0, y0, x1, y1, '#c83a50');
-    for (const [x, y] of [[2, 5], [2, 10], [13, 11], [10, 2], [5, 13]]) pc.set(x, y, '#8a1a34');
-    // Iris (cóncavo: más claro abajo a la derecha) y pupila
-    for (let y = 4; y <= 12; y++) {
-      for (let x = 5; x <= 13; x++) {
-        const d = Math.hypot(x - 8.6, y - 8);
+    // Venas rojas que nacen del borde
+    for (const [x0, y0, x1, y1] of [[4, 5, 6, 6], [5, 10, 7, 9], [9, 12, 9, 11], [12, 2, 11, 3], [14, 9, 13, 8]]) pc.line(x0, y0, x1, y1, '#d8485e');
+    for (const [x, y] of [[4, 5], [5, 10], [9, 12], [12, 2], [14, 9]]) pc.set(x, y, '#9a1a3a');
+    // Iris: anillo oscuro, violeta que se aclara abajo a la derecha (cóncavo) y pupila rasgada
+    for (let y = 3; y <= 11; y++) {
+      for (let x = 6; x <= 14; x++) {
+        const d = Math.hypot(x - 10, y - 7);
         if (d > 3.3) continue;
-        const t = (x - 8.6 + (y - 8)) / 4;
-        pc.set(x, y, d > 2.6 ? '#3a1068' : t > 0.3 ? '#c080ff' : t > -0.3 ? '#8a40d8' : '#6020a8');
+        const t = (x - 10 + (y - 7)) / 4;
+        pc.set(x, y, d > 2.6 ? '#3a1068' : t > 0.35 ? '#c890ff' : t > -0.2 ? '#9048e0' : '#6624b0');
       }
     }
-    pc.disc(8.6, 8, 1.4, '#12061c');
+    for (let y = 5; y <= 9; y++) pc.set(10, y, '#12061c');
+    pc.set(10, 4, '#3a1068');
+    pc.set(10, 10, '#3a1068');
+    pc.set(9, 7, '#12061c');
+    pc.set(11, 7, '#12061c');
     rim(pc);
-    pc.set(6, 6, '#ffffff');
-    pc.set(7, 6, '#ffffff');
-    pc.set(6, 7, '#f0e0ff');
-    pc.set(10, 10, '#e8c8ff');
+    // Tentáculos (nervios) finos que arrastra por detrás, abajo a la izquierda
+    for (const [x, y, c] of [
+      [3, 10, 0], [2, 11, 1], [1, 11, 0], [1, 12, 1],
+      [5, 12, 0], [4, 13, 1], [4, 14, 0], [3, 15, 1],
+      [7, 13, 0], [7, 14, 1], [8, 15, 0],
+    ]) pc.set(x, y, ['#5a1a88', '#a050e0'][c]);
+    // Brillos: reflejo de la luz en el ojo y en el iris
+    pc.set(6, 3, '#ffffff');
+    pc.set(5, 4, '#ffffff');
+    pc.set(9, 5, '#f4e4ff');
   },
   relic_core(pc) {
-    // Núcleo de cristal: gema tallada violeta con corazón celeste que brilla
-    const R = ['#2a1046', '#4a1a7a', '#7434b4', '#a45cdc', '#cc90f4', '#f0d4ff'];
-    const hw = (y) => (y <= 7 ? 0.5 + (y - 1) * 0.9 : 0.5 + (14 - y) * 0.9);
-    const m = mask((x, y) => y >= 1 && y <= 14 && Math.abs(x - 7.5) <= hw(y) + 0.01);
-    for (let y = 0; y < 16; y++) {
-      for (let x = 0; x < 16; x++) {
-        if (!inM(m, x, y)) continue;
-        const left = x <= 7;
-        const top = y <= 7;
-        const inner = Math.abs(x - 7.5) + Math.abs(y - 7.5) * 0.9 < 3.6;
-        let c = top ? (left ? R[4] : R[3]) : left ? R[2] : R[1];
-        if (inner) c = top ? (left ? R[5] : R[4]) : left ? R[3] : R[2];
-        if (!inM(m, x + 1, y) || !inM(m, x, y + 1)) c = top ? R[2] : R[0];
-        if ((!inM(m, x - 1, y) || !inM(m, x, y - 1)) && top) c = R[5];
-        pc.set(x, y, c);
-      }
-    }
-    // Corazón que brilla
-    for (const [x, y, c] of [[7, 6, '#8ef0ff'], [8, 6, '#2ad0f0'], [6, 7, '#8ef0ff'], [7, 7, '#ffffff'], [8, 7, '#8ef0ff'], [9, 7, '#2ad0f0'], [6, 8, '#2ad0f0'], [7, 8, '#8ef0ff'], [8, 8, '#2ad0f0'], [9, 8, '#1a90c8'], [7, 9, '#1a90c8'], [8, 9, '#1a90c8']]) pc.set(x, y, c);
+    // Núcleo de cristal del Gólem: piedra violeta oscura con el rombo celeste que brilla, runas en X
+    // y dos cristales rosados que asoman arriba
+    const S = ['#16122a', '#241e40', '#342c58', '#463c70', '#5a5088', '#7468a4'];
+    const m = spans({ 4: [4, 11], 5: [3, 12], 6: [2, 13], 7: [2, 13], 8: [2, 13], 9: [2, 13], 10: [2, 13], 11: [2, 13], 12: [3, 12], 13: [4, 11] });
+    bevel(pc, m, S);
+    // Grietas de la piedra
+    for (const [x, y] of [[4, 11], [5, 12], [11, 5], [12, 6]]) pc.set(x, y, S[1]);
+    // Cristales rosados (dos puntas)
+    const K = ['#4a1050', '#8a2a8a', '#c850c0', '#f088e4', '#ffd0f8'];
+    paint(pc, [
+      '..3.........4...',
+      '..32.......43...',
+      '.432......432...',
+      '.421......321...',
+    ], { 1: K[0], 2: K[1], 3: K[2], 4: K[3] }, 0, 1);
+    // Runas en X que salen del núcleo
+    for (const [x, y] of [[4, 6], [5, 7], [11, 6], [10, 7], [4, 11], [5, 10], [11, 11], [10, 10]]) pc.set(x, y, '#2a8ab8');
+    // Núcleo: rombo celeste tallado con resplandor
+    paint(pc, [
+      '...4...',
+      '..453..',
+      '.45532.',
+      '4556321',
+      '.43221.',
+      '..321..',
+      '...1...',
+    ], { 1: '#0a5a84', 2: '#1a90c4', 3: '#3ad0f4', 4: '#9af2ff', 5: '#e0ffff', 6: '#ffffff' }, 5, 5);
     rim(pc);
-    glint(pc, 4, 4);
-    pc.set(12, 11, '#ffffff');
+    glint(pc, 7, 6, false);
+    pc.set(2, 1, K[4]);
+    pc.set(12, 1, K[4]);
   },
   relic_flame(pc) {
-    // Llama eterna en un brasero de oro con rubí
+    // Llama eterna: cáliz de oro con rubí y una llama en forma de gota (núcleo blanco, bordes rojos) y chispas
     paint(pc, [
-      '........1.......',
-      '.......12.......',
-      '...1...121...1..',
-      '...1..12221..1..',
-      '..121.12321.12..',
-      '..1221233321121.',
-      '..1223444432211.',
-      '..1234555543211.',
-      '...12345554321..',
-    ], { 1: FIRE[1], 2: FIRE[2], 3: FIRE[3], 4: FIRE[4], 5: FIRE[5] }, 0, 1);
-    const m = spans({ 10: [2, 13], 11: [3, 12], 12: [4, 11], 13: [6, 9], 14: [4, 11] });
-    bevel(pc, m, GOLD);
-    for (let x = 2; x <= 13; x++) pc.set(x, 10, GOLD[5]);
-    pc.set(2, 10, GOLD[6]);
-    pc.set(7, 11, '#ff9aa8');
-    pc.set(8, 11, '#e02040');
-    pc.set(7, 12, '#e02040');
-    pc.set(8, 12, '#8a0a28');
+      '.......2........',
+      '.......32.......',
+      '......2342......',
+      '.....234432.....',
+      '....23455432....',
+      '...2345665432...',
+      '...2345666543...',
+      '...2345666543...',
+    ], { 1: FIRE[0], 2: FIRE[1], 3: FIRE[2], 4: FIRE[3], 5: FIRE[4], 6: FIRE[5] }, 0, 1);
+    paint(pc, [
+      '..lhhhhhhhhhhb..',
+      '...lbbbrrbbbm...',
+      '....lbbRrbbm....',
+      '.....lbbbbm.....',
+      '.......bm.......',
+      '.....lhbbbm.....',
+    ], { h: GOLD[5], l: GOLD[4], b: GOLD[3], m: GOLD[2], d: GOLD[1], r: '#ff5a70', R: '#ffc0c8' }, 0, 9);
+    pc.set(8, 10, '#a01030');
+    pc.set(8, 11, '#c02040');
     rim(pc);
-    pc.set(5, 1, FIRE[3]);
-    pc.set(11, 1, FIRE[2]);
-    pc.set(1, 3, FIRE[2]);
-    glint(pc, 3, 10, false);
+    pc.set(2, 9, GOLD[6]);
+    // Chispas que suben
+    pc.set(11, 2, FIRE[4]);
+    pc.set(4, 3, FIRE[3]);
+    pc.set(12, 5, FIRE[2]);
+    pc.set(3, 1, FIRE[2]);
   },
-
   // ---------- herramientas de orientación ----------
   magic_mirror(pc) {
     // Espejo de mano: marco dorado con gema, vidrio con reflejos y mango
@@ -964,7 +1038,8 @@ export const PIXEL = {
     glint(pc, 3, 3);
   },
   compass(pc) {
-    // Brújula de bronce: argolla, esfera de marfil, aguja roja y de acero
+    // Brújula de latón: argolla arriba, aro biselado, esfera de marfil bajo un vidrio con reflejo,
+    // marcas cardinales y aguja en rombo (norte rojo, sur de acero) con eje dorado
     const B = ['#4a2a10', '#7a4a1a', '#a8702a', '#c8943a', '#e8c06a', '#fff0b0'];
     const cx = 7.5;
     const cy = 8.5;
@@ -975,50 +1050,61 @@ export const PIXEL = {
         const d = Math.sqrt(dx * dx + dy * dy);
         if (d > 6.1) continue;
         const lit = (-dx - dy) / (Math.abs(dx) + Math.abs(dy) + 0.001);
-        if (d > 4.7) pc.set(x, y, lit > 0.5 ? B[5] : lit > -0.2 ? B[4] : lit > -0.7 ? B[3] : B[2]);
-        else if (d > 4) pc.set(x, y, lit > 0.2 ? B[1] : B[2]);
-        else pc.set(x, y, dx + dy < -3.5 ? '#d8ccb0' : dx + dy > 3 ? '#e4dac4' : '#f6eedc');
+        if (d > 5) pc.set(x, y, lit > 0.45 ? B[5] : lit > -0.3 ? B[4] : lit > -0.8 ? B[3] : B[2]);
+        else if (d > 4.2) pc.set(x, y, lit > 0.2 ? B[1] : B[3]);
+        else pc.set(x, y, dx + dy > 2.5 ? '#ddd0b0' : '#f4ecd6');
       }
     }
     // Argolla
-    paint(pc, ['.lb.', 'l..m', '.bm.'], { l: B[5], b: B[3], m: B[2] }, 6, 0);
+    paint(pc, ['.hl.', 'h..m', '.lm.'], { h: B[5], l: B[4], m: B[2] }, 6, 0);
+    pc.set(7, 2, B[3]);
+    pc.set(8, 2, B[2]);
     // Marcas cardinales
-    for (const [x, y] of [[7, 5], [8, 5], [7, 12], [8, 12], [4, 8], [4, 9], [11, 8], [11, 9]]) pc.set(x, y, '#8a7a5a');
-    // Aguja en diagonal (norte rojo arriba-derecha)
-    for (const [x, y, c] of [[10, 5, '#ff6a5a'], [9, 6, '#ff6a5a'], [10, 6, '#c02020'], [8, 7, '#ff6a5a'], [9, 7, '#c02020'], [6, 9, '#c8d0dc'], [7, 9, '#7a8494'], [6, 10, '#c8d0dc'], [5, 10, '#c8d0dc'], [5, 11, '#7a8494']]) pc.set(x, y, c);
-    pc.set(7, 8, '#ffe070');
-    pc.set(8, 8, '#c88a20');
+    for (const [x, y] of [[7, 5], [8, 5], [7, 12], [8, 12], [4, 8], [4, 9], [11, 8], [11, 9]]) pc.set(x, y, '#9a8460');
+    pc.set(7, 4, '#c02020');
+    // Aguja en rombo: norte rojo arriba-derecha, sur de acero abajo-izquierda, eje dorado
+    for (const [x, y, c] of [
+      [10, 6, '#ff9a8a'], [9, 7, '#ff5a4a'], [10, 7, '#a81818'], [9, 8, '#a81818'],
+      [7, 9, '#e4eaf2'], [6, 10, '#e4eaf2'], [5, 11, '#ffffff'], [7, 10, '#6e7a8c'], [6, 11, '#6e7a8c'],
+    ]) pc.set(x, y, c);
+    pc.set(8, 8, '#ffe070');
+    pc.set(8, 9, '#a86a18');
     rim(pc);
+    // Reflejo del vidrio
     pc.set(5, 6, '#ffffff');
     pc.set(4, 7, '#ffffff');
+    pc.set(6, 5, '#fffaf0');
+    glint(pc, 3, 4, false);
   },
   depth_meter(pc) {
-    // Medidor de profundidad: caja de acero con remaches, pantalla con escala y flecha
+    // Medidor de profundidad: aparato de hierro con remaches; la pantalla muestra un corte del mundo
+    // (cielo, pasto, tierra, piedra y el infierno) y una flecha amarilla marca la profundidad
     const m = spans({ 1: [4, 11], 2: [3, 12], 3: [3, 12], 4: [3, 12], 5: [3, 12], 6: [3, 12], 7: [3, 12], 8: [3, 12], 9: [3, 12], 10: [3, 12], 11: [3, 12], 12: [3, 12], 13: [3, 12], 14: [4, 11] });
     bevel(pc, m, IRON);
-    // Pantalla: más clara arriba (superficie) y más honda abajo
-    const scr = ['#3a8aa8', '#2a7090', '#205a78', '#184862', '#12384e', '#0e2a3c', '#0a2030', '#081828'];
-    for (let y = 3; y <= 10; y++) {
-      for (let x = 5; x <= 10; x++) pc.set(x, y, scr[y - 3]);
-      pc.set(5, y, y % 2 ? '#8ef0ff' : scr[y - 3]);
-    }
-    pc.set(6, 5, '#8ef0ff');
-    pc.set(6, 9, '#8ef0ff');
+    // Marco hundido de la pantalla
     for (let x = 5; x <= 10; x++) pc.set(x, 2, IRON[1]);
-    for (let y = 3; y <= 10; y++) pc.set(4, y, IRON[1]);
-    for (let x = 5; x <= 11; x++) pc.set(x, 11, IRON[5]);
-    for (let y = 3; y <= 10; y++) pc.set(11, y, IRON[4]);
-    // Flecha amarilla
-    for (const [x, y] of [[7, 7], [8, 6], [8, 7], [8, 8], [9, 7], [10, 7]]) pc.set(x, y, '#ffd84a');
-    pc.set(8, 6, '#fff2a0');
+    for (let y = 3; y <= 11; y++) pc.set(4, y, IRON[1]);
+    for (let x = 5; x <= 11; x++) pc.set(x, 12, IRON[5]);
+    for (let y = 3; y <= 11; y++) pc.set(11, y, IRON[4]);
+    // Corte del mundo: una franja por capa
+    const L = [['#9ad8ff', '#7ac4f4'], ['#6ac4f0', '#4aa8e0'], ['#58b040', '#3a8a2e'], ['#8a5a32', '#6e4426'], ['#7a5634', '#5e3e22'], ['#6a6e80', '#545868'], ['#5a5e70', '#444858'], ['#3a2a3a', '#2a1e2a'], ['#c8401a', '#8a2410']];
+    for (let y = 3; y <= 11; y++) for (let x = 5; x <= 10; x++) pc.set(x, y, L[y - 3][(x + y) % 3 === 0 ? 1 : 0]);
+    pc.set(6, 11, '#ffa22c');
+    pc.set(9, 11, '#ffd65a');
+    // Marcas de la escala
+    for (const y of [4, 6, 8, 10]) pc.set(5, y, '#e8f0f6');
+    // Marca amarilla de la profundidad actual (línea con punta de flecha)
+    for (let x = 6; x <= 10; x++) pc.set(x, 7, '#ffd040');
+    for (const [x, y, c] of [[5, 7, '#fff2a0'], [6, 6, '#e0a020'], [6, 8, '#e0a020']]) pc.set(x, y, c);
     // Botones y remaches
-    pc.set(5, 13, '#ff5a4a');
+    pc.set(5, 13, '#ff6a5a');
     pc.set(6, 13, '#a82020');
-    pc.set(9, 13, '#5ad86a');
+    pc.set(9, 13, '#6ae07a');
     pc.set(10, 13, '#20883a');
     for (const [x, y] of [[4, 2], [11, 2]]) pc.set(x, y, IRON[6]);
     rim(pc);
-    pc.set(10, 3, '#ffffff');
+    pc.set(6, 3, '#ffffff');
+    pc.set(7, 3, '#e8f8ff');
   },
 };
 
