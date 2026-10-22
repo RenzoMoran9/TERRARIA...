@@ -967,8 +967,8 @@ export const PIXEL = {
   // Golem de Cristal: 2 cuadros de 56×64 (de pie, brazos arriba para golpear)
   boss_crystal_golem(pc) {
     const L = layer(pc);
-    const ST = R5('#160f24', '#2a2040', '#41375c', '#5e5480', '#867ca8'); // roca violeta oscura
-    const STB = R5('#0e0a18', '#160f24', '#2a2040', '#41375c', '#5e5480'); // roca de atrás
+    const ST = R5('#1c1430', '#33294e', '#4e4470', '#6e6494', '#9a90bc'); // roca violeta oscura
+    const STB = R5('#120c20', '#1c1430', '#33294e', '#4e4470', '#6e6494'); // roca de atrás
     const CR = R5('#4a1060', '#8a2aa8', '#d060e8', '#f4a4ff', '#fff0ff'); // cristal rosa
     const CORE = ['#1a6a8a', '#3ab8e0', '#8ef0ff', '#e8ffff'];
     // Bloque de roca con biseles de luz y grietas
@@ -1027,8 +1027,10 @@ export const PIXEL = {
         if (y > 34) over(L, ox + 27, y, ST.shade);
       }
       for (let x = 14; x < 43; x++) over(L, ox + x, 40 + (x > 28 ? 0 : 0), ST.deep);
-      crack(L, ox + 15, 24, 1, 0.6, 6, ST.deep, 21);
-      crack(L, ox + 42, 30, -1, 0.5, 5, ST.deep, 22);
+      // Grietas por donde se filtra la luz del núcleo
+      crack(L, ox + 15, 24, 1, 0.6, 6, (t) => (t > 0.6 ? '#3ab8e0' : ST.deep), 21);
+      crack(L, ox + 42, 30, -1, 0.5, 5, (t) => (t > 0.6 ? '#3ab8e0' : ST.deep), 22);
+      crack(L, ox + 20, 44, 1, -0.4, 5, (t) => (t > 0.5 ? '#2a8ab0' : ST.deep), 23);
       stamp(pc, L, 0.6);
       // Núcleo de cristal en el pecho: rombo que brilla con grietas de luz
       poly(L, [[ox + 28, 24], [ox + 34, 31], [ox + 28, 38], [ox + 22, 31]], (x, y) => {
