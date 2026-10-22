@@ -180,7 +180,7 @@ function glint(pc, x, y, big = true, arm = SPARK) {
 }
 
 // ---------------------------------------------------------------- formas compartidas
-// Lingote trapezoidal visto desde arriba y adelante: cara de arriba (con sello), filo biselado y frente.
+// Lingote en perspectiva: cara de arriba, filo biselado que brilla, frente y costado derecho en sombra.
 // Letras → índice de la rampa R de 7 tonos (K hondo … W blanco).
 const INGOT = [
   '................',
@@ -278,7 +278,7 @@ export const PIXEL = {
     pc.set(5, 9, B[0]);
     pc.set(4, 9, B[1]);
     pc.set(5, 8, B[4]);
-    // Corte: elipse con corteza, albura clara, dos anillos y la médula
+    // Corte: elipse con corteza, albura clara, un anillo y la médula
     for (let y = 3; y <= 14; y++) {
       for (let x = 8; x <= 15; x++) {
         const dx = (x - cx) / 3.3;
@@ -309,7 +309,7 @@ export const PIXEL = {
   },
   coal(pc) {
     // Trozo de carbón anguloso: caras planas, aristas que brillan frías y destellos minerales
-    const R = ['#0d0e15', '#191b25', '#252836', '#333748', '#454b5f', '#626a86', '#aab6d6'];
+    const R = ['#0d0e15', '#191b25', '#262a38', '#363b4e', '#4c5470', '#6e789a', '#b8c4e4'];
     const m = poly([[1.6, 10], [3, 5.5], [6.5, 2.4], [10.5, 2], [13.6, 4.6], [14.6, 9.4], [12, 13.6], [6.5, 14], [2.8, 12.6]]);
     facets(pc, m, [[5, 5, 5], [10, 4, 4], [13, 8, 2], [3, 10, 3], [8, 9, 3], [11, 12, 1], [6, 13, 1], [7, 6, 4]], R);
     rim(pc);
@@ -419,7 +419,7 @@ export const PIXEL = {
     rim(pc);
   },
   flower_item(pc) {
-    // Flor rosada de 5 pétalos con centro amarillo, tallo y hoja
+    // Flor roja de 5 pétalos (como las del pasto) con centro amarillo, tallo y hoja
     const S = ['#1e4a1e', '#2e6a2a', '#45903a', '#66b04c', '#94d066'];
     for (let y = 9; y <= 14; y++) pc.set(7, y, S[2]);
     for (let y = 9; y <= 14; y++) pc.set(8, y, S[1]);
@@ -555,8 +555,11 @@ export const PIXEL = {
       pc.set(x, 5, IRON[6]);
       pc.set(x, 10, IRON[6]);
     }
-    // Cerradura
-    paint(pc, ['lhhl', 'hbbm', 'bkkm', 'mkmd'], { h: GOLD[5], l: GOLD[4], b: GOLD[3], m: GOLD[2], d: GOLD[1], k: '#2a160b' }, 6, 6);
+    // Esquineras de hierro abajo
+    for (const [x, y, c] of [[1, 13, 2], [2, 13, 2], [1, 12, 4], [13, 13, 1], [14, 13, 1], [14, 12, 2]]) pc.set(x, y, IRON[c]);
+    // Cerradura dorada sobre la juntura de la tapa, con el ojo de la llave
+    paint(pc, ['hhhl', 'hkkm', 'lkkd', 'lmdd', '.dd.'], { h: GOLD[5], l: GOLD[4], b: GOLD[3], m: GOLD[2], d: GOLD[1], k: '#2a160b' }, 6, 6);
+    pc.set(8, 8, '#5a3214');
     rim(pc);
     glint(pc, 6, 6, false);
   },
@@ -842,61 +845,60 @@ export const PIXEL = {
         return R[t > 0.7 ? 5 : t > 0.4 ? 4 : t > 0.05 ? 3 : t > -0.35 ? 2 : 1];
       });
     };
-    ball(3.2, 12.4, 2.2, G);
-    ball(4.6, 8.4, 2.5, G);
-    ball(7.4, 4.9, 2.4, G);
-    ball(10.8, 4.4, 2.7, V);
+    ball(4.6, 12.8, 1.9, G);
+    ball(3.6, 9.2, 2.1, G);
+    ball(4.8, 5.6, 2.1, G);
+    ball(7.8, 3.4, 1.8, G);
+    ball(11.2, 4.8, 2.6, V);
     // Púa curva y afilada (violeta casi negro) que sale del bulbo y apunta hacia abajo
-    for (const [x, y, c] of [[13, 4, 2], [13, 5, 1], [14, 5, 2], [14, 6, 1], [14, 7, 3], [14, 8, 4]]) pc.set(x, y, V[c]);
+    for (const [x, y, c] of [[12, 7, 2], [13, 7, 1], [13, 8, 2], [14, 8, 1], [14, 9, 3], [14, 10, 4]]) pc.set(x, y, V[c]);
     rim(pc);
     // Brillos
     pc.set(10, 3, '#ffffff');
-    pc.set(6, 4, G[5]);
-    pc.set(3, 7, G[5]);
+    pc.set(4, 4, G[5]);
+    pc.set(2, 8, G[5]);
+    pc.set(7, 2, G[5]);
     // Gota de veneno
-    pc.set(14, 11, V[5]);
-    pc.set(14, 12, V[3]);
+    pc.set(14, 12, V[5]);
+    pc.set(14, 13, V[3]);
   },
   relic_hive(pc) {
     // Corazón de la colmena: trozo de panal de 7 celdas hexagonales (cera clara, miel ámbar hundida);
-    // la celda del centro brilla como una brasa dorada y la miel gotea por un costado
-    const cells = [[7, 3], [2, 5], [12, 5], [7, 7], [2, 9], [12, 9], [7, 11]];
-    const cellPx = new Map();
+    // la celda del centro brilla como una brasa dorada y el panal tiene canto abajo a la derecha
+    const cells = [[8, 4], [4, 6], [12, 6], [8, 8], [4, 10], [12, 10], [8, 12]];
+    const HEART = 3;
+    const cellAt = new Map();
     cells.forEach(([cx, cy], k) => {
-      for (const [dx, dy] of [[0, 0], [1, 0], [-1, 1], [0, 1], [1, 1], [2, 1], [0, 2], [1, 2]]) cellPx.set(cx + dx + (cy + dy) * 16, k);
+      for (let x = cx - 1; x <= cx + 1; x++) cellAt.set(x + (cy - 1) * 16, k).set(x + (cy + 1) * 16, k);
+      for (let x = cx - 2; x <= cx + 2; x++) cellAt.set(x + cy * 16, k);
     });
-    const isCell = (x, y) => x >= 0 && x < 16 && cellPx.has(x + y * 16);
+    const isCell = (x, y) => x >= 0 && x < 16 && y >= 0 && cellAt.has(x + y * 16);
     const isWall = (x, y) => {
-      if (x < 1 || x > 14 || isCell(x, y)) return false;
+      if (x < 1 || x > 14 || y < 2 || y > 14 || isCell(x, y)) return false;
       for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) if (isCell(x + i, y + j)) return true;
       return false;
     };
-    const HEART = 3;
+    const solid = (x, y) => isCell(x, y) || isWall(x, y);
     for (let y = 0; y < 16; y++) {
       for (let x = 0; x < 16; x++) {
         if (isCell(x, y)) {
-          const k = cellPx.get(x + y * 16);
-          const ry = y - cells[k][1];
-          if (k === HEART) pc.set(x, y, ry === 1 && (x === 7 || x === 8) ? '#ffffff' : '#ffe680');
-          else pc.set(x, y, ry === 0 ? '#5e2404' : ry === 1 ? '#9a4806' : '#d27412');
+          const k = cellAt.get(x + y * 16);
+          const [cx, cy] = cells[k];
+          if (k === HEART) pc.set(x, y, y === cy && Math.abs(x - cx) <= 1 ? '#ffffff' : '#ffe680');
+          else pc.set(x, y, y < cy ? '#5e2404' : y > cy ? '#c86a10' : '#94420a');
         } else if (isWall(x, y)) {
-          const out = (i, j) => !isWall(i, j) && !isCell(i, j);
-          pc.set(x, y, out(x - 1, y) || out(x, y - 1) ? '#ffe8a0' : out(x + 1, y) || out(x, y + 1) ? '#c8841e' : '#efc052');
+          pc.set(x, y, !solid(x - 1, y) || !solid(x, y - 1) ? '#ffe7a0' : !solid(x + 1, y) || !solid(x, y + 1) ? '#c88420' : '#f0c454');
         }
       }
     }
-    // Canto del panal (grosor), abajo a la derecha
-    for (let y = 15; y >= 1; y--) for (let x = 15; x >= 1; x--) if (!pc.get(x, y) && (isWall(x - 1, y - 1) || isCell(x - 1, y - 1))) pc.set(x, y, '#8a4a0c');
-    // Brillo de la miel en cada celda y resplandor alrededor del corazón
+    // Brillo de la miel en cada celda
     cells.forEach(([cx, cy], k) => {
-      if (k !== HEART) pc.set(cx + 1, cy + 2, '#ffb838');
+      if (k !== HEART) pc.set(cx + 1, cy + 1, '#f0a030');
     });
-    for (const [x, y] of [[6, 6], [9, 6], [5, 8], [10, 8], [6, 10], [9, 10], [7, 6], [8, 6], [7, 10], [8, 10]]) pc.set(x, y, '#fff6c8');
-    // Miel que gotea por el costado izquierdo
-    pc.set(3, 13, '#d87c12');
-    pc.set(3, 14, '#ffb838');
+    // Canto del panal (grosor), abajo a la derecha
+    for (let y = 15; y >= 1; y--) for (let x = 15; x >= 1; x--) if (!pc.get(x, y) && solid(x - 1, y - 1) && x < 15 && y < 15) pc.set(x, y, '#8a4a0c');
     rim(pc);
-    glint(pc, 3, 4, false);
+    glint(pc, 3, 5, false);
   },
   relic_eye(pc) {
     // Ojo de las sombras: globo blanco con venas, iris violeta con pupila de serpiente y tentáculos oscuros
