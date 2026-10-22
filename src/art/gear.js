@@ -107,10 +107,10 @@ function diag(pc, fn) {
 }
 
 /** Empuñadura de 2 px (c = -1 y 0) entre a0 y a1, con vendas alternadas. R = [hondo, oscuro, medio, claro]. */
-function grip(pc, a0, a1, R, band = 1) {
+function grip(pc, a0, a1, R) {
   diag(pc, (a, c, x, y) => {
     if (a < a0 || a > a1 || (c !== -1 && c !== 0)) return null;
-    const stripe = (y + band) % 2 === 0;
+    const stripe = y % 2 === 1;
     if (c === -1) return stripe ? R[3] : R[2];
     return stripe ? R[2] : R[1];
   });
@@ -171,7 +171,7 @@ const SWORDS = {
     pommel(pc, DARKWOOD);
     rim(pc);
   },
-  // Piedra: hoja tallada a golpes (lascas que sobresalen y motas), cruz de madera atada con cuero
+  // Piedra: hoja tallada a golpes (filo mellado y astillas claras), cruz de madera atada con cuero
   stone(pc) {
     blade(pc, -3, 12, -1, 1, (c, a, e) => {
       if (e < 0) return a % 4 === 3 ? STONE[4] : STONE[6];
@@ -257,7 +257,7 @@ const SWORDS = {
       return a > 9 ? FIRE[5] : a > 4 ? FIRE[4] : FIRE[3];
     }, 2);
     guard(pc, -4, 4, HELL);
-    diag(pc, (a, c) => (Math.abs(c) === 4 && (a === -3 || a === -2) ? (c < 0 ? BONE[2] : BONE[1]) : Math.abs(c) === 5 && a === -1 ? BONE[2] : null)); // cuernos
+    diag(pc, (a, c) => (Math.abs(c) === 5 && (a === -3 || a === -1) ? (c < 0 ? BONE[2] : BONE[1]) : null)); // cuernos de hueso hacia la hoja
     grip(pc, -11, -6, [HELL[0], HELL[1], HELL[2], HELL[3]]);
     pommel(pc, FIRE);
     rim(pc);
@@ -304,7 +304,7 @@ const PICKS = {
   wood(pc) {
     haft(pc, -12, 6, DARKWOOD);
     pickHead(pc, WOOD.slice(1).concat(WOOD[6]), { th: 2.1, tip: 0.9, span: 0.9, p: 1, fx: (u, s) => (Math.abs(s) < 0.2 && Math.abs(u) > 0.25 && Math.abs(u) < 0.7 ? WOOD[3] : undefined) });
-    collar(pc, ROPE);
+    collar(pc, [ROPE[0], ROPE[0], ROPE[1], ROPE[2]], 4, 5); // atadura de cordel
     rim(pc);
   },
   // Piedra: cabeza de piedra tallada, despareja, con motas y atadura de cuero
@@ -341,17 +341,17 @@ const PICKS = {
     collar(pc, GOLD);
     diag(pc, (a, c) => (a === 7 && c === -1 ? RUBY[3] : a === 6 && c === 0 ? RUBY[2] : null));
     rim(pc);
-    sparkle(pc, 4, 1, '#ffffff', GOLD[5]);
+    sparkle(pc, 13, 2, '#ffffff', GOLD[5]);
   },
-  // Infernal: cabeza de piedra infernal con borde dentado al rojo y grietas de lava
+  // Infernal: cabeza de piedra infernal con el borde al rojo, una vena de lava y chispas
   hell(pc) {
     haft(pc, -12, 6, [HELL[0], HELL[1], HELL[2], HELL[3], HELL[4], HELL[5]]);
     pickHead(pc, HELL, {
       th: 2.3,
       fx: (u, s) => {
-        if (Math.abs(u) > 0.84) return FIRE[4];
-        if (s > 0.5) return u > -0.2 ? HELL[6] : HELL[5];
-        if (Math.abs(s + 0.05) < 0.28 && Math.abs(u) < 0.75) return Math.abs(u) < 0.25 ? FIRE[4] : FIRE[2];
+        if (Math.abs(u) > 0.86) return FIRE[3];
+        if (s > 0.55) return u > 0 ? HELL[6] : HELL[5];
+        if (Math.abs(s + 0.1) < 0.22 && Math.abs(u) < 0.72) return Math.abs(u) < 0.2 ? FIRE[4] : FIRE[2];
         return undefined;
       },
     });
@@ -363,16 +363,18 @@ const PICKS = {
 };
 
 // ---------------------------------------------------------------- martillos
-// Cabeza atravesada arriba a la derecha: a de a0 a a1 (grosor), |c| ≤ half (largo); caras en los extremos.
-function hammerHead(pc, a0, a1, half, R, fx = null) {
+// Cabeza atravesada arriba a la derecha: a de 5 a 10 (grosor) y c de -6 a 5 (largo), recortada por el borde
+// del ícono: así las caras de golpe quedan planas (arriba, iluminada; a la derecha, en sombra).
+function hammerHead(pc, R, fx = null) {
   diag(pc, (a, c, x, y) => {
-    const face = Math.abs(c) >= half - 1;
-    if (a < a0 || a > a1 || Math.abs(c) > half) return null;
+    if (a < 5 || a > 10 || c < -6 || c > 5 || x > 14 || y < 1) return null;
+    const face = c <= -5 || y === 1 ? -1 : c >= 4 || x === 14 ? 1 : 0;
     const f = fx && fx(a, c, face, x, y);
     if (f) return f;
-    const L = -c * 0.11 + (a - (a0 + a1) / 2) * 0.22;
-    if (face) return c < 0 ? (a >= a1 ? R[6] : R[5]) : a >= a1 ? R[3] : R[2];
-    return L > 0.5 ? R[5] : L > 0.1 ? R[4] : L > -0.35 ? R[3] : R[2];
+    if (face < 0) return a >= 9 ? R[6] : R[5];
+    if (face > 0) return a >= 9 ? R[3] : R[2];
+    const L = -c * 0.07 + (a - 7.5) * 0.3;
+    return L > 0.5 ? R[5] : L > 0.05 ? R[4] : L > -0.45 ? R[3] : R[2];
   });
 }
 
@@ -382,22 +384,28 @@ function hammerHead(pc, a0, a1, half, R, fx = null) {
 function bowShape(pc, R, gripR, tipR, string = STRING) {
   for (let y = 1; y <= 14; y++) {
     const t = (y - 7.5) / 6.5;
-    const cx = 4.9 + (1 - t * t) * 6.0;
-    const w = Math.abs(t) < 0.3 ? 2.6 : Math.abs(t) < 0.75 ? 2.1 : 1.5;
+    const k = Math.abs(t);
+    const cx = 4.7 + Math.pow(1 - t * t, 0.85) * 6.3 + (k > 0.8 ? (k - 0.8) * 4 : 0); // puntas recurvas
+    const w = k < 0.25 ? 3 : k < 0.7 ? 2.5 : 2;
     const x0 = Math.round(cx - w / 2);
-    const x1 = Math.round(cx + w / 2) - 1;
+    const x1 = Math.max(x0 + 1, Math.round(cx + w / 2) - 1);
+    const up = y < 8;
     for (let x = x0; x <= x1; x++) {
-      const up = y < 8;
-      pc.set(x, y, x === x0 ? (up ? R[6] : R[5]) : x === x1 ? (up ? R[3] : R[2]) : up ? R[4] : R[3]);
+      if (x === x0) pc.set(x, y, up ? (y === 3 || y === 4 ? R[6] : R[5]) : R[4]);
+      else if (x === x1) pc.set(x, y, up ? R[2] : R[1]);
+      else pc.set(x, y, up ? R[4] : R[3]);
     }
   }
   // Empuñadura con vendas
   for (let y = 6; y <= 9; y++) {
     pc.set(10, y, y % 2 ? gripR[3] : gripR[2]);
     pc.set(11, y, y % 2 ? gripR[2] : gripR[1]);
+    pc.set(12, y, gripR[1]);
   }
-  // Puntas curvas hacia afuera
+  // Culatines en las puntas
+  pc.set(5, 1, tipR[4]);
   pc.set(6, 1, tipR[3]);
+  pc.set(5, 14, tipR[3]);
   pc.set(6, 14, tipR[2]);
   // Cuerda
   for (let y = 2; y <= 13; y++) pc.set(4, y, y === 7 || y === 8 ? string[2] : string[1]);
@@ -413,7 +421,23 @@ const SETS = {
   gold: { R: GOLD, acc: RUBY, alt: SAPPHIRE },
   hell: { R: HELL, acc: FIRE, alt: BONE },
 };
-const setKey = (asset) => (asset && SETS[asset.set] ? asset.set : 'iron');
+
+// Sets sin paleta propia: rampa armada con los 3 colores de ARMOR_ICON (Placeholders.js) y dibujo del de hierro
+let ARMOR_ICON = null;
+const mix = (a, b, t) => {
+  const [r1, g1, b1] = rgb(a);
+  const [r2, g2, b2] = rgb(b);
+  return toHex(r1 + (r2 - r1) * t, g1 + (g2 - g1) * t, b1 + (b2 - b1) * t);
+};
+function armorSet(asset) {
+  const k = asset && asset.set;
+  if (SETS[k]) return [k, SETS[k]];
+  const ic = ARMOR_ICON && ARMOR_ICON[k];
+  if (!ic) return ['iron', SETS.iron];
+  const [d, m, l] = ic;
+  const R = [mix(d, '#0a0814', 0.5), d, mix(d, m, 0.5), m, mix(m, l, 0.5), l, mix(l, '#ffffff', 0.5)];
+  return ['iron', { R, acc: LEATHER, alt: R }];
+}
 
 // Letras: 0-6 = rampa del material; a-d = adorno (oscuro → claro); x-z = segundo material; i = interior oscuro
 function armorPal(S) {
@@ -505,11 +529,11 @@ const HELMETS = {
   ],
   // Oro: yelmo cerrado pulido con cresta roja, zafiros en el aro y visera ribeteada
   gold: [
-    '.......dc.......',
-    '.......cb.......',
-    '......4cb3......',
-    '....4456b543....',
-    '...4566b65433...',
+    '......dcc.......',
+    '......dcb.......',
+    '......cba3......',
+    '....445ba543....',
+    '...4566a65433...',
     '..456666554332..',
     '..455555544332..',
     '..3z33z33z33z2..',
@@ -568,27 +592,27 @@ const CHEST_FX = {
     '................',
     '................',
     '................',
-    '.....b......c...',
-    '......c..b......',
-    '.......cb.......',
-    '.......bc.......',
-    '......b..c......',
-    '................',
-    '................',
+    '..2..........2..',
+    '..2...2..2...2..',
+    '..2...2..2...2..',
+    '..1...2..2...1..',
+    '......2..2......',
+    '......2..2......',
+    '......1..1......',
     '....abbcdbba....',
   ],
   cactus: [
     '................',
     '................',
-    '..x.........x...',
-    '..............x.',
-    '.x....x..x......',
-    '.....x....x...x.',
     '................',
-    '......x..x......',
+    '..x..........x..',
+    '................',
+    '.....x....x.....',
+    '..x.........x...',
+    '.......x........',
     '.....x....x.....',
     '................',
-    '....2223322.....',
+    '....22233222....',
   ],
   iron: [
     '................',
@@ -653,8 +677,8 @@ const LEGS = [
   '...3454..3321...',
   '...3453..3321...',
   '...3443..3221...',
-  '...3443..3221...',
-  '..34443..43321..',
+  '...2222..2211...',
+  '..45543..43321..',
   '..12222..22211..',
   '................',
   '................',
@@ -678,14 +702,14 @@ const LEGS_FX = {
     '................',
     '................',
     '...2223322221...',
-    '....x......x....',
-    '...x.....x......',
-    '.....x......x...',
     '................',
-    '...x......x.....',
-    '.....x......x...',
+    '....x.....x.....',
     '................',
-    '....x......x....',
+    '...x........x...',
+    '................',
+    '.....x....x.....',
+    '................',
+    '................',
   ],
   iron: [
     '................',
@@ -761,16 +785,24 @@ export const PIXEL = {
 
   // Mazo de madera: cabeza de tronco con anillos en la punta y dos zunchos oscuros
   wood_hammer(pc) {
-    haft(pc, -12, 5, WOOD);
-    hammerHead(pc, 6, 10, 5, WOOD, (a, c, face) => (face ? null : Math.abs(c) === 2 ? (c < 0 ? DARKWOOD[3] : DARKWOOD[2]) : null));
+    haft(pc, -12, 4, DARKWOOD);
+    hammerHead(pc, WOOD, (a, c, face) => {
+      if (face) return c === -6 && a === 8 ? WOOD[4] : null; // anillo de la veta en la punta
+      return c === -3 || c === 2 ? (c < 0 ? DARKWOOD[4] : DARKWOOD[2]) : null; // zunchos
+    });
     rim(pc);
   },
   // Martillo de hierro: maza de acero con caras anchas y cuña en el ojo del mango
   iron_hammer(pc) {
-    haft(pc, -12, 5, WOOD);
-    hammerHead(pc, 6, 10, 5, IRON, (a, c, face) => (!face && c === 0 && a === 8 ? IRON[1] : !face && c === -1 && a === 9 ? IRON[2] : null));
+    haft(pc, -12, 4, WOOD);
+    hammerHead(pc, IRON, (a, c, face) => {
+      if (face) return null;
+      if (c === -4 || c === 3) return c < 0 ? IRON[4] : IRON[1]; // bisel entre el cuerpo y las caras
+      if ((c === -1 && a === 7) || (c === 0 && a === 6)) return IRON[2]; // ojo del mango
+      return null;
+    });
     rim(pc);
-    pc.set(9, 2, IRON[6]);
+    pc.set(9, 1, IRON[6]);
   },
 
   // Daga de hierro: hoja corta en forma de hoja de laurel, guarda de bronce
@@ -793,7 +825,7 @@ export const PIXEL = {
       const L = ((9.5 - x) + (4.5 - y)) * 0.3;
       return L > 0.9 ? STONE[6] : L > 0.3 ? STONE[5] : L > -0.3 ? STONE[4] : L > -0.8 ? STONE[3] : STONE[2];
     });
-    collar(pc, LEATHER, 3, 4);
+    collar(pc, IRON, 3, 4);
     rim(pc);
   },
   // Lanza de hierro: asta larga, punta en hoja con nervio central y atadura roja
@@ -810,18 +842,24 @@ export const PIXEL = {
     rim(pc);
   },
 
+  // Arco de madera: palas de madera curvada y empuñadura de cuero
   wood_bow(pc) {
     bowShape(pc, WOOD, LEATHER, DARKWOOD);
     rim(pc);
   },
+  // Arco de hierro: palas de acero con remaches y empuñadura de cuero
   iron_bow(pc) {
     bowShape(pc, IRON, LEATHER, IRON);
+    pc.set(8, 3, IRON[1]);
+    pc.set(8, 12, IRON[1]);
     rim(pc);
   },
+  // Arco de oro: palas doradas con puntas brillantes y empuñadura de zafiro
   gold_bow(pc) {
     bowShape(pc, GOLD, SAPPHIRE, GOLD);
     rim(pc);
     sparkle(pc, 7, 1, '#ffffff');
+    pc.set(13, 7, SAPPHIRE[3]);
   },
 
   // Flecha: punta de hierro arriba a la derecha, plumas blancas con banda roja abajo a la izquierda
@@ -835,10 +873,11 @@ export const PIXEL = {
     });
     diag(pc, (a, c) => {
       const k = Math.abs(c);
-      if (k < 1 || k > 2 || a < -11 + k || a > -6 + k) return null;
-      if (a <= -9 + k) return c < 0 ? RUBY[3] : RUBY[2];
-      return c < 0 ? '#f6f2ea' : '#c8c2b8';
+      if (k < 1 || k > 2 || a > -5 - k || a < -11 + (k === 2 ? 1 : 0)) return null;
+      if (a === -9 || a === -8) return c < 0 ? RUBY[3] : RUBY[2];
+      return c < 0 ? (k === 2 ? '#fffaf0' : '#e8e2d6') : k === 2 ? '#c8c0b2' : '#aaa294';
     });
+    diag(pc, (a, c) => (c === 0 && a <= -11 && a >= -12 ? DARKWOOD[2] : null)); // culatín
     rim(pc);
   },
   // Bumerán: madera curva con el codo arriba a la izquierda y franjas rojas pintadas de través
@@ -866,31 +905,31 @@ export const PIXEL = {
   // Cuchillo arrojadizo (kunai): hoja en punta, mango vendado y anilla
   throwing_knife(pc) {
     diag(pc, (a, c) => {
-      if (a < -2 || a > 12) return null;
-      const w = a <= 1 ? 1 + (a + 2) * 0.34 : 2 - (a - 1) * 0.19;
+      if (a < -2 || a > 11) return null;
+      const w = a <= 1 ? 1 + (a + 2) * 0.4 : 2.2 - (a - 1) * 0.22;
       if (Math.abs(c) > w) return null;
-      return c < 0 ? (a > 6 ? IRON[6] : IRON[5]) : c === 0 ? IRON[4] : IRON[2];
+      return c < 0 ? (a > 5 ? IRON[6] : IRON[5]) : c === 0 ? IRON[4] : IRON[2];
     });
-    grip(pc, -9, -3, ['#14141c', '#262632', '#3a3a4a', '#545468']);
+    grip(pc, -9, -3, ['#1e0a0c', '#4a1a1c', '#6e2a28', '#8e3c34']); // venda de tela
     paint(pc, ['.4.', '5.3', '.2.'], { 2: IRON[2], 3: IRON[3], 4: IRON[4], 5: IRON[5] }, 1, 12); // anilla
     rim(pc);
   },
 
   armor_helmet(pc, v, asset) {
-    const k = setKey(asset);
-    paint(pc, HELMETS[k], armorPal(SETS[k]));
+    const [k, S] = armorSet(asset);
+    paint(pc, HELMETS[k], armorPal(S));
     rim(pc);
   },
   armor_chest(pc, v, asset) {
-    const k = setKey(asset);
-    const p = armorPal(SETS[k]);
+    const [k, S] = armorSet(asset);
+    const p = armorPal(S);
     paint(pc, CHEST, p);
     paint(pc, CHEST_FX[k], p);
     rim(pc);
   },
   armor_legs(pc, v, asset) {
-    const k = setKey(asset);
-    const p = armorPal(SETS[k]);
+    const [k, S] = armorSet(asset);
+    const p = armorPal(S);
     paint(pc, LEGS, p);
     paint(pc, LEGS_FX[k], p);
     rim(pc);
@@ -898,3 +937,13 @@ export const PIXEL = {
 };
 
 export const CTX = {};
+
+/** Guarda la tabla de colores de armaduras (para sets nuevos) y la alinea con las rampas de este módulo. */
+export function patch(api) {
+  ARMOR_ICON = api.ARMOR_ICON;
+  if (!ARMOR_ICON) return;
+  for (const k of Object.keys(SETS)) {
+    const R = SETS[k].R;
+    if (ARMOR_ICON[k]) ARMOR_ICON[k] = [R[1], R[3], R[5]];
+  }
+}
